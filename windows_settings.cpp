@@ -14,9 +14,11 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 
 
 
-
 WindowsSettings::WindowsSettings(clan::Canvas &canvas)
 {
+	// Настройки программы
+	settings = std::make_shared<SettingsStorage>();
+
 	style()->set("background: lightgray");
 	style()->set("flex: auto");
 	style()->set("flex-direction: column");
@@ -35,7 +37,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas)
 	lModelName->style()->set("flex: none");
 	lModelName->style()->set("margin: 5px");
 	lModelName->style()->set("font: 12px 'tahoma'");
-	lModelName->set_text("Model name: Untitled");
+	set_modelFilename(settings->getProjectFilename());
 	panelGeneral->add_child(lModelName);
 
 	// Панель с кнопками
@@ -52,7 +54,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas)
 	bNew->image_view()->set_image(clan::Image(canvas, "ThemeAero/New.png"));
 	bNew->image_view()->style()->set("padding-left: 3px");
 	bNew->label()->set_text("New");
-	bNew->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownOpen);
+	bNew->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownNew);
 	panelGeneral_panelButtons->add_child(bNew);
 
 	auto bOpen = Theme::create_button();
@@ -102,10 +104,25 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas)
 	panelGeneral_panelButtons->add_child(bStartStop);
 
 	// Чекбокс для автозапуска модели
-	auto cbAutoRun = Theme::create_checkbox();
-	cbAutoRun->style()->set("margin: 12px");
+	cbAutoRun = Theme::create_checkbox();
+	cbAutoRun->style()->set("margin: 12px 12px 6px;");
 	cbAutoRun->label()->set_text("Autostart last project on program load");
+	cbAutoRun->set_check(settings->getProjectAutorun());
 	panelGeneral->add_child(cbAutoRun);
+
+	// Чекбокс автосохранения модели при выходе из программы
+	cbAutoSave = Theme::create_checkbox();
+	cbAutoSave->style()->set("margin: 6px 12px;");
+	cbAutoSave->label()->set_text("Autosave project on program exit");
+	cbAutoSave->set_check(settings->getProjectAutosave());
+	panelGeneral->add_child(cbAutoSave);
+
+	// Чекбокс периодического (ежечасного) автосохранения модели.
+	cbAutoSaveHourly = Theme::create_checkbox();
+	cbAutoSaveHourly->style()->set("margin: 6px 12px;");
+	cbAutoSaveHourly->label()->set_text("Autosave project every hour");
+	cbAutoSaveHourly->set_check(settings->getProjectAutosaveHourly());
+	panelGeneral->add_child(cbAutoSaveHourly);
 
 	// Панель с информацией о модели
 	//
@@ -117,11 +134,23 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas)
 
 }
 
+WindowsSettings::~WindowsSettings()
+{
+	settings->setProjectInfo(modelFilename, cbAutoRun->checked(), cbAutoSave->checked(), cbAutoSaveHourly->checked());
+}
+
 
 // Обработчики событий
+void WindowsSettings::onButtondownNew()
+{
+	set_modelFilename("");
+}
+
 void WindowsSettings::onButtondownOpen()
 {
-
+	auto dlg = std::make_shared<clan::OpenFileDialog>(this);
+	if (dlg->show()) 
+		set_modelFilename(dlg->filename());
 }
 
 void WindowsSettings::onButtondownSave()
@@ -144,3 +173,9 @@ void WindowsSettings::onButtondownRestart()
 
 }
 
+// Сохраняет новое имя модели и обновляет надпись на экране.
+void WindowsSettings::set_modelFilename(const std::string &newName)
+{
+	modelFilename = newName;
+	lModelName->set_text("Model name: " + (modelFilename != "" ? modelFilename : "not selected"));
+}

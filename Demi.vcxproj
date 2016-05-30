@@ -101,6 +101,7 @@
   <ItemGroup>
     <ClCompile Include="app.cpp" />
     <ClCompile Include="precomp.cpp" />
+    <ClCompile Include="settings_storage.cpp" />
     <ClCompile Include="Theme\theme.cpp" />
     <ClCompile Include="Theme\theme_views.cpp" />
     <ClCompile Include="windows_settings.cpp" />
@@ -109,6 +110,7 @@
     <ClInclude Include="app.h" />
     <ClInclude Include="precomp.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="settings_storage.h" />
     <ClInclude Include="windows_settings.h" />
   </ItemGroup>
   <ItemGroup>

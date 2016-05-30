@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<resources>
+	<section name="MainWindow">
+		<!--Main window position, size and state (6-maximized, 7-minimized, 10-normal)-->
+		<item name="Appearance" left="171" top="75" width="1120" height="960" state="10" is_fullscreen="false"/>
+	</section>--&gt;
+	<section name="Project">
+		<!--Project name-->
+		<item name="ProjectName" filename="C:\Users\PC2014-230\Documents\2016 05 16 цены на продукты в г  ВунгТау.xls"/>
+		<!--Checkboxes on settings window-->
+		<item name="Checkboxes" autorun="false" autosave="false" autosave_hourly="true"/>
+	</section>--&gt;
+</resources>

@@ -14,6 +14,7 @@ class App : public clan::Application
 {
 public:
 	App();
+	~App();
 	bool update() override;
 
 private:

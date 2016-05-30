@@ -12,6 +12,7 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 #include "windows_settings.h"
 #include "app.h"
 #include "Theme/theme.h"
+#include "settings_storage.h"
 
 // Высота строки с панелью меню.
 const int cTopMenuHeight = 30;
@@ -37,11 +38,16 @@ App::App()
 	// Mark this thread as the UI thread
 	ui_thread = clan::UIThread(resources);
 
+	// Настройки программы
+	SettingsStorage settings;
+
 	// Create a window:
 	clan::DisplayWindowDescription desc;
 	desc.set_title("Demi: Hello World");
 	desc.set_allow_resize(true);
-	//desc.set_size(Sizef(640, 600), false);
+	desc.set_position(settings.getMainWindowPosition(), false);
+	desc.set_visible(false);
+	desc.set_fullscreen(settings.getIsFullScreen());
 	window = std::make_shared<clan::TopLevelWindow>(desc);
 	const std::shared_ptr<clan::View> view = window->root_view();
 
@@ -49,14 +55,17 @@ App::App()
 	view->slots.connect(view->sig_close(), [&](clan::CloseEvent &e) { on_window_close(); });
 	view->slots.connect(view->sig_key_press(), [&](clan::KeyEvent &e) { on_input_down(e); });
 	
-	// Без этого события клавиатуры не приходят
+	// Без вызова этой функции события клавиатуры не приходят.
 	view->set_focus();
 	
 	canvas = view->canvas();
 
 	// Иконки приложения.
-	window->display_window().set_small_icon(clan::PixelBuffer("ThemeAero/Flower16.png"));
-	window->display_window().set_large_icon(clan::PixelBuffer("ThemeAero/Flower32.png"));
+	//resources.set_cache("Flower16.png", std::make_shared<clan::PixelBuffer>("Flower16.png", doc.get_file_system()));
+	//clan::PixelBuffer &pixbuf = *resources.get_cache<clan::PixelBuffer>("Flower16.png").get();
+	//window->display_window().set_small_icon(pixbuf);
+	window->display_window().set_small_icon(clan::PixelBuffer("Flower16.png", doc.get_file_system()));
+	window->display_window().set_large_icon(clan::PixelBuffer("Flower32.png", doc.get_file_system()));
 
 	// Дочерние панели распологаются в столбик
 	view->style()->set("flex-direction: column");
@@ -73,7 +82,7 @@ App::App()
 	menu_button->style()->set("margin: 3px");
 	menu_button->style()->set("width: 23px");
 	menu_button->set_sticky(true);
-	menu_button->image_view()->set_image(clan::Image(canvas, "ThemeAero/Options.png"));
+	menu_button->image_view()->set_image(clan::Image(canvas, "Options.png", doc.get_file_system()));
 	menu_button->image_view()->style()->set("padding: 0 3px");
 	menu_button->func_clicked() = clan::bind_member(this, &App::on_menuButton_down);
 	topPanel->add_child(menu_button);
@@ -92,9 +101,33 @@ App::App()
 	menu_button->set_pressed(true);
 	on_menuButton_down();
 
+	// Показываем окно в состоянии, в котором оно было при закрытии (свёрнуто, максимизировано и т.д.)
+	window->show(settings.getMainWindowState());
+
 	// Инициализируем счётчик времени.
 	game_time.reset();
 }
+
+App::~App()
+{
+	// Настройки программы
+	SettingsStorage settings;
+
+	// Для удобства.
+	clan::DisplayWindow &dw = window->display_window();
+
+	// Определим состояние окна в формате clan::WindowShowType.
+	clan::WindowShowType state = clan::WindowShowType::show_default;
+	if (dw.is_maximized())
+		state = clan::WindowShowType::maximize;
+	else if (dw.is_minimized())
+		state = clan::WindowShowType::minimize;
+
+	// Сохраняем местоположение и состояние главного окна.
+	settings.setMainWindowPositionAndState(dw.get_geometry(), state, dw.is_fullscreen());
+}
+
+
 
 bool App::update()
 {
