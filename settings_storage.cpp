@@ -38,10 +38,10 @@ const std::string cProjectSectionAutosaveHourly = "autosave_hourly";
 SettingsStorage::SettingsStorage()
 {
 	// Открываем настроечный файл.
-	resDoc = std::make_shared<clan::XMLResourceDocument>(cSettingsXML);
+	pResDoc = std::make_shared<clan::XMLResourceDocument>(cSettingsXML);
 
 	// Читаем раздел с размерами.
-	clan::DomElement &prop = resDoc->get_resource(cMainWindowSection).get_element();
+	clan::DomElement &prop = pResDoc->get_resource(cMainWindowSection).get_element();
 
 	mainWindowLeft = prop.get_attribute_int(cMainWindowSectionLeft, mainWindowLeft);
 	mainWindowTop = prop.get_attribute_int(cMainWindowSectionTop, mainWindowTop);
@@ -51,9 +51,9 @@ SettingsStorage::SettingsStorage()
 	isFullScreen = prop.get_attribute_bool(cMainWindowSectionFullScreen, isFullScreen);
 
 	// Имя текущего проекта и чекбоксы
-	prop = resDoc->get_resource(cProjectSectionName).get_element();
+	prop = pResDoc->get_resource(cProjectSectionName).get_element();
 	projectFilename = prop.get_attribute(cProjectSectionNameFilename, "");
-	prop = resDoc->get_resource(cProjectSectionCheckboxes).get_element();
+	prop = pResDoc->get_resource(cProjectSectionCheckboxes).get_element();
 	projectAutorun = prop.get_attribute_bool(cProjectSectionAutorun, projectAutorun);
 	projectAutosave = prop.get_attribute_bool(cProjectSectionAutosave, projectAutosave);
 	projectAutosaveHourly = prop.get_attribute_bool(cProjectSectionAutosaveHourly, projectAutosaveHourly);
@@ -71,7 +71,7 @@ const clan::Rectf SettingsStorage::getMainWindowPosition()
 void SettingsStorage::setMainWindowPositionAndState(const clan::Rectf & rect, const clan::WindowShowType state, bool isFullScreen)
 {
 	// Раздел с параметрами главного окна.
-	clan::DomElement &prop = resDoc->get_resource(cMainWindowSection).get_element();
+	clan::DomElement &prop = pResDoc->get_resource(cMainWindowSection).get_element();
 
 	// Признак наличия изменений.
 	bool dirt = false;
@@ -117,14 +117,14 @@ void SettingsStorage::setMainWindowPositionAndState(const clan::Rectf & rect, co
 
 	// Сохраняем изменения на диске.
 	if (dirt)
-		resDoc->save(cSettingsXML);
+		pResDoc->save(cSettingsXML);
 }
 
 
 void SettingsStorage::setProjectInfo(const std::string &projectFilename, bool autorun, bool autosave, bool autosaveHourly)
 {
 	// Раздел с параметрами проекта.
-	clan::DomElement &prop = resDoc->get_resource(cProjectSectionName).get_element();
+	clan::DomElement &prop = pResDoc->get_resource(cProjectSectionName).get_element();
 
 	// Признак наличия изменений.
 	bool dirt = false;
@@ -136,7 +136,7 @@ void SettingsStorage::setProjectInfo(const std::string &projectFilename, bool au
 	}
 
 	// Раздел с чекбоксами проекта.
-	clan::DomElement &propCB = resDoc->get_resource(cProjectSectionCheckboxes).get_element();
+	clan::DomElement &propCB = pResDoc->get_resource(cProjectSectionCheckboxes).get_element();
 
 	if (projectAutorun != autorun) {
 		projectAutorun = autorun;
@@ -158,5 +158,5 @@ void SettingsStorage::setProjectInfo(const std::string &projectFilename, bool au
 
 	// Сохраняем изменения на диске.
 	if (dirt)
-		resDoc->save(cSettingsXML);
+		pResDoc->save(cSettingsXML);
 }

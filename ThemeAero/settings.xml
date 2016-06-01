@@ -5,9 +5,9 @@
 		<item name="Appearance" left="171" top="75" width="1120" height="960" state="10" is_fullscreen="false"/>
 	</section>--&gt;
 	<section name="Project">
-		<!--Project name-->
-		<item name="ProjectName" filename="C:\Users\PC2014-230\Documents\2016 05 16 цены на продукты в г  ВунгТау.xls"/>
+		<!--Project filename, XML-part. Using a relative path for easy moving/copying the application, if possible.-->
+		<item name="ProjectName" filename=""/>
 		<!--Checkboxes on settings window-->
-		<item name="Checkboxes" autorun="false" autosave="false" autosave_hourly="true"/>
+		<item name="Checkboxes" autorun="true" autosave="true" autosave_hourly="true" top="299" state="6"/>
 	</section>--&gt;
 </resources>

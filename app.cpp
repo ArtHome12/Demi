@@ -10,9 +10,11 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 
 #include "precomp.h"
 #include "windows_settings.h"
-#include "app.h"
 #include "Theme/theme.h"
 #include "settings_storage.h"
+#include "earth.h"
+#include "app.h"
+
 
 // Высота строки с панелью меню.
 const int cTopMenuHeight = 30;
@@ -20,6 +22,8 @@ const int cTopMenuHeight = 30;
 // Положение кнопки меню
 const int cMenuButtonTop = 5;
 const int cMenuButtonLeft = 5;
+
+const std::string cModelTimeLabel = "Model time:"; 
 
 clan::ApplicationInstance<App> clanapp;
 
@@ -48,61 +52,82 @@ App::App()
 	desc.set_position(settings.getMainWindowPosition(), false);
 	desc.set_visible(false);
 	desc.set_fullscreen(settings.getIsFullScreen());
-	window = std::make_shared<clan::TopLevelWindow>(desc);
-	const std::shared_ptr<clan::View> view = window->root_view();
+	pWindow = std::make_shared<clan::TopLevelWindow>(desc);
+	const std::shared_ptr<clan::View> pView = pWindow->root_view();
 
 	// Обработчики событий.
-	view->slots.connect(view->sig_close(), [&](clan::CloseEvent &e) { on_window_close(); });
-	view->slots.connect(view->sig_key_press(), [&](clan::KeyEvent &e) { on_input_down(e); });
+	pView->slots.connect(pView->sig_close(), [&](clan::CloseEvent &e) { on_window_close(); });
+	pView->slots.connect(pView->sig_key_press(), [&](clan::KeyEvent &e) { on_input_down(e); });
 	
 	// Без вызова этой функции события клавиатуры не приходят.
-	view->set_focus();
+	pView->set_focus();
 	
-	canvas = view->canvas();
+	canvas = pView->canvas();
 
 	// Иконки приложения.
-	//resources.set_cache("Flower16.png", std::make_shared<clan::PixelBuffer>("Flower16.png", doc.get_file_system()));
-	//clan::PixelBuffer &pixbuf = *resources.get_cache<clan::PixelBuffer>("Flower16.png").get();
-	//window->display_window().set_small_icon(pixbuf);
-	window->display_window().set_small_icon(clan::PixelBuffer("Flower16.png", doc.get_file_system()));
-	window->display_window().set_large_icon(clan::PixelBuffer("Flower32.png", doc.get_file_system()));
+	pWindow->display_window().set_small_icon(clan::PixelBuffer("Flower16.png", doc.get_file_system()));
+	pWindow->display_window().set_large_icon(clan::PixelBuffer("Flower32.png", doc.get_file_system()));
 
 	// Дочерние панели распологаются в столбик
-	view->style()->set("flex-direction: column");
+	pView->style()->set("flex-direction: column");
 
 	// Панель меню и информации в вехней части окна
-	auto topPanel = std::make_shared<clan::View>();
-	topPanel->style()->set("background: darkgray");
-	topPanel->style()->set("flex-direction: row");
-	topPanel->style()->set("height: 30px");
-	view->add_child(topPanel);
+	auto pTopPanel = std::make_shared<clan::View>();
+	pTopPanel->style()->set("background-color: darkgray");
+	pTopPanel->style()->set("flex-direction: row");
+	pTopPanel->style()->set("height: 30px");
+	pView->add_child(pTopPanel);
 
 	// Кнопка в панели меню
-	menu_button = Theme::create_button();
-	menu_button->style()->set("margin: 3px");
-	menu_button->style()->set("width: 23px");
-	menu_button->set_sticky(true);
-	menu_button->image_view()->set_image(clan::Image(canvas, "Options.png", doc.get_file_system()));
-	menu_button->image_view()->style()->set("padding: 0 3px");
-	menu_button->func_clicked() = clan::bind_member(this, &App::on_menuButton_down);
-	topPanel->add_child(menu_button);
+	pMenuButton = Theme::create_button();
+	pMenuButton->style()->set("margin: 3px");
+	pMenuButton->style()->set("width: 23px");
+	pMenuButton->set_sticky(true);
+	pMenuButton->image_view()->set_image(clan::Image(canvas, "Options.png", doc.get_file_system()));
+	pMenuButton->image_view()->style()->set("padding: 0 3px");
+	pMenuButton->func_clicked() = clan::bind_member(this, &App::on_menuButton_down);
+	pTopPanel->add_child(pMenuButton);
 
 	// Надпись для отображения FPS
-	labelFPS = std::make_shared<clan::LabelView>();
-	labelFPS->style()->set("color: white");
-	labelFPS->style()->set("flex: none");
-	labelFPS->style()->set("margin: 5px");
-	labelFPS->style()->set("font: 12px 'tahoma'");
-	topPanel->add_child(labelFPS);
+	pLabelFPS = std::make_shared<clan::LabelView>();
+	pLabelFPS->style()->set("color: white");
+	pLabelFPS->style()->set("flex: none");
+	pLabelFPS->style()->set("margin: 5px");
+	pLabelFPS->style()->set("width: 60px");
+	pLabelFPS->style()->set("font: 12px 'tahoma'");
+	//pLabelFPS->style()->set("border: 1px solid #DD3B2A");
+	pTopPanel->add_child(pLabelFPS);
+
+	// Подпись для отображения времени модели
+	auto pLabelModelTimeTitle = std::make_shared<clan::LabelView>();
+	pLabelModelTimeTitle->style()->set("color: white");
+	pLabelModelTimeTitle->style()->set("flex: none");
+	pLabelModelTimeTitle->style()->set("margin: 5px");
+	pLabelModelTimeTitle->style()->set("font: 12px 'tahoma'");
+	//pLabelModelTimeTitle->style()->set("border: 1px solid #003B2A");
+	pLabelModelTimeTitle->set_text(cModelTimeLabel);
+	pTopPanel->add_child(pLabelModelTimeTitle);
+
+	// Надпись для отображения времени модели
+	pLabelModelTime = std::make_shared<clan::LabelView>();
+	pLabelModelTime->style()->set("color: white");
+	pLabelModelTime->style()->set("flex: none");
+	pLabelModelTime->style()->set("margin: 5px");
+	pLabelModelTime->style()->set("width: 60px");
+	pLabelModelTime->style()->set("font: 12px 'tahoma'");
+	pTopPanel->add_child(pLabelModelTime);
 
 	// Окно настроек
-	window_settings = std::make_shared<WindowsSettings>(canvas);
+	pWindowSettings = std::make_shared<WindowsSettings>(canvas);
 
-	menu_button->set_pressed(true);
+	pMenuButton->set_pressed(true);
 	on_menuButton_down();
 
 	// Показываем окно в состоянии, в котором оно было при закрытии (свёрнуто, максимизировано и т.д.)
-	window->show(settings.getMainWindowState());
+	pWindow->show(settings.getMainWindowState());
+
+	// Используется для отрисовки изменяющихся надписей, чтобы не использовать медленное set_text().
+	font = clan::Font("tahoma", 12);
 
 	// Инициализируем счётчик времени.
 	game_time.reset();
@@ -114,7 +139,7 @@ App::~App()
 	SettingsStorage settings;
 
 	// Для удобства.
-	clan::DisplayWindow &dw = window->display_window();
+	clan::DisplayWindow &dw = pWindow->display_window();
 
 	// Определим состояние окна в формате clan::WindowShowType.
 	clan::WindowShowType state = clan::WindowShowType::show_default;
@@ -139,7 +164,7 @@ bool App::update()
 	if (fullscreen_requested != is_fullscreen)
 	{
 		is_fullscreen = fullscreen_requested;
-		window->display_window().toggle_fullscreen();
+		pWindow->display_window().toggle_fullscreen();
 	}
 	
 	// Выведем скорость обновления экрана, но только если она изменилась - так как каждое изменение текста вызывает InvalidateRect()
@@ -148,14 +173,21 @@ bool App::update()
 	if (lastFPS != fps) {
 		lastFPS = fps;
 		std::string fpsStr = clan::StringHelp::int_to_text(fps) + " fps";
-		labelFPS->set_text(fpsStr);
+		pLabelFPS->set_text(fpsStr, true);
 	}
 
-
 	// Отрисуем содержимое окна с моделью.
+	DemiTime modelTime = globalEarth.getModelTime();
+	if (lastModelTime != modelTime) {
+		lastModelTime = modelTime;
+		pLabelModelTime->set_text(modelTime.getDateStr(), true);
+	}
+
+	//pLabelModelTime->set_text(modelTime.getDateStr());
+	//globalEarth.getCopyDotsArray();
 
 
-	window->display_window().flip();
+	pWindow->display_window().flip();
 
 	return !quit;
 }
@@ -215,8 +247,8 @@ void App::on_mouse_down(const clan::InputEvent &key)
 void App::on_menuButton_down()
 {
 	// Показываем в клиентской области либо окно настроек, либо окно модели.
-	if (menu_button->pressed()) 
-		window->root_view()->add_child(window_settings);
+	if (pMenuButton->pressed()) 
+		pWindow->root_view()->add_child(pWindowSettings);
 	else 
-		window_settings->remove_from_parent();
+		pWindowSettings->remove_from_parent();
 }

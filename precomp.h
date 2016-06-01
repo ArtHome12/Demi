@@ -17,6 +17,8 @@
 #endif
 #include <ClanLib/gl.h>
 #include <ClanLib/ui.h>
+#include <clanlib/xml.h>
+
 
 #include <cmath>
 #include <thread>

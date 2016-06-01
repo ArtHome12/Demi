@@ -22,27 +22,30 @@ public:
 private:
 
 	// Настройки
-	std::shared_ptr<SettingsStorage> settings;
+	std::shared_ptr<SettingsStorage> pSettings;
 
 	// Название текущей модели
 	std::string modelFilename;
-	std::shared_ptr<clan::LabelView> lModelName;
+	std::shared_ptr<clan::LabelView> pLabelModelName;
+
+	// Кнопка запуска или приостановки расчёта.
+	std::shared_ptr<clan::ButtonView> pButtonRunPause;
 
 	// Чекбокс автозапуска модели
-	std::shared_ptr<clan::CheckBoxView> cbAutoRun;
+	std::shared_ptr<clan::CheckBoxView> pCBAutoRun;
 
 	// Чекбокс автосохранения модели при выходе из программы.
-	std::shared_ptr<clan::CheckBoxView> cbAutoSave;
+	std::shared_ptr<clan::CheckBoxView> pCBAutoSave;
 
 	// Чекбокс периодического (ежечасного) автосохранения модели.
-	std::shared_ptr<clan::CheckBoxView> cbAutoSaveHourly;
+	std::shared_ptr<clan::CheckBoxView> pCBAutoSaveHourly;
 
 	// Обработчики событий
 	void onButtondownNew();
 	void onButtondownOpen();
 	void onButtondownSave();
 	void onButtondownSaveAs();
-	void onButtondownStartStop();
+	void onButtondownRunPause();
 	void onButtondownRestart();
 
 	// Сохраняет новое имя модели и обновляет надпись на экране.

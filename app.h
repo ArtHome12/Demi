@@ -28,7 +28,11 @@ private:
 
 	// Надпись для отображения FPS
 	int lastFPS;
-	std::shared_ptr<clan::LabelView> labelFPS;
+	std::shared_ptr<clan::LabelView> pLabelFPS;
+
+	// Надпись для отображения времени модели.
+	DemiTime lastModelTime;
+	std::shared_ptr<clan::LabelView> pLabelModelTime;
 
 	// Флаг завершения работы программы.
 	bool quit = false;
@@ -38,16 +42,18 @@ private:
 	bool is_fullscreen = false;
 
 	clan::UIThread ui_thread;
-	std::shared_ptr<clan::TopLevelWindow> window;
+	std::shared_ptr<clan::TopLevelWindow> pWindow;
 
 	// Окно настроек
-	std::shared_ptr<WindowsSettings> window_settings;
+	std::shared_ptr<WindowsSettings> pWindowSettings;
 
 	// Счётчик времени.
 	clan::GameTime game_time;
 
+	// Используется для отрисовки изменяющихся надписей.
+	clan::Font font;
 
 	// Кнопка меню - если нажата, то отображается панель настроек.
-	std::shared_ptr<clan::ButtonView> menu_button;
+	std::shared_ptr<clan::ButtonView> pMenuButton;
 };
 

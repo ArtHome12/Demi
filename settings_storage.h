@@ -10,14 +10,12 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 
 #pragma once
 
-#include <clanlib/xml.h>
-
 class SettingsStorage
 {
 public:
 	SettingsStorage();
 
-	std::shared_ptr<clan::XMLResourceDocument> resDoc;
+	std::shared_ptr<clan::XMLResourceDocument> pResDoc;
 
 	// Положение и состояние главного окна.
 	const clan::Rectf getMainWindowPosition();
