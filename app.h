@@ -47,13 +47,14 @@ private:
 	// ќкно настроек
 	std::shared_ptr<WindowsSettings> pWindowSettings;
 
+	// ќкно модели
+	std::shared_ptr<ModelRender> pModelRender;
+
 	// —чЄтчик времени.
 	clan::GameTime game_time;
 
-	// »спользуетс€ дл€ отрисовки измен€ющихс€ надписей.
-	clan::Font font;
-
 	//  нопка меню - если нажата, то отображаетс€ панель настроек.
 	std::shared_ptr<clan::ButtonView> pMenuButton;
+
 };
 

@@ -36,6 +36,9 @@
     <ClCompile Include="earth.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="model_render.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="precomp.h">
@@ -54,6 +57,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="earth.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="model_render.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

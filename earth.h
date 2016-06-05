@@ -16,7 +16,7 @@ const int cDaysInYear = 365;
 
 //  оличество тиков в сутках, приравн€ем к секундам 60с*60м*24ч=86400
 const int cTicksInDay = 86400;
-//const int cTicksInDay = 1000;
+//const int cTicksInDay = 10;
 
 // √лобальна€ переменна€ - указатель на мир.
 class Earth;
@@ -52,12 +52,16 @@ public:
 //
 class LocalCoord { 
 public:
+	LocalCoord(Dot *arDots, float x, float y) : dots(arDots), xcenter(x), ycenter(y) {};
+
+	Dot& get_dot(float x, float y) const;
+
+private:
+	// ћассив с точками поверхности.
+	Dot *dots;
+
 	// ÷ентр локальных координат, выраженный в глобальных координатах.
-	int xcenter, ycenter;
-
-	LocalCoord(int x, int y) : xcenter(x), ycenter(y) {};
-
-	Dot& operator()( int x, int y ) const;
+	float xcenter, ycenter;
 };
 
 
@@ -100,9 +104,9 @@ class Solar {
 private:
 
 	// ¬озвращает позицию дл€ солнца в зависимости от дн€ года (по вертикали мира).
-	unsigned int YPos(const DemiTime &timeModel);
+	float YPos(const DemiTime &timeModel);
 	// ¬озвращает позицию дл€ солнца в зависимости от времени суток (по горизонтали мира).
-	unsigned int XPos(const DemiTime &timeModel);
+	float XPos(const DemiTime &timeModel);
 
 public:
 
@@ -116,8 +120,8 @@ public:
 //
 class Geothermal {
 public:
-	unsigned int XPos;
-	unsigned int YPos;
+	float XPos;
+	float YPos;
 };
 
 
@@ -127,7 +131,7 @@ public:
 class Earth {
 
 	friend Dot;
-	friend LocalCoord;
+	friend Solar;
 
 public:
 	Earth();
@@ -141,16 +145,17 @@ public:
 	void RunEvolution(bool is_active);
 
 	// ¬озвращает точки поверхности.
-	Dot *getCopyDotsArray() { return arDotsCopy; }
+	//Dot *getCopyDotsArray() { return arDotsCopy; }
+	Dot *getCopyDotsArray() { return arDots; }
 	DemiTime getModelTime() { return timeBackup; }
 
 	// ƒоступ к свойствам.
-	int get_worldWidth() { return worldWidth; }
-	int get_worldHeight() { return worldHeight; }
+	float get_worldWidth() { return worldWidth; }
+	float get_worldHeight() { return worldHeight; }
 	int get_elemCount() { return elemCount; }
 	int get_energyCount() { return energyCount; }
-	int get_lightRadius() { return lightRadius; }
-	int get_tropicHeight() { return tropicHeight; }
+	float get_lightRadius() { return lightRadius; }
+	float get_tropicHeight() { return tropicHeight; }
 
 private:
 
@@ -172,21 +177,21 @@ private:
 
 
 	// –азмеры мира.
-	int worldWidth = 0;
-	int worldHeight = 0;
+	float worldWidth = 0;
+	float worldHeight = 0;
 
 	//  оличество химических элементов, существующих в модели.
 	int elemCount = 0;
 
 	//  оличество геотермальных источников.
-	int energyCount;
+	int energyCount = 0;
 
 	// ћаксимальный радиус освещЄнности вокруг местонахождени€ солнца, составл€ет 90% высоты мира.
 	// Ёта же величина и максимальна€ €ркость солнца - в самой удалЄнной точке она была минимальной и равной 1, соответственно в центре - равна радиусу.
-	int lightRadius = 0;
+	float lightRadius = 0;
 
 	// ’од солнца по вертикали, обусловленный наклоном земной оси, примерно sin(23.5)=0.4 или по 10% с каждой стороны от экватора.
-	int tropicHeight = 0;
+	float tropicHeight = 0;
 
 	// ѕоверхность земли и копи€ дл€ отображени€ на экране.
 	Dot *arDots;
@@ -208,20 +213,18 @@ private:
 	std::thread thread;
 
 	// «адаЄт распределение ресурсов по указанной пр€моугольной области в указанном количестве.
-	void FillRectResource(int resId, float amount, const clan::Rect &rect);
+	void FillRectResource(int resId, float amount, const clan::Rectf &rect);
 
 	// «адаЄт местоположение источников геотермальной энергии.
-	void AddGeothermal(int i, int x, int y);
+	void AddGeothermal(int i, float x, float y);
 
 private:
 
 	bool thread_exit_flag = false;		// ≈сли истина, поток должен завершитьс€.
 	bool thread_run_flag = false;		// ≈сли истина, то поток работает и измен€ет модель, иначе простаивает.
 	bool thread_crashed_flag = false;	// ≈сли истина, значит поток завершилс€ аварийно.
-	//bool thread_complete_flag = false;	// ≈сли истина, значит поток завершил расчЄт модели (устанавливаетс€ в расчЄтном потоке дл€ основного потока).
 	std::mutex thread_mutex;
 	std::condition_variable threadMainToWorkerEvent;
-	//std::condition_variable threadWorkerToMainEvent;
 
 	// –абоча€ функци€ потока, вычисл€ющего модель.
 	void worker_thread();

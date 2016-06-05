@@ -101,6 +101,7 @@
   <ItemGroup>
     <ClCompile Include="app.cpp" />
     <ClCompile Include="earth.cpp" />
+    <ClCompile Include="model_render.cpp" />
     <ClCompile Include="precomp.cpp" />
     <ClCompile Include="settings_storage.cpp" />
     <ClCompile Include="Theme\theme.cpp" />
@@ -110,6 +111,7 @@
   <ItemGroup>
     <ClInclude Include="app.h" />
     <ClInclude Include="earth.h" />
+    <ClInclude Include="model_render.h" />
     <ClInclude Include="precomp.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="settings_storage.h" />

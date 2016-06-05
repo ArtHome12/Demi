@@ -13,6 +13,7 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 #include "Theme/theme.h"
 #include "settings_storage.h"
 #include "earth.h"
+#include "model_render.h"
 #include "app.h"
 
 
@@ -53,30 +54,30 @@ App::App()
 	desc.set_visible(false);
 	desc.set_fullscreen(settings.getIsFullScreen());
 	pWindow = std::make_shared<clan::TopLevelWindow>(desc);
-	const std::shared_ptr<clan::View> pView = pWindow->root_view();
+	const std::shared_ptr<clan::View> pRootView = pWindow->root_view();
+
+	// Дочерние панели распологаются в столбик
+	pRootView->style()->set("flex-direction: column");
 
 	// Обработчики событий.
-	pView->slots.connect(pView->sig_close(), [&](clan::CloseEvent &e) { on_window_close(); });
-	pView->slots.connect(pView->sig_key_press(), [&](clan::KeyEvent &e) { on_input_down(e); });
+	pRootView->slots.connect(pRootView->sig_close(), [&](clan::CloseEvent &e) { on_window_close(); });
+	pRootView->slots.connect(pRootView->sig_key_press(), [&](clan::KeyEvent &e) { on_input_down(e); });
 	
 	// Без вызова этой функции события клавиатуры не приходят.
-	pView->set_focus();
+	pRootView->set_focus();
 	
-	canvas = pView->canvas();
+	canvas = pRootView->canvas();
 
 	// Иконки приложения.
 	pWindow->display_window().set_small_icon(clan::PixelBuffer("Flower16.png", doc.get_file_system()));
 	pWindow->display_window().set_large_icon(clan::PixelBuffer("Flower32.png", doc.get_file_system()));
-
-	// Дочерние панели распологаются в столбик
-	pView->style()->set("flex-direction: column");
 
 	// Панель меню и информации в вехней части окна
 	auto pTopPanel = std::make_shared<clan::View>();
 	pTopPanel->style()->set("background-color: darkgray");
 	pTopPanel->style()->set("flex-direction: row");
 	pTopPanel->style()->set("height: 30px");
-	pView->add_child(pTopPanel);
+	pRootView->add_child(pTopPanel);
 
 	// Кнопка в панели меню
 	pMenuButton = Theme::create_button();
@@ -119,15 +120,19 @@ App::App()
 
 	// Окно настроек
 	pWindowSettings = std::make_shared<WindowsSettings>(canvas);
+	pWindowSettings->set_hidden(true);
+	pWindow->root_view()->add_child(pWindowSettings);
+
+	// Окно модели
+	pModelRender = std::make_shared<ModelRender>();
+	pModelRender->style()->set("flex: auto");
+	pWindow->root_view()->add_child(pModelRender);
 
 	pMenuButton->set_pressed(true);
 	on_menuButton_down();
 
 	// Показываем окно в состоянии, в котором оно было при закрытии (свёрнуто, максимизировано и т.д.)
 	pWindow->show(settings.getMainWindowState());
-
-	// Используется для отрисовки изменяющихся надписей, чтобы не использовать медленное set_text().
-	font = clan::Font("tahoma", 12);
 
 	// Инициализируем счётчик времени.
 	game_time.reset();
@@ -183,9 +188,7 @@ bool App::update()
 		pLabelModelTime->set_text(modelTime.getDateStr(), true);
 	}
 
-	//pLabelModelTime->set_text(modelTime.getDateStr());
-	//globalEarth.getCopyDotsArray();
-
+	pModelRender->draw(canvas);
 
 	pWindow->display_window().flip();
 
@@ -199,10 +202,13 @@ void App::on_input_down(const clan::KeyEvent &e)
 	{
 		quit = true;
 	}
-
-	if ((e.text() == "f") || (e.text() == "F"))
+	else if (e.key() == clan::Key::f)
 	{
 		fullscreen_requested = !fullscreen_requested;
+	}
+	else if (e.key() == clan::Key::f2)
+	{
+		pModelRender->toggleIlluminated();
 	}
 }
 
@@ -246,9 +252,6 @@ void App::on_mouse_down(const clan::InputEvent &key)
 
 void App::on_menuButton_down()
 {
-	// Показываем в клиентской области либо окно настроек, либо окно модели.
-	if (pMenuButton->pressed()) 
-		pWindow->root_view()->add_child(pWindowSettings);
-	else 
-		pWindowSettings->remove_from_parent();
+	// Показываем или прячем в клиентской области окно настроек.
+	pWindowSettings->set_hidden(!pMenuButton->pressed());
 }
