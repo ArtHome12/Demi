@@ -47,9 +47,9 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas)
 
 	// Название модели
 	pLabelModelName = std::make_shared<clan::LabelView>();
-	pLabelModelName->style()->set("flex: none");
-	pLabelModelName->style()->set("margin: 5px");
-	pLabelModelName->style()->set("font: 12px 'tahoma'");
+	pLabelModelName->style()->set("flex: none;");
+	pLabelModelName->style()->set("margin: 5px;");
+	pLabelModelName->style()->set("font: 12px 'tahoma';");
 	set_modelFilename(pSettings->getProjectFilename());
 	panelGeneral->add_child(pLabelModelName);
 
@@ -132,7 +132,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas)
 
 	// Чекбокс периодического (ежечасного) автосохранения модели.
 	pCBAutoSaveHourly = Theme::create_checkbox();
-	pCBAutoSaveHourly->style()->set("margin: 6px 12px;");
+	pCBAutoSaveHourly->style()->set("margin: 0px 12px;");
 	pCBAutoSaveHourly->label()->set_text("Autosave project every hour");
 	pCBAutoSaveHourly->set_check(pSettings->getProjectAutosaveHourly());
 	panelGeneral->add_child(pCBAutoSaveHourly);
@@ -231,7 +231,7 @@ void WindowsSettings::onButtondownRunPause()
 
 void WindowsSettings::onButtondownRestart()
 {
-
+	pCBAutoRun->set_disabled();
 }
 
 // Сохраняет новое имя модели и обновляет надпись на экране.

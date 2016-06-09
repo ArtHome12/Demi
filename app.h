@@ -18,11 +18,6 @@ public:
 	bool update() override;
 
 private:
-	void on_input_down(const clan::KeyEvent &e);
-	void on_window_close();
-	void on_mouse_down(const clan::InputEvent &key);
-	void on_menuButton_down();
-
 
 	clan::Canvas canvas;
 
@@ -33,6 +28,14 @@ private:
 	// Надпись для отображения времени модели.
 	DemiTime lastModelTime;
 	std::shared_ptr<clan::LabelView> pLabelModelTime;
+
+	// Кнопка-надпись левого верхнего угла координат мира.
+	clan::Pointf lastTopLeftWorld;
+	std::shared_ptr<clan::ButtonView> pButtonTopLeftModelCoordinate;
+
+	// Кнопка-надпись масштаба координат мира.
+	float lastScaleWorld = 0.0f;
+	std::shared_ptr<clan::ButtonView> pButtonScaleModel;
 
 	// Флаг завершения работы программы.
 	bool quit = false;
@@ -56,5 +59,11 @@ private:
 	// Кнопка меню - если нажата, то отображается панель настроек.
 	std::shared_ptr<clan::ButtonView> pMenuButton;
 
+	void on_input_down(const clan::KeyEvent &e);
+	void on_window_close();
+	void on_mouse_down(const clan::InputEvent &key);
+	void on_menuButton_down();
+	void on_menuTopLeftModelButton_down();
+	void on_menuScaleModelButton_down();
 };
 

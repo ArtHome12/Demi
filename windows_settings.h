@@ -28,8 +28,10 @@ private:
 	std::string modelFilename;
 	std::shared_ptr<clan::LabelView> pLabelModelName;
 
+public:
 	// Кнопка запуска или приостановки расчёта.
 	std::shared_ptr<clan::ButtonView> pButtonRunPause;
+private:
 
 	// Чекбокс автозапуска модели
 	std::shared_ptr<clan::CheckBoxView> pCBAutoRun;

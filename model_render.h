@@ -21,6 +21,14 @@ public:
 	// Включает или выключает подсетку.
 	void toggleIlluminated() { illuminated = !illuminated; }
 
+	// Координаты левого верхнего угла мира.
+	const clan::Pointf &getTopLeftWorld() { return topLeftWorld; }
+	void setTopLeftWorld(const clan::Pointf &newValue) { topLeftWorld = newValue; }
+
+	// Масштаб координат мира.
+	const float getScaleWorld() { return scale; }
+	void setScaleWorld(float newValue) { scale = newValue; }
+
 protected:
 	/// Renders the content of a view
 	virtual void render_content(clan::Canvas &canvas);
@@ -37,8 +45,7 @@ private:
 	std::shared_ptr<clan::Image> pImage;
 
 	// Мировые координаты левого верхнего угла окна и масштаб.
-	float xWorld = 0;
-	float yWorld = 0;
+	clan::Pointf topLeftWorld;
 	float scale = 1;
 
 	// Истина, если включена подсветка.

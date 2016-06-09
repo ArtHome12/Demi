@@ -80,19 +80,19 @@ void ModelRender::render_content(clan::Canvas &canvas)
 
 		// Если в результате увеличения размера окно выезжает за границу мира, надо откорректировать мировые координаты.
 		// По вертикали ограничиваем, по горизонтали - циклическая прокрутка.
-		if (xWorld < 0)
-			xWorld += earthWidth;
-		else if (xWorld >= earthWidth)
-			xWorld -= earthWidth;
+		if (topLeftWorld.x < 0.0f)
+			topLeftWorld.x += earthWidth;
+		else if (topLeftWorld.x >= earthWidth)
+			topLeftWorld.x -= earthWidth;
 
-		if (yWorld < 0)
-			yWorld = 0;
-		else if (yWorld + scaledHeight > earthHeight)
-			yWorld = earthHeight - scaledHeight;
+		if (topLeftWorld.y < 0.0f)
+			topLeftWorld.y = 0.0f;
+		else if (topLeftWorld.y + scaledHeight > earthHeight)
+			topLeftWorld.y = earthHeight - scaledHeight;
 	}
 
 	// Определим систему координат.
-	LocalCoord coordSystem(globalEarth.getCopyDotsArray(), xWorld, yWorld);
+	LocalCoord coordSystem(globalEarth.getCopyDotsArray(), topLeftWorld.x, topLeftWorld.y);
 
 	// В зависимости от масштаба, отрисовываем точки либо клетки.
 	if (scale >= cPixelDetailLevel) {
@@ -232,8 +232,8 @@ void ModelRender::on_mouse_down(clan::PointerEvent &e)
 		isScrollStart = true;
 		scrollWindowX = e.pos(this).x;
 		scrollWindowY = e.pos(this).y;
-		scrollWorldX = xWorld;
-		scrollWorldY = yWorld;
+		scrollWorldX = topLeftWorld.x;
+		scrollWorldY = topLeftWorld.y;
 
 		// Захватываем события мыши, чтобы узнать об отпускании кнопки.
 		//pMainWindow->capture_mouse(true);
@@ -244,9 +244,9 @@ void ModelRender::on_mouse_down(clan::PointerEvent &e)
 		// Если зажата клавиша Ctrl, прокрутка вверх, если Shift, прокрутка вправо, иначе приближение.
 		//
 		if (e.shift_down())
-			xWorld -= max1(xWorldInc * scale);
+			topLeftWorld.x -= max1(xWorldInc * scale);
 		else if (e.ctrl_down() || e.cmd_down())
-			yWorld -= max1(yWorldInc * scale);
+			topLeftWorld.y -= max1(yWorldInc * scale);
 		else
 			Approach(e.pos(this));
 
@@ -256,9 +256,9 @@ void ModelRender::on_mouse_down(clan::PointerEvent &e)
 
 	case clan::PointerButton::wheel_down:
 		if (e.shift_down())
-			xWorld += max1(xWorldInc * scale);
+			topLeftWorld.x += max1(xWorldInc * scale);
 		else if (e.ctrl_down() || e.cmd_down())
-			yWorld += max1(yWorldInc * scale);
+			topLeftWorld.y += max1(yWorldInc * scale);
 		else
 			ToDistance(e.pos(this));
 
@@ -294,7 +294,7 @@ void ModelRender::Approach(const clan::Pointf &pos)
 	// и на эту дельту сделать прокрутку.
 	//
 
-	// Координаты мира под курсором до масштабирования (без учёта прокрутки xWorld для оптимизации).
+	// Координаты мира под курсором до масштабирования (без учёта прокрутки topLeftWorld.x для оптимизации).
 	//
 	float wx1 = pos.x * scale;
 	float wy1 = pos.y * scale;
@@ -307,8 +307,8 @@ void ModelRender::Approach(const clan::Pointf &pos)
 	float wx2 = pos.x * scale;
 	float wy2 = pos.y * scale;
 
-	xWorld += int(wx1 - wx2);
-	yWorld += int(wy1 - wy2);
+	topLeftWorld.x += int(wx1 - wx2);
+	topLeftWorld.y += int(wy1 - wy2);
 }
 
 
@@ -327,8 +327,8 @@ void ModelRender::ToDistance(const clan::Pointf &pos)
 		float wy1 = pos.y * scale / cScaleInc;
 		float wx2 = pos.x * scale;
 		float wy2 = pos.y * scale;
-		xWorld += int(wx1 - wx2);
-		yWorld += int(wy1 - wy2);
+		topLeftWorld.x += int(wx1 - wx2);
+		topLeftWorld.y += int(wy1 - wy2);
 	}
 }
 

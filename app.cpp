@@ -93,7 +93,7 @@ App::App()
 	pLabelFPS = std::make_shared<clan::LabelView>();
 	pLabelFPS->style()->set("color: white");
 	pLabelFPS->style()->set("flex: none");
-	pLabelFPS->style()->set("margin: 5px");
+	pLabelFPS->style()->set("margin: 8px");
 	pLabelFPS->style()->set("width: 60px");
 	pLabelFPS->style()->set("font: 12px 'tahoma'");
 	//pLabelFPS->style()->set("border: 1px solid #DD3B2A");
@@ -103,7 +103,7 @@ App::App()
 	auto pLabelModelTimeTitle = std::make_shared<clan::LabelView>();
 	pLabelModelTimeTitle->style()->set("color: white");
 	pLabelModelTimeTitle->style()->set("flex: none");
-	pLabelModelTimeTitle->style()->set("margin: 5px");
+	pLabelModelTimeTitle->style()->set("margin: 8px");
 	pLabelModelTimeTitle->style()->set("font: 12px 'tahoma'");
 	//pLabelModelTimeTitle->style()->set("border: 1px solid #003B2A");
 	pLabelModelTimeTitle->set_text(cModelTimeLabel);
@@ -113,10 +113,31 @@ App::App()
 	pLabelModelTime = std::make_shared<clan::LabelView>();
 	pLabelModelTime->style()->set("color: white");
 	pLabelModelTime->style()->set("flex: none");
-	pLabelModelTime->style()->set("margin: 5px");
+	pLabelModelTime->style()->set("margin: 8px");
 	pLabelModelTime->style()->set("width: 60px");
 	pLabelModelTime->style()->set("font: 12px 'tahoma'");
 	pTopPanel->add_child(pLabelModelTime);
+
+	// Кнопка-надпись левого верхнего угла координат мира.
+	pButtonTopLeftModelCoordinate = Theme::create_button();
+	pButtonTopLeftModelCoordinate->style()->set("flex: none");
+	pButtonTopLeftModelCoordinate->style()->set("margin: 3px");
+	pButtonTopLeftModelCoordinate->style()->set("width: 120px");
+	pButtonTopLeftModelCoordinate->label()->style()->set("font: 12px 'tahoma';");
+	pButtonTopLeftModelCoordinate->label()->set_text("X:Y 0:0");
+	pButtonTopLeftModelCoordinate->func_clicked() = clan::bind_member(this, &App::on_menuTopLeftModelButton_down);
+	pTopPanel->add_child(pButtonTopLeftModelCoordinate);
+
+	// Кнопка-надпись масштаба координат мира.
+	pButtonScaleModel = Theme::create_button();
+	pButtonScaleModel->style()->set("flex: none");
+	pButtonScaleModel->style()->set("margin: 3px");
+	pButtonScaleModel->style()->set("width: 120px");
+	pButtonScaleModel->label()->style()->set("font: 12px 'tahoma';");
+	pButtonScaleModel->label()->set_text("Scale 1.0");
+	pButtonScaleModel->func_clicked() = clan::bind_member(this, &App::on_menuScaleModelButton_down);
+	pTopPanel->add_child(pButtonScaleModel);
+
 
 	// Окно настроек
 	pWindowSettings = std::make_shared<WindowsSettings>(canvas);
@@ -172,7 +193,7 @@ bool App::update()
 		pWindow->display_window().toggle_fullscreen();
 	}
 	
-	// Выведем скорость обновления экрана, но только если она изменилась - так как каждое изменение текста вызывает InvalidateRect()
+	// Выведем скорость обновления экрана, но только если она изменилась.
 	//
 	int fps = int(game_time.get_updates_per_second());
 	if (lastFPS != fps) {
@@ -181,16 +202,40 @@ bool App::update()
 		pLabelFPS->set_text(fpsStr, true);
 	}
 
+	// Истина, если что-либо в модели изменилось и необходима перерисовка.
+	bool isDirty = false;
+
+	// Выведем координаты левого верхнего угла мира.
+	const clan::Pointf &topLeftWorld = pModelRender->getTopLeftWorld();
+	if (lastTopLeftWorld != topLeftWorld) {
+		lastTopLeftWorld = topLeftWorld;
+		pButtonTopLeftModelCoordinate->label()->set_text("X:Y "
+			+ clan::StringHelp::int_to_text(int(topLeftWorld.x)) + ":"
+			+ clan::StringHelp::int_to_text(int(topLeftWorld.y)), true);
+		isDirty = true; // Пометим необхдимость перерисовать модель.
+	}
+
+	// Выведем масштаб координат мира.
+	float scaleWorld = pModelRender->getScaleWorld();
+	if (lastScaleWorld != scaleWorld) {
+		lastScaleWorld = scaleWorld;
+		pButtonScaleModel->label()->set_text("Scale "	+ clan::StringHelp::float_to_text(scaleWorld, 3, false), true);
+		isDirty = true; // Пометим необхдимость перерисовать модель.
+	}
+
 	// Отрисуем содержимое окна с моделью.
 	DemiTime modelTime = globalEarth.getModelTime();
 	if (lastModelTime != modelTime) {
 		lastModelTime = modelTime;
 		pLabelModelTime->set_text(modelTime.getDateStr(), true);
+		isDirty = true; // Пометим необхдимость перерисовать модель.
 	}
 
-	pModelRender->draw(canvas);
+	if (isDirty) 
+		pModelRender->draw(canvas);
 
-	pWindow->display_window().flip();
+	//pWindow->display_window().flip();
+	pWindow->display_window().flip(0);
 
 	return !quit;
 }
@@ -255,3 +300,16 @@ void App::on_menuButton_down()
 	// Показываем или прячем в клиентской области окно настроек.
 	pWindowSettings->set_hidden(!pMenuButton->pressed());
 }
+
+void App::on_menuTopLeftModelButton_down()
+{
+	// Reset top left coordinate of the world.
+	pModelRender->setTopLeftWorld(clan::Pointf());
+}
+
+void App::on_menuScaleModelButton_down()
+{
+	// Reset the scale.
+	pModelRender->setScaleWorld(1.0f);
+}
+
