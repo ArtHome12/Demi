@@ -47,6 +47,9 @@ private:
 	void onButtondownSaveAs();
 	void onButtondownRunPause();
 	void onButtondownRestart();
+	void onCBAutoRunToggle();
+	void onCBAutoSaveToggle();
+	void onCBAutoSaveHourlyToggle();
 
 	// Сохраняет новое имя модели и обновляет надпись на экране.
 	void set_modelFilename(const std::string &newName);

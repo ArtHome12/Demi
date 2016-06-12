@@ -191,9 +191,7 @@ App::~App()
 	// Сохраняем местоположение и состояние главного окна.
 	pSettings->setMainWindowSettings(dw.get_geometry(),
 		state, 
-		dw.is_fullscreen(), 
-		pMenuButton->pressed(), 
-		pModelRender->getIlluminatedWorld());
+		dw.is_fullscreen());
 }
 
 
@@ -324,8 +322,14 @@ void App::on_mouse_down(const clan::InputEvent &key)
 
 void App::on_menuButton_down()
 {
+	// Нажата ли кнопка отображения панели с настройками.
+	bool isPressed = pMenuButton->pressed();
+	
 	// Показываем или прячем в клиентской области окно настроек.
-	pWindowSettings->set_hidden(!pMenuButton->pressed());
+	pWindowSettings->set_hidden(!isPressed);
+
+	// Сохраняем настройку.
+	pSettings->setTopMenuIsSettingsWindowVisible(isPressed);
 }
 
 void App::on_menuTopLeftModelButton_down()

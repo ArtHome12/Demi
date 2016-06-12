@@ -118,20 +118,23 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	pCBAutoRun->style()->set("margin: 12px 12px 6px;");
 	pCBAutoRun->label()->set_text("Autostart last project on program load");
 	pCBAutoRun->set_check(pSettings->getProjectAutorun());
+	pCBAutoRun->func_state_changed() = clan::bind_member(this, &WindowsSettings::onCBAutoRunToggle);
 	panelGeneral->add_child(pCBAutoRun);
 
 	// Чекбокс автосохранения модели при выходе из программы
 	pCBAutoSave = Theme::create_checkbox();
-	pCBAutoSave->style()->set("margin: 6px 12px;");
+	pCBAutoSave->style()->set("margin: 0px 12px;");
 	pCBAutoSave->label()->set_text("Autosave project on program exit");
 	pCBAutoSave->set_check(pSettings->getProjectAutosave());
+	pCBAutoSave->func_state_changed() = clan::bind_member(this, &WindowsSettings::onCBAutoSaveToggle);
 	panelGeneral->add_child(pCBAutoSave);
 
 	// Чекбокс периодического (ежечасного) автосохранения модели.
 	pCBAutoSaveHourly = Theme::create_checkbox();
-	pCBAutoSaveHourly->style()->set("margin: 0px 12px;");
+	pCBAutoSaveHourly->style()->set("margin: 6px 12px;");
 	pCBAutoSaveHourly->label()->set_text("Autosave project every hour");
 	pCBAutoSaveHourly->set_check(pSettings->getProjectAutosaveHourly());
+	pCBAutoSaveHourly->func_state_changed() = clan::bind_member(this, &WindowsSettings::onCBAutoSaveHourlyToggle);
 	panelGeneral->add_child(pCBAutoSaveHourly);
 
 	// Панель с информацией о модели
@@ -143,12 +146,11 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	add_child(panelModelInfo);
 
 	// Загрузим пустую модель.
-	onButtondownNew();
+	//onButtondownNew();
 }
 
 WindowsSettings::~WindowsSettings()
 {
-	pSettings->setProjectInfo(modelFilename, pCBAutoRun->checked(), pCBAutoSave->checked(), pCBAutoSaveHourly->checked());
 }
 
 
@@ -231,6 +233,22 @@ void WindowsSettings::onButtondownRestart()
 	pCBAutoRun->set_disabled();
 }
 
+void WindowsSettings::onCBAutoRunToggle()
+{
+	pSettings->setProjectAutorun(pCBAutoRun->checked());
+}
+
+void WindowsSettings::onCBAutoSaveToggle()
+{
+	pSettings->setProjectAutosave(pCBAutoSave->checked());
+}
+
+void WindowsSettings::onCBAutoSaveHourlyToggle()
+{
+	pSettings->setProjectAutosaveHourly(pCBAutoSaveHourly->checked());
+}
+
+
 // Сохраняет новое имя модели и обновляет надпись на экране.
 void WindowsSettings::set_modelFilename(const std::string &newName)
 {
@@ -246,4 +264,7 @@ void WindowsSettings::set_modelFilename(const std::string &newName)
 
 	// Информация для пользователя.
 	pLabelModelName->set_text("Model name: " + (modelFilename != "" ? modelFilename : "not selected or not available"));
+
+	// Сохраняем в настройках как последний открытый проект.
+	pSettings->setProjectFilename(modelFilename);
 }

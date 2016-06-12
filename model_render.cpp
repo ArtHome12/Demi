@@ -95,6 +95,9 @@ void ModelRender::render_content(clan::Canvas &canvas)
 	// Определим систему координат.
 	LocalCoord coordSystem(globalEarth.getCopyDotsArray(), topLeftWorld);
 
+	// Включена ли постоянная подсветка, для удобства.
+	bool illuminated = getIlluminatedWorld();
+
 	// В зависимости от масштаба, отрисовываем точки либо клетки.
 	if (scale >= cPixelDetailLevel) {
 
@@ -375,8 +378,8 @@ void ModelRender::ToDistance(const clan::Pointf &pos, float scaleStep)
 // Постоянная подсветка мира.
 void ModelRender::setIlluminatedWorld(bool newValue) 
 { 
-	illuminated = newValue;
-	if (illuminated)
+	pSettings->setTopMenuIsModelIlluminated(newValue);
+	if (newValue)
 		soundIlluminateOn.play();
 	else
 		soundIlluminateOff.play();

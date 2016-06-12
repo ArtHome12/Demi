@@ -27,7 +27,7 @@ public:
 	void setScaleWorld(float newValue) { scale = newValue; }
 
 	// Постоянная подсветка мира.
-	const bool getIlluminatedWorld() { return illuminated; }
+	const bool getIlluminatedWorld() { return pSettings->getTopMenuIsModelIlluminated(); }
 	void setIlluminatedWorld(bool newValue);
 
 protected:
@@ -50,9 +50,6 @@ private:
 	// Мировые координаты левого верхнего угла окна и масштаб.
 	clan::Pointf topLeftWorld;
 	float scale = 1;
-
-	// Истина, если включена подсветка.
-	bool illuminated = false;
 
 	// Истина, когда нажата средняя кнопка мыши и мы в режиме прокрутки.
 	bool isScrollStart = false;

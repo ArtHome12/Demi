@@ -14,6 +14,7 @@ class SettingsStorage
 {
 public:
 	SettingsStorage();
+	~SettingsStorage();
 
 	// Внешние ресурсы.
 	clan::FileResourceDocument fileResDoc;
@@ -22,43 +23,34 @@ public:
 
 	// Положение и состояние главного окна.
 	const clan::Rectf getMainWindowPosition();
-	const bool getIsFullScreen() { return isFullScreen; }
-	const clan::WindowShowType getMainWindowState() { return mainWindowState; }
+	const bool getIsFullScreen();
+	const clan::WindowShowType getMainWindowState();
 	void setMainWindowSettings(const clan::Rectf & rect, 
 		const clan::WindowShowType state, 
-		bool isFullScreen, 
-		bool isWindowsSettingsVisible, 
-		bool isModelIlluminated);
+		bool isFullScreen);
 
 	// Состояние панели меню.
-	const bool getTopMenuIsSettingsWindowVisible() { return topMenuSettingsWindowVisible; }
-	const bool getTopMenuIsModelIlluminated() { return topMenuModelIlluminated; }
+	const bool getTopMenuIsSettingsWindowVisible();
+	void setTopMenuIsSettingsWindowVisible(bool newValue);
+	const bool getTopMenuIsModelIlluminated();
+	void setTopMenuIsModelIlluminated(bool newValue);
 
 	// Имя текущего проекта и чекбоксы
-	const std::string getProjectFilename() { return projectFilename; }
-	const bool getProjectAutorun() { return projectAutorun; }
-	const bool getProjectAutosave() { return projectAutosave; }
-	const bool getProjectAutosaveHourly() { return projectAutosaveHourly; }
-	void setProjectInfo(const std::string &projectFilename, bool autorun, bool autosave, bool autosaveHourly);
+	const std::string getProjectFilename();
+	const bool getProjectAutorun();
+	const bool getProjectAutosave();
+	const bool getProjectAutosaveHourly();
+	void setProjectFilename(const std::string &newValue);
+	void setProjectAutorun(bool newValue);
+	void setProjectAutosave(bool newValue);
+	void setProjectAutosaveHourly(bool newValue);
 
 
 private:
-	// Положение и размеры окна
-	int mainWindowLeft = 0;
-	int mainWindowTop = 0;
-	int mainWindowWidth = 800;
-	int mainWindowHeight = 600;
-	clan::WindowShowType mainWindowState = clan::WindowShowType::show_default;
-	bool isFullScreen = false;
-
-	// Состояние панели меню
-	bool topMenuSettingsWindowVisible = false;
-	bool topMenuModelIlluminated = false;
-
-	// Имя текущего проекта и чекбоксы
-	std::string projectFilename = "";
-	bool projectAutorun = false;
-	bool projectAutosave = false;
-	bool projectAutosaveHourly = false;
+	// Разделы XML-файла.
+	clan::DomElement sectionMainWindowApperance;			// Раздел с параметрами главного окна.
+	clan::DomElement sectionMainWindowTopMenu;				// Раздел с параметрами меню главного окна.
+	clan::DomElement sectionProjectName;					// Раздел с названием файлов проекта.
+	clan::DomElement sectionProjectCheckBoxes;				// Раздел с настройками проекта.
 };
 

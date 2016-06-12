@@ -38,150 +38,136 @@ const std::string cProjectSectionAutorun = "autorun";
 const std::string cProjectSectionAutosave = "autosave";
 const std::string cProjectSectionAutosaveHourly = "autosave_hourly";
 
-SettingsStorage::SettingsStorage() : resManager(clan::FileResourceManager::create(fileResDoc)),
+SettingsStorage::SettingsStorage() : 
+	sectionMainWindowApperance(XMLResDoc.get_resource(cMainWindowSectionAppearance).get_element()),
+	sectionMainWindowTopMenu(XMLResDoc.get_resource(cMainWindowSectionMenu).get_element()),
+	sectionProjectName(XMLResDoc.get_resource(cProjectSectionName).get_element()),
+	sectionProjectCheckBoxes(XMLResDoc.get_resource(cProjectSectionCheckboxes).get_element()),
+	resManager(clan::FileResourceManager::create(fileResDoc)),
 	XMLResDoc(cSettingsXML), 
 	fileResDoc(clan::FileSystem("ThemeAero"))
 {
-	// Читаем раздел с размерами.
-	clan::DomElement &prop = XMLResDoc.get_resource(cMainWindowSectionAppearance).get_element();
+}
 
-	mainWindowLeft = prop.get_attribute_int(cMainWindowSectionLeft, mainWindowLeft);
-	mainWindowTop = prop.get_attribute_int(cMainWindowSectionTop, mainWindowTop);
-	mainWindowWidth = prop.get_attribute_int(cMainWindowSectionWidth, mainWindowWidth);
-	mainWindowHeight = prop.get_attribute_int(cMainWindowSectionHeight, mainWindowHeight);
-	mainWindowState = clan::WindowShowType(prop.get_attribute_int(cMainWindowSectionState, int(mainWindowState)));
-	isFullScreen = prop.get_attribute_bool(cMainWindowSectionFullScreen, isFullScreen);
-
-	// Состояние панели меню
-	prop = XMLResDoc.get_resource(cMainWindowSectionMenu).get_element();
-	topMenuSettingsWindowVisible = prop.get_attribute_bool(cMainWindowSectionSettingsWindowVisible, topMenuSettingsWindowVisible);
-	topMenuModelIlluminated = prop.get_attribute_bool(cMainWindowSectionModelIlluminated, topMenuModelIlluminated);
-
-	// Имя текущего проекта и чекбоксы
-	prop = XMLResDoc.get_resource(cProjectSectionName).get_element();
-	projectFilename = prop.get_attribute(cProjectSectionNameFilename, "");
-	prop = XMLResDoc.get_resource(cProjectSectionCheckboxes).get_element();
-	projectAutorun = prop.get_attribute_bool(cProjectSectionAutorun, projectAutorun);
-	projectAutosave = prop.get_attribute_bool(cProjectSectionAutosave, projectAutosave);
-	projectAutosaveHourly = prop.get_attribute_bool(cProjectSectionAutosaveHourly, projectAutosaveHourly);
+SettingsStorage::~SettingsStorage()
+{
+	// Сохраняем изменения на диске.
+	XMLResDoc.save(cSettingsXML);
 }
 
 
 // Возвращает местоположение и размеры главного окна программы.
 const clan::Rectf SettingsStorage::getMainWindowPosition()
 {
-	return clan::Rect(mainWindowLeft, mainWindowTop, mainWindowWidth, mainWindowHeight);
+	// Положение и размеры окна
+	int mainWindowLeft = sectionMainWindowApperance.get_attribute_int(cMainWindowSectionLeft, 0);
+	int mainWindowTop = sectionMainWindowApperance.get_attribute_int(cMainWindowSectionTop, 0);
+	int mainWindowWidth = sectionMainWindowApperance.get_attribute_int(cMainWindowSectionWidth, 800);
+	int mainWindowHeight = sectionMainWindowApperance.get_attribute_int(cMainWindowSectionHeight, 600);
+
+	return clan::Rectf(float(mainWindowLeft), float(mainWindowTop), float(mainWindowWidth), float(mainWindowHeight));
 }
 
 
 // Обновляет значения местоположения и состояния главного окна программы.
 void SettingsStorage::setMainWindowSettings(const clan::Rectf & rect, 
 	const clan::WindowShowType state, 
-	bool isFullScreen,
-	bool isWindowsSettingsVisible,
-	bool isModelIlluminated)
+	bool isFullScreen)
 {
-	// Раздел с параметрами главного окна.
-	clan::DomElement &prop = XMLResDoc.get_resource(cMainWindowSectionAppearance).get_element();
-
-	// Признак наличия изменений.
-	bool dirt = false;
-
 	// Размеры меняем только если окно в нормальном состоянии.
 	if ((state != clan::WindowShowType::maximize) && (state != clan::WindowShowType::minimize) && !isFullScreen) {
-		if (mainWindowLeft != int(rect.left)) {
-			mainWindowLeft = int(rect.left);
-			prop.set_attribute_int(cMainWindowSectionLeft, mainWindowLeft);
-			dirt = true;
-		}
-
-		if (mainWindowTop != int(rect.top)) {
-			mainWindowTop = int(rect.top);
-			prop.set_attribute_int(cMainWindowSectionTop, mainWindowTop);
-			dirt = true;
-		}
-
-		if (mainWindowWidth != int(rect.right)) {
-			mainWindowWidth = int(rect.right);
-			prop.set_attribute_int(cMainWindowSectionWidth, mainWindowWidth);
-			dirt = true;
-		}
-
-		if (mainWindowHeight != int(rect.bottom)) {
-			mainWindowHeight = int(rect.bottom);
-			prop.set_attribute_int(cMainWindowSectionHeight, mainWindowHeight);
-			dirt = true;
-		}
+		sectionMainWindowApperance.set_attribute_int(cMainWindowSectionLeft, int(rect.left));
+		sectionMainWindowApperance.set_attribute_int(cMainWindowSectionTop, int(rect.top));
+		sectionMainWindowApperance.set_attribute_int(cMainWindowSectionWidth, int(rect.right));
+		sectionMainWindowApperance.set_attribute_int(cMainWindowSectionHeight, int(rect.bottom));
 	}
 
-	if (mainWindowState != state) {
-		mainWindowState = state;
-		prop.set_attribute_int(cMainWindowSectionState, int(mainWindowState));
-		dirt = true;
-	}
+	sectionMainWindowApperance.set_attribute_int(cMainWindowSectionState, int(state));
+	sectionMainWindowApperance.set_attribute_bool(cMainWindowSectionFullScreen, isFullScreen);
+}
 
-	if (this->isFullScreen != isFullScreen) {
-		this->isFullScreen = isFullScreen;
-		prop.set_attribute_bool(cMainWindowSectionFullScreen, this->isFullScreen);
-		dirt = true;
-	}
+const bool SettingsStorage::getIsFullScreen()
+{
+	return sectionMainWindowApperance.get_attribute_bool(cMainWindowSectionFullScreen, false);
+}
 
-	// Раздел с параметрами меню главного окна.
-	prop = XMLResDoc.get_resource(cMainWindowSectionMenu).get_element();
-	if (topMenuSettingsWindowVisible != isWindowsSettingsVisible) {
-		topMenuSettingsWindowVisible = isWindowsSettingsVisible;
-		prop.set_attribute_bool(cMainWindowSectionSettingsWindowVisible, topMenuSettingsWindowVisible);
-		dirt = true;
-	}
+const clan::WindowShowType SettingsStorage::getMainWindowState()
+{
+	// Состояние гравного окна.
+	return clan::WindowShowType(sectionMainWindowApperance.get_attribute_int(cMainWindowSectionState, int(clan::WindowShowType::show_default)));
+}
 
-	if (topMenuModelIlluminated != isModelIlluminated) {
-		topMenuModelIlluminated = isModelIlluminated;
-		prop.set_attribute_bool(cMainWindowSectionModelIlluminated, topMenuModelIlluminated);
-		dirt = true;
-	}
-
-	// Сохраняем изменения на диске.
-	if (dirt)
-		XMLResDoc.save(cSettingsXML);
+const bool SettingsStorage::getTopMenuIsModelIlluminated()
+{
+	// Постоянная подсветка модели.
+	return sectionMainWindowTopMenu.get_attribute_bool(cMainWindowSectionModelIlluminated, false);
 }
 
 
-void SettingsStorage::setProjectInfo(const std::string &projectFilename, bool autorun, bool autosave, bool autosaveHourly)
+void SettingsStorage::setTopMenuIsModelIlluminated(bool newValue)
 {
-	// Раздел с параметрами проекта.
-	clan::DomElement &prop = XMLResDoc.get_resource(cProjectSectionName).get_element();
+	// Постоянная подсветка модели.
+	sectionMainWindowTopMenu.set_attribute_bool(cMainWindowSectionModelIlluminated, newValue);
+}
 
-	// Признак наличия изменений.
-	bool dirt = false;
+const bool SettingsStorage::getTopMenuIsSettingsWindowVisible()
+{
+	// Отображение панели с настройками.
+	return sectionMainWindowTopMenu.get_attribute_bool(cMainWindowSectionSettingsWindowVisible, true);
+}
 
-	if (this->projectFilename != projectFilename) {
-		this->projectFilename = projectFilename;
-		prop.set_attribute(cProjectSectionNameFilename, this->projectFilename);
-		dirt = true;
-	}
 
-	// Раздел с чекбоксами проекта.
-	clan::DomElement &propCB = XMLResDoc.get_resource(cProjectSectionCheckboxes).get_element();
+void SettingsStorage::setTopMenuIsSettingsWindowVisible(bool newValue)
+{
+	// Отображение панели с настройками.
+	sectionMainWindowTopMenu.set_attribute_bool(cMainWindowSectionSettingsWindowVisible, newValue);
+}
 
-	if (projectAutorun != autorun) {
-		projectAutorun = autorun;
-		propCB.set_attribute_bool(cProjectSectionAutorun, projectAutorun);
-		dirt = true;
-	}
+// Имя текущего проекта и чекбоксы
+const std::string SettingsStorage::getProjectFilename()
+{
+	// Имя текущего проекта и чекбоксы
+	return sectionProjectName.get_attribute(cProjectSectionNameFilename, "");
+}
 
-	if (projectAutosave != autosave) {
-		projectAutosave = autosave;
-		propCB.set_attribute_bool(cProjectSectionAutosave, projectAutosave);
-		dirt = true;
-	}
+const bool SettingsStorage::getProjectAutorun()
+{
+	// Имя текущего проекта и чекбоксы
+	return sectionProjectCheckBoxes.get_attribute_bool(cProjectSectionAutorun, false);
+}
 
-	if (projectAutosaveHourly != autosaveHourly) {
-		projectAutosaveHourly = autosaveHourly;
-		propCB.set_attribute_bool(cProjectSectionAutosaveHourly, projectAutosaveHourly);
-		dirt = true;
-	}
+const bool SettingsStorage::getProjectAutosave()
+{
+	// Имя текущего проекта и чекбоксы
+	return sectionProjectCheckBoxes.get_attribute_bool(cProjectSectionAutosave, false);
+}
 
-	// Сохраняем изменения на диске.
-	if (dirt)
-		XMLResDoc.save(cSettingsXML);
+const bool SettingsStorage::getProjectAutosaveHourly()
+{
+	// Имя текущего проекта и чекбоксы
+	return sectionProjectCheckBoxes.get_attribute_bool(cProjectSectionAutosaveHourly, false);
+}
+
+void SettingsStorage::setProjectFilename(const std::string &newValue)
+{
+	// Имя текущего проекта и чекбоксы
+	sectionProjectName.set_attribute(cProjectSectionNameFilename, newValue);
+}
+
+void SettingsStorage::setProjectAutorun(bool newValue)
+{
+	// Имя текущего проекта и чекбоксы
+	sectionProjectCheckBoxes.set_attribute_bool(cProjectSectionAutorun, newValue);
+}
+
+void SettingsStorage::setProjectAutosave(bool newValue)
+{
+	// Имя текущего проекта и чекбоксы
+	sectionProjectCheckBoxes.set_attribute_bool(cProjectSectionAutosave, newValue);
+}
+
+void SettingsStorage::setProjectAutosaveHourly(bool newValue)
+{
+	// Имя текущего проекта и чекбоксы
+	sectionProjectCheckBoxes.set_attribute_bool(cProjectSectionAutosaveHourly, newValue);
 }
