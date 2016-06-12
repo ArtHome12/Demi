@@ -138,7 +138,6 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	panelGeneral->add_child(pCBAutoSaveHourly);
 
 	// Панель с информацией о модели
-	//
 	auto panelModelInfo = std::make_shared<clan::View>();
 	panelModelInfo->style()->set("flex-direction: column");
 	panelModelInfo->style()->set("flex: auto");
@@ -146,7 +145,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	add_child(panelModelInfo);
 
 	// Загрузим пустую модель.
-	//onButtondownNew();
+	onButtondownNew();
 }
 
 WindowsSettings::~WindowsSettings()

@@ -47,6 +47,9 @@ private:
 	// Буфер для отрисовки по точкам, пересоздаётся при изменении размера, тут для оптимизации.
 	std::shared_ptr<clan::Image> pImage;
 
+	// Шрифт для отрисовки надписей в клетке.
+	clan::Font cellFont;
+
 	// Мировые координаты левого верхнего угла окна и масштаб.
 	clan::Pointf topLeftWorld;
 	float scale = 1;
@@ -70,11 +73,11 @@ private:
 	void ToDistance(const clan::Pointf &pos, float scaleStep);
 
 	// Отрисовывает сетку.
-	void DrawGrid(int width, int height);
+	void DrawGrid(clan::Canvas &canvas, const clan::Sizef &windowSize);
 
 	// Отрисовывает клетку в компактном виде - с координатой и ресурсами, которые поместятся.
 	// В функцию передаётся точка поверхности, прямоугольник, где её необходимо отрисовать и мировые координаты точки относительно окна.
-	void DrawCellCompact(const Dot &d, const clan::Rectf &rect, int x, int y);
+	void DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan::Rectf &rect, int xLabel, int yLabel);
 
 	// Звуки включения и выключения подсветки.
 	clan::SoundBuffer soundIlluminateOn;

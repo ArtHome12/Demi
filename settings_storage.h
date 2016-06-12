@@ -23,9 +23,9 @@ public:
 
 	// Положение и состояние главного окна.
 	const clan::Rectf getMainWindowPosition();
-	const bool getIsFullScreen();
 	const clan::WindowShowType getMainWindowState();
-	void setMainWindowSettings(const clan::Rectf & rect, 
+	const bool getIsFullScreen();
+	void setMainWindowSettings(const clan::Rectf & rect,
 		const clan::WindowShowType state, 
 		bool isFullScreen);
 

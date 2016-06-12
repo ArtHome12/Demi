@@ -35,9 +35,14 @@ const float cScaleInc = 1.1f;
 const float xWorldInc = 120;
 const float yWorldInc = xWorldInc;
 
+const std::string cSolar = "Solar";			// Подпись для солнечной энергии.
+const std::string cEnergy = "Geothermal";	// Подпись для геотермальной энергии.
+
+
 ModelRender::ModelRender(std::shared_ptr<SettingsStorage> &pSettingsStorage) : pSettings(pSettingsStorage),
 	soundIlluminateOn("IlluminateOn.wav", false, pSettingsStorage->fileResDoc.get_file_system()),
-	soundIlluminateOff("IlluminateOff.wav", false, pSettingsStorage->fileResDoc.get_file_system())
+	soundIlluminateOff("IlluminateOff.wav", false, pSettingsStorage->fileResDoc.get_file_system()),
+	cellFont("Tahoma", 12)
 {
 	slots.connect(sig_pointer_press(), this, &ModelRender::on_mouse_down);
 	slots.connect(sig_pointer_release(), this, &ModelRender::on_mouse_up);
@@ -51,10 +56,13 @@ void ModelRender::render_content(clan::Canvas &canvas)
 	// Отрисовывает модель в указанном месте.
 	//
 	// Получим размеры для отображения.
-	const clan::Sizef	windowSize = geometry().content_size();
+	const clan::Sizef windowSize = geometry().content_size();
 
-	// Если некуда рисовать, выходим.
-	if (windowSize.width == 0 || windowSize.height == 0)
+	// Для оптимизации.
+	const clan::Sizef earthSize = globalEarth.get_worldSize();
+
+	// Если некуда или нечего рисовать, выходим.
+	if (windowSize.width == 0 || windowSize.height == 0 || earthSize.width == 0 || earthSize.height == 0)
 		return;
 
 	// Если размер поменялся, пересоздадим пиксельбуфер.
@@ -67,9 +75,6 @@ void ModelRender::render_content(clan::Canvas &canvas)
 	// Для удобства, размер в мировых координатах.
 	const float scaledWidth = windowSize.width * scale;
 	const float scaledHeight = windowSize.height * scale;
-
-	// Для оптимизации.
-	const clan::Sizef earthSize = globalEarth.get_worldSize();
 
 	// Если размер окна стал больше отображаемого мира, надо откорректировать масштаб.
 	if (scaledWidth > earthSize.width || scaledHeight > earthSize.height) {
@@ -98,13 +103,12 @@ void ModelRender::render_content(clan::Canvas &canvas)
 	// Включена ли постоянная подсветка, для удобства.
 	bool illuminated = getIlluminatedWorld();
 
+	// Цвет точки, для оптимизации объявление вынесено сюда.
+	clan::Colorf color;
+
 	// В зависимости от масштаба, отрисовываем точки либо клетки.
 	if (scale >= cPixelDetailLevel) {
-
 		// Рисуем точками.
-
-		// Цвет точки, для оптимизации объявление вынесено сюда.
-		clan::Colorf color;
 
 		// Указатель на точки буфера.
 		pPixelBuf->lock(canvas, clan::access_write_only);
@@ -115,7 +119,7 @@ void ModelRender::render_content(clan::Canvas &canvas)
 			for (int xpos = 0; xpos < windowSize.width; xpos++)
 			{
 				// Точка мира. Доступ через индекс потому, что в физической матрице точки могут быть расположены иначе, хотя это повод для оптимизации.
-				Dot &d = coordSystem.get_dot(xpos * scale, ypos * scale);
+				const Dot &d = coordSystem.get_dot(xpos * scale, ypos * scale);
 
 				d.get_color(color);
 
@@ -130,21 +134,16 @@ void ModelRender::render_content(clan::Canvas &canvas)
 		pPixelBuf->unlock();
 		pImage->set_subimage(canvas, 0, 0, *pPixelBuf, clan::Rect(0, 0, pPixelBuf->get_size()));
 		pImage->draw(canvas, 0, 0);
-		
-		//
-		// Рисование точек завершено.
+		// Рисование точками завершено.
 	}
 	else {
+		// Рисуем клетками.
 
-/*		// Рисуем клетками.
-		//
+		// Координаты отрисовываемой точки мира, от нуля с учётом сдвига в coordSystem.
+		float xDotIndex = 0;
+		float yDotIndex = 0;
 
-		// Координаты в мировой системе координат.
-		//
-		int xpos = 0;
-		int ypos = 0;
-
-		// Координаты клетки.
+		// Область клетки.
 		clan::Rectf r;
 
 		// Помещается ли текст, для оптимизации.
@@ -152,18 +151,18 @@ void ModelRender::render_content(clan::Canvas &canvas)
 
 		// В цикле двигаемся, пока не выйдем за границу окна.
 		//
-		while (r.top < windowHeight) {
+		while (r.top < windowSize.height) {
 
 			r.top = r.bottom;
-			r.bottom = float((ypos + 1) / scale);
+			r.bottom = (yDotIndex + 1) / scale;
 
 			r.left = r.right = 0;
-			xpos = 0;
+			xDotIndex = 0;
 
-			while (r.left < windowWidth) {
+			while (r.left < windowSize.width) {
 
 				// Точка мира. 
-				const demi::Dot &d = coord(xpos, ypos);
+				const Dot &d = coordSystem.get_dot(xDotIndex, yDotIndex);
 
 				// Получим цвет точки.
 				d.get_color(color);
@@ -174,30 +173,100 @@ void ModelRender::render_content(clan::Canvas &canvas)
 
 				// Сразу переходим к следующей клетке, см. оператор ++!.
 				r.left = r.right;
-				r.right = float((xpos++ + 1) / scale);
+				r.right = (xDotIndex++ + 1) / scale;
 
 				// Отрисовываем клетку.
-				pCanvas->fill_rect(r, color);
+				canvas.fill_rect(r, color);
 
 				// Отрисовываем её координату, если помещается.
 				if (showTextInCell)
-					DrawCellCompact(d, r, xpos - 1, ypos);
+					DrawCellCompact(canvas, d, r, int(topLeftWorld.x + xDotIndex - 1), int(topLeftWorld.y + yDotIndex));
 			}
 
 			// Переходим к следующему ряду клеток.
-			++ypos;
+			++yDotIndex;
 		}
 
 		// Отрисуем линии, если они помещаются.
 		//
 		if (scale < cLinesDetailLevel)
-			DrawGrid(windowWidth, windowHeight);
+			DrawGrid(canvas, windowSize);
 
-		//
 		// Рисование клеток завершено.
-		*/
 	}
 
+}
+
+void ModelRender::DrawGrid(clan::Canvas &canvas, const clan::Sizef &windowSize)
+{
+	// Отрисовывает сетку.
+
+	// Расстояние между линиями это обратная к масштабу величина. Количество линий, помещающихся в окне.
+	//
+	float numHLines = roundf(windowSize.height * scale);
+	float numVLines = roundf(windowSize.width * scale);
+
+	// Отрисовываем горизонтальные и вертикальные линии.
+	for (float i = 0; i <= numHLines; i++) {
+		float y = i / scale;
+		canvas.draw_line(0, y, windowSize.width, y, clan::Colorf::darkblue);
+	}
+	for (float i = 0; i <= numVLines; i++) {
+		float x = i / scale;
+		canvas.draw_line(x, 0, x, windowSize.height, clan::Colorf::darkblue);
+	}
+}
+
+// Отрисовывает клетку в компактном виде - с координатой и ресурсами, которые поместятся.
+// В функцию передаётся точка поверхности, прямоугольник, где её необходимо отрисовать и мировые координаты точки относительно окна.
+//
+void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan::Rectf &rect, int xLabel, int yLabel)
+{
+	// Ограничиваем область отрисовки
+	//canvas.set_cliprect(rect);
+
+	// Кличество строк, которые влезли бы в указанное пространство, исключая место под координату.
+	float numLinesInRect = roundf(rect.get_height() / cCompactCellResLineHeight - 1);
+
+	// Количество строк с ресурсами - все, включая энергии, или сколько поместится.
+	float numLines = clan::min(float(globalEarth.getElemCount() + 2), numLinesInRect);
+
+	// Отступ слева для надписей.
+	const float indent = rect.left + 3;
+
+	// Отрисовываем солнечную энергию, геотермальную и количества элементов.
+	if (numLines > 0) {
+
+		// Координата строки.
+		float yLine = rect.top + 16;
+
+		cellFont.draw_text(canvas, indent, yLine, cSolar + '\t' + clan::StringHelp::float_to_text(d.solarEnergy * 100) + "%");
+
+		if (numLines > 1) {
+
+			yLine += cCompactCellResLineHeight;
+			cellFont.draw_text(canvas, indent, yLine, cEnergy + '\t' + clan::StringHelp::float_to_text(d.energy * 100) + "%");
+			yLine += cCompactCellResLineHeight;
+
+
+			// В цикле отрисовываем строки с ресурсами.
+			for (int i = 0; i < numLines - 2; i++) {
+
+				// Значение в процентах.
+				//float percent = d.res[i];
+				float percent = d.res[i] * 100 / globalEarth.getResMaxValue(i);
+
+				cellFont.draw_text(canvas, indent, yLine, globalEarth.getResName(i) + '\t' + clan::StringHelp::float_to_text(percent) + "%");
+				yLine += cCompactCellResLineHeight;
+			}
+		}
+	}
+
+	// Отрисовываем в нижнем левом углу координату.
+	cellFont.draw_text(canvas, indent, rect.bottom - 3, "X:Y " + clan::StringHelp::int_to_text(xLabel) + ":" + clan::StringHelp::int_to_text(yLabel));
+
+	// Восстановим область отрисовки на всё полотно.
+	//canvas.reset_cliprect();
 }
 
 // Отрисовывает модель.

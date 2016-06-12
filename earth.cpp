@@ -46,8 +46,8 @@ Earth globalEarth;
 // =============================================================================
 Dot::Dot() 
 {
-	res = new float[globalEarth.get_elemCount()];
-	memset(res, 0, sizeof(float) * globalEarth.get_elemCount());
+	res = new float[globalEarth.getElemCount()];
+	memset(res, 0, sizeof(float) * globalEarth.getElemCount());
 }
 
 Dot::~Dot()
@@ -172,7 +172,7 @@ void Solar::Shine(const DemiTime &timeModel)
 
 	// Двигаемся по всем точкам
 	//
-	float lightRadius = globalEarth.get_lightRadius();
+	float lightRadius = globalEarth.getLightRadius();
 	for (float x = -lightRadius; x <= lightRadius; x++)
 		for (float y = -lightRadius; y <= lightRadius; y++) {
 
@@ -205,7 +205,7 @@ clan::Pointf Solar::getPos(const DemiTime &timeModel)
 	const float halfYear = cDaysInYear / 2;
 
 	// Высота тропиков
-	const float tropic = globalEarth.get_tropicHeight();
+	const float tropic = globalEarth.getTropicHeight();
 
 	// Когда идёт первая половина года, надо от экватора отнимать долю, а когда вторая - прибавлять.
 	//

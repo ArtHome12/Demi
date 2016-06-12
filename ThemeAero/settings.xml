@@ -2,13 +2,13 @@
 <resources>
 	<section name="MainWindow">
 		<!--Main window position, size and state (6-maximized, 7-minimized, 10-normal)-->
-		<item name="Appearance" left="319" top="63" width="1304" height="841" state="10" is_fullscreen="false"/>
+		<item name="Appearance" left="319" top="63" width="1304" height="841" state="6" is_fullscreen="false"/>
 		<!--Top menu states-->
 		<item name="TopMenuState" SettingsWindowVisible="true" ModelIlluminated="false"/>
 	</section>--&gt;
 	<section name="Project">
 		<!--Project filename, XML-part. Using a relative path for easy moving/copying the application, if possible.-->
-		<item name="ProjectName" filename="../11.demi"/>
+		<item name="ProjectName" filename=""/>
 		<!--Checkboxes on settings window-->
 		<item name="Checkboxes" autorun="false" autosave="false" autosave_hourly="false" top="0" state="7" width="1280" height="1024" left="0"/>
 	</section>--&gt;

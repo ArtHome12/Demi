@@ -148,10 +148,12 @@ public:
 
 	// Доступ к свойствам.
 	clan::Sizef get_worldSize() { return worldSize; }
-	int get_elemCount() { return elemCount; }
-	int get_energyCount() { return energyCount; }
-	float get_lightRadius() { return lightRadius; }
-	float get_tropicHeight() { return tropicHeight; }
+	int getElemCount() { return elemCount; }
+	int getEnergyCount() { return energyCount; }
+	float getLightRadius() { return lightRadius; }
+	float getTropicHeight() { return tropicHeight; }
+	float getResMaxValue(int index) { return arResMax[index]; }
+	const std::string &getResName(int index) { return arResNames[index]; }
 
 private:
 
