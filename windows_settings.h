@@ -16,14 +16,10 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 class WindowsSettings :	public clan::View
 {
 public:
-	WindowsSettings(clan::Canvas &canvas);
+	WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsStorage> &pSettingsStorage);
 	~WindowsSettings();
 
 private:
-
-	// Настройки
-	std::shared_ptr<SettingsStorage> pSettings;
-
 	// Название текущей модели
 	std::string modelFilename;
 	std::shared_ptr<clan::LabelView> pLabelModelName;
@@ -32,6 +28,8 @@ public:
 	// Кнопка запуска или приостановки расчёта.
 	std::shared_ptr<clan::ButtonView> pButtonRunPause;
 private:
+	// Настройки.
+	std::shared_ptr<SettingsStorage> &pSettings;
 
 	// Чекбокс автозапуска модели
 	std::shared_ptr<clan::CheckBoxView> pCBAutoRun;

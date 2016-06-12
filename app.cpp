@@ -36,23 +36,22 @@ App::App()
 	clan::OpenGLTarget::set_current();
 #endif
 
-	// Create a source for our resources
-	clan::FileResourceDocument doc(clan::FileSystem("ThemeAero"));
-	clan::ResourceManager resources = clan::FileResourceManager::create(doc);
+	// Звуковая подсистема.
+	pSoundOutput = std::make_shared<clan::SoundOutput>(44100, 192);
+
+	// Ресурсы необходимо создавать после инициализации графической подсистемы.
+	pSettings = std::make_shared<SettingsStorage>();
 
 	// Mark this thread as the UI thread
-	ui_thread = clan::UIThread(resources);
-
-	// Настройки программы
-	SettingsStorage settings;
+	ui_thread = clan::UIThread(pSettings->resManager);
 
 	// Create a window:
 	clan::DisplayWindowDescription desc;
 	desc.set_title("Demi: Hello World");
 	desc.set_allow_resize(true);
-	desc.set_position(settings.getMainWindowPosition(), false);
+	desc.set_position(pSettings->getMainWindowPosition(), false);
 	desc.set_visible(false);
-	desc.set_fullscreen(settings.getIsFullScreen());
+	desc.set_fullscreen(pSettings->getIsFullScreen());
 	pWindow = std::make_shared<clan::TopLevelWindow>(desc);
 	const std::shared_ptr<clan::View> pRootView = pWindow->root_view();
 
@@ -69,8 +68,8 @@ App::App()
 	canvas = pRootView->canvas();
 
 	// Иконки приложения.
-	pWindow->display_window().set_small_icon(clan::PixelBuffer("Flower16.png", doc.get_file_system()));
-	pWindow->display_window().set_large_icon(clan::PixelBuffer("Flower32.png", doc.get_file_system()));
+	pWindow->display_window().set_small_icon(clan::PixelBuffer("Flower16.png", pSettings->fileResDoc.get_file_system()));
+	pWindow->display_window().set_large_icon(clan::PixelBuffer("Flower32.png", pSettings->fileResDoc.get_file_system()));
 
 	// Панель меню и информации в вехней части окна
 	auto pTopPanel = std::make_shared<clan::View>();
@@ -84,7 +83,7 @@ App::App()
 	pMenuButton->style()->set("margin: 3px");
 	pMenuButton->style()->set("width: 23px");
 	pMenuButton->set_sticky(true);
-	pMenuButton->image_view()->set_image(clan::Image(canvas, "Options.png", doc.get_file_system()));
+	pMenuButton->image_view()->set_image(clan::Image(canvas, "Options.png", pSettings->fileResDoc.get_file_system()));
 	pMenuButton->image_view()->style()->set("padding: 0 3px");
 	pMenuButton->func_clicked() = clan::bind_member(this, &App::on_menuButton_down);
 	pTopPanel->add_child(pMenuButton);
@@ -138,22 +137,40 @@ App::App()
 	pButtonScaleModel->func_clicked() = clan::bind_member(this, &App::on_menuScaleModelButton_down);
 	pTopPanel->add_child(pButtonScaleModel);
 
+	// Кнопка постоянного освещения мира.
+	pButtonIlluminatedModel = Theme::create_button();
+	pButtonIlluminatedModel->style()->set("margin: 3px");
+	pButtonIlluminatedModel->style()->set("width: 23px");
+	pButtonIlluminatedModel->set_sticky(true);
+	pButtonIlluminatedModel->image_view()->set_image(clan::Image(canvas, "Options.png", pSettings->fileResDoc.get_file_system()));
+	pButtonIlluminatedModel->image_view()->style()->set("padding: 0 3px");
+	pButtonIlluminatedModel->func_clicked() = clan::bind_member(this, &App::on_menuIlluminatedModelButton_down);
+	pTopPanel->add_child(pButtonIlluminatedModel);
 
 	// Окно настроек
-	pWindowSettings = std::make_shared<WindowsSettings>(canvas);
+	pWindowSettings = std::make_shared<WindowsSettings>(canvas, pSettings);
 	pWindowSettings->set_hidden(true);
 	pWindow->root_view()->add_child(pWindowSettings);
 
 	// Окно модели
-	pModelRender = std::make_shared<ModelRender>();
+	pModelRender = std::make_shared<ModelRender>(pSettings);
 	pModelRender->style()->set("flex: auto");
 	pWindow->root_view()->add_child(pModelRender);
 
-	pMenuButton->set_pressed(true);
-	on_menuButton_down();
+	// Отобразим окно настроек.
+	if (pSettings->getTopMenuIsSettingsWindowVisible()) {
+		pMenuButton->set_pressed(true);
+		on_menuButton_down();
+	}
+
+	// Настроим освещённость.
+	if (pSettings->getTopMenuIsModelIlluminated()) {
+		pButtonIlluminatedModel->set_pressed(true);
+		on_menuIlluminatedModelButton_down();
+	}
 
 	// Показываем окно в состоянии, в котором оно было при закрытии (свёрнуто, максимизировано и т.д.)
-	pWindow->show(settings.getMainWindowState());
+	pWindow->show(pSettings->getMainWindowState());
 
 	// Инициализируем счётчик времени.
 	game_time.reset();
@@ -161,9 +178,6 @@ App::App()
 
 App::~App()
 {
-	// Настройки программы
-	SettingsStorage settings;
-
 	// Для удобства.
 	clan::DisplayWindow &dw = pWindow->display_window();
 
@@ -175,7 +189,11 @@ App::~App()
 		state = clan::WindowShowType::minimize;
 
 	// Сохраняем местоположение и состояние главного окна.
-	settings.setMainWindowPositionAndState(dw.get_geometry(), state, dw.is_fullscreen());
+	pSettings->setMainWindowSettings(dw.get_geometry(),
+		state, 
+		dw.is_fullscreen(), 
+		pMenuButton->pressed(), 
+		pModelRender->getIlluminatedWorld());
 }
 
 
@@ -212,23 +230,30 @@ bool App::update()
 		pButtonTopLeftModelCoordinate->label()->set_text("X:Y "
 			+ clan::StringHelp::int_to_text(int(topLeftWorld.x)) + ":"
 			+ clan::StringHelp::int_to_text(int(topLeftWorld.y)), true);
-		isDirty = true; // Пометим необхдимость перерисовать модель.
+		isDirty = true; // Пометим, что необхдимо перерисовать модель.
 	}
 
 	// Выведем масштаб координат мира.
 	float scaleWorld = pModelRender->getScaleWorld();
 	if (lastScaleWorld != scaleWorld) {
 		lastScaleWorld = scaleWorld;
-		pButtonScaleModel->label()->set_text("Scale "	+ clan::StringHelp::float_to_text(scaleWorld, 3, false), true);
-		isDirty = true; // Пометим необхдимость перерисовать модель.
+		pButtonScaleModel->label()->set_text("Scale " + clan::StringHelp::float_to_text(scaleWorld, 3, false), true);
+		isDirty = true; 
 	}
+
+	// Проверим, не изменилась ли освещённость.
+	bool illuminatedWorld = pModelRender->getIlluminatedWorld();
+	if (lastIlluminatedWorld != illuminatedWorld) {
+		lastIlluminatedWorld = illuminatedWorld;
+		isDirty = true; 
+	} 
 
 	// Отрисуем содержимое окна с моделью.
 	DemiTime modelTime = globalEarth.getModelTime();
 	if (lastModelTime != modelTime) {
 		lastModelTime = modelTime;
 		pLabelModelTime->set_text(modelTime.getDateStr(), true);
-		isDirty = true; // Пометим необхдимость перерисовать модель.
+		isDirty = true; 
 	}
 
 	if (isDirty) 
@@ -253,7 +278,9 @@ void App::on_input_down(const clan::KeyEvent &e)
 	}
 	else if (e.key() == clan::Key::f2)
 	{
-		pModelRender->toggleIlluminated();
+		// Переключаем подсветку модели.
+		pButtonIlluminatedModel->set_pressed(!pButtonIlluminatedModel->pressed());
+		on_menuIlluminatedModelButton_down();
 	}
 }
 
@@ -313,3 +340,8 @@ void App::on_menuScaleModelButton_down()
 	pModelRender->setScaleWorld(1.0f);
 }
 
+void App::on_menuIlluminatedModelButton_down()
+{
+	// Показываем или прячем в клиентской области окно настроек.
+	pModelRender->setIlluminatedWorld(pButtonIlluminatedModel->pressed());
+}

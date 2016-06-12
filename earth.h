@@ -52,7 +52,7 @@ public:
 //
 class LocalCoord { 
 public:
-	LocalCoord(Dot *arDots, float x, float y) : dots(arDots), xcenter(x), ycenter(y) {};
+	LocalCoord(Dot *arDots, const clan::Pointf &coord) : dots(arDots), center(coord) {};
 
 	Dot& get_dot(float x, float y) const;
 
@@ -61,7 +61,7 @@ private:
 	Dot *dots;
 
 	// ÷ентр локальных координат, выраженный в глобальных координатах.
-	float xcenter, ycenter;
+	clan::Pointf center;
 };
 
 
@@ -103,10 +103,8 @@ public:
 class Solar {
 private:
 
-	// ¬озвращает позицию дл€ солнца в зависимости от дн€ года (по вертикали мира).
-	float YPos(const DemiTime &timeModel);
-	// ¬озвращает позицию дл€ солнца в зависимости от времени суток (по горизонтали мира).
-	float XPos(const DemiTime &timeModel);
+	// ¬озвращает позицию дл€ солнца в зависимости от времени.
+	clan::Pointf getPos(const DemiTime &timeModel);
 
 public:
 
@@ -120,8 +118,7 @@ public:
 //
 class Geothermal {
 public:
-	float XPos;
-	float YPos;
+	clan::Pointf coord;
 };
 
 
@@ -150,8 +147,7 @@ public:
 	DemiTime getModelTime() { return timeBackup; }
 
 	// ƒоступ к свойствам.
-	float get_worldWidth() { return worldWidth; }
-	float get_worldHeight() { return worldHeight; }
+	clan::Sizef get_worldSize() { return worldSize; }
 	int get_elemCount() { return elemCount; }
 	int get_energyCount() { return energyCount; }
 	float get_lightRadius() { return lightRadius; }
@@ -177,8 +173,7 @@ private:
 
 
 	// –азмеры мира.
-	float worldWidth = 0;
-	float worldHeight = 0;
+	clan::Sizef worldSize;
 
 	//  оличество химических элементов, существующих в модели.
 	int elemCount = 0;
@@ -216,7 +211,7 @@ private:
 	void FillRectResource(int resId, float amount, const clan::Rectf &rect);
 
 	// «адаЄт местоположение источников геотермальной энергии.
-	void AddGeothermal(int i, float x, float y);
+	void AddGeothermal(int i, const clan::Pointf &coord);
 
 private:
 

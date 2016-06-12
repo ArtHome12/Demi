@@ -27,11 +27,8 @@ const std::string cProjectTemplate = "ThemeAero/template.demi";
 const std::string cMessageBoxText = "File %1 exists. Rewrite it?";
 
 
-WindowsSettings::WindowsSettings(clan::Canvas &canvas)
+WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsStorage> &pSettingsStorage) : pSettings(pSettingsStorage)
 {
-	// Настройки программы
-	pSettings = std::make_shared<SettingsStorage>();
-
 	style()->set("background: lightgray");
 	style()->set("flex: auto");
 	style()->set("flex-direction: column");
@@ -64,7 +61,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas)
 	auto bNew = Theme::create_button();
 	bNew->style()->set("width: 80px");
 	bNew->style()->set("margin-left: 5px");
-	bNew->image_view()->set_image(clan::Image(canvas, "ThemeAero/New.png"));
+	bNew->image_view()->set_image(clan::Image(canvas, "New.png", pSettings->fileResDoc.get_file_system()));
 	bNew->image_view()->style()->set("padding-left: 3px");
 	bNew->label()->set_text("New");
 	bNew->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownNew);
@@ -73,7 +70,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas)
 	auto bOpen = Theme::create_button();
 	bOpen->style()->set("width: 80px");
 	bOpen->style()->set("margin-left: 12px");
-	bOpen->image_view()->set_image(clan::Image(canvas, "ThemeAero/Open.png"));
+	bOpen->image_view()->set_image(clan::Image(canvas, "Open.png", pSettings->fileResDoc.get_file_system()));
 	bOpen->image_view()->style()->set("padding-left: 3px");
 	bOpen->label()->set_text("Open");
 	bOpen->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownOpen);
@@ -82,7 +79,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas)
 	auto bSave = Theme::create_button();
 	bSave->style()->set("width: 80px");
 	bSave->style()->set("margin-left: 12px");
-	bSave->image_view()->set_image(clan::Image(canvas, "ThemeAero/Save.png"));
+	bSave->image_view()->set_image(clan::Image(canvas, "Save.png", pSettings->fileResDoc.get_file_system()));
 	bSave->image_view()->style()->set("padding-left: 3px");
 	bSave->label()->set_text("Save");
 	bSave->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownSave);
@@ -91,7 +88,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas)
 	auto bSaveAs = Theme::create_button();
 	bSaveAs->style()->set("width: 80px");
 	bSaveAs->style()->set("margin-left: 12px");
-	bSaveAs->image_view()->set_image(clan::Image(canvas, "ThemeAero/SaveAs.png"));
+	bSaveAs->image_view()->set_image(clan::Image(canvas, "SaveAs.png", pSettings->fileResDoc.get_file_system()));
 	bSaveAs->image_view()->style()->set("padding-left: 3px");
 	bSaveAs->label()->set_text("SaveAs");
 	bSaveAs->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownSaveAs);
@@ -100,7 +97,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas)
 	auto bRestart = Theme::create_button();
 	bRestart->style()->set("width: 80px");
 	bRestart->style()->set("margin-left: 12px");
-	bRestart->image_view()->set_image(clan::Image(canvas, "ThemeAero/Restart.png"));
+	bRestart->image_view()->set_image(clan::Image(canvas, "Restart.png", pSettings->fileResDoc.get_file_system()));
 	bRestart->image_view()->style()->set("padding-left: 3px");
 	bRestart->label()->set_text("Restart");
 	bRestart->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownRestart);
@@ -110,7 +107,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas)
 	pButtonRunPause->style()->set("width: 110px");
 	pButtonRunPause->style()->set("margin-left: 12px");
 	pButtonRunPause->set_sticky(true);
-	pButtonRunPause->image_view()->set_image(clan::Image(canvas, "ThemeAero/StartStop.png"));
+	pButtonRunPause->image_view()->set_image(clan::Image(canvas, "StartStop.png", pSettings->fileResDoc.get_file_system()));
 	pButtonRunPause->image_view()->style()->set("padding-left: 3px");
 	pButtonRunPause->label()->set_text("Run / Pause");
 	pButtonRunPause->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownRunPause);

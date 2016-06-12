@@ -105,28 +105,28 @@ void Dot::get_color(clan::Colorf &aValue) const
 // =============================================================================
 Dot& LocalCoord::get_dot(float x, float y) const
 {
+	// Для удобства.
+	float ww = globalEarth.get_worldSize().width;
+	float wh = globalEarth.get_worldSize().height;
+
 	// По горизонтали координату переносим с одного края на другой.
-	//
-	//x += xcenter;
-	x = roundf(x + xcenter);
+	x = roundf(x + center.x);
 	if (x < 0)
-		x += globalEarth.get_worldWidth();
-	else if (x >= globalEarth.get_worldWidth())
-		x -= globalEarth.get_worldWidth();
+		x += ww;
+	else if (x >= ww)
+		x -= ww;
 
 	// По вертикали пока просто отрезаем.
-	//
-	//y += ycenter;
-	y = roundf(y + ycenter);
+	y = roundf(y + center.y);
 	if (y < 0) 
 		y = 0;
-	else if (y >= globalEarth.get_worldHeight())
-		y = globalEarth.get_worldHeight() - 1;
+	else if (y >= wh)
+		y = wh - 1;
 
 	//_ASSERT(x < globalEarth.get_worldWidth());
 	//_ASSERT(y < globalEarth.get_worldHeight());
 
-	return dots[int(x + y * globalEarth.get_worldWidth())];
+	return dots[int(x + y * ww)];
 }
 
 // =============================================================================
@@ -165,15 +165,10 @@ void Solar::Shine(const DemiTime &timeModel)
 {
 	// Облучает энергией для указанного момента времени землю.
 	//
-	// Сброс старой освещённости должен был быть сделан при перемешивании, но практически она затухает сама по мере удаления от центра.
+	// Сброс старой освещённости должен был быть сделан при перемешивании, но практически она затирается сама.
 
-	// Определим центр солнца.
-	//
-	float cx = XPos(timeModel);
-	float cy = YPos(timeModel);
-
-	// Определим систему координат.
-	LocalCoord coord(globalEarth.arDots, cx, cy);
+	// Определим систему координат с положением солнца в центре.
+	LocalCoord coord(globalEarth.arDots, getPos(timeModel));
 
 	// Двигаемся по всем точкам
 	//
@@ -191,31 +186,37 @@ void Solar::Shine(const DemiTime &timeModel)
 }
 
 
-float Solar::YPos(const DemiTime &timeModel)
+clan::Pointf Solar::getPos(const DemiTime &timeModel)
 {
-	// Возвращает позицию для солнца в зависимости от дня года (по вертикали мира).
-	//
-	// Солнце полгода двигается от одной границы тропиков до другой и полгода в обратном направлении, то есть через полгода позиция повторяется.
-	//
+	// Возвращает позицию для солнца в зависимости от времени.
+
+	// Размеры мира.
+	const clan::Sizef worldSize = globalEarth.get_worldSize();
+
+	// Позиция по горизонтали зависит от времени суток.
+	// Солнце двигается с востока на запад пропорционально прошедшей доле суток.
+	clan::Pointf result(worldSize.width * (1.0f - float(timeModel.sec - 1) / (cTicksInDay - 1)), 0.0f);
+
+	// Позиция по вертикали зависит от дня года.
+	// Солнце полгода двигается от одной границы тропиков до другой и полгода в обратном направлении, 
+	// то есть через полгода позиция повторяется.
 	
 	// Половина года, для удобства.
 	const float halfYear = cDaysInYear / 2;
 
+	// Высота тропиков
+	const float tropic = globalEarth.get_tropicHeight();
+
 	// Когда идёт первая половина года, надо от экватора отнимать долю, а когда вторая - прибавлять.
 	//
 	if (timeModel.day < halfYear)
-		return (globalEarth.get_worldHeight() - globalEarth.get_tropicHeight()) / 2 + timeModel.day * globalEarth.get_tropicHeight() / halfYear;
-	return (globalEarth.get_worldHeight() + globalEarth.get_tropicHeight()) / 2 - (timeModel.day - halfYear) * globalEarth.get_tropicHeight() / halfYear;
+		result.y = (worldSize.height - tropic) / 2 + timeModel.day * tropic / halfYear;
+	else
+		result.y = (worldSize.height + tropic) / 2 - (timeModel.day - halfYear) * tropic / halfYear;
+
+	return result;
 }
 
-
-float Solar::XPos(const DemiTime &timeModel)
-{
-	// Возвращает позицию для солнца в зависимости от времени суток (по горизонтали мира).
-	//
-	// Солнце двигается с востока на запад пропорционально прошедшей доле суток.
-	return globalEarth.get_worldWidth() * (1.0f - float(timeModel.sec - 1) / (cTicksInDay - 1));
-}
 
 
 // =============================================================================
@@ -279,7 +280,7 @@ void Earth::FillRectResource(int resId, float amount, const clan::Rectf &rect)
 
 	for (float x = rect.left; x < rect.right; ++x)
 		for (float y = rect.top; y < rect.bottom; ++y)
-			arDots[int(x + y * worldWidth)].res[resId] = amount;
+			arDots[int(x + y * worldSize.width)].res[resId] = amount;
 }
 
 
@@ -289,7 +290,7 @@ void Earth::Diffusion()
 	//
 	// Граница массива, на которую заходить нельзя.
 	Dot *cur = arDots;	// Исходная точка для переноса ресурсов - первая точка массива.
-	Dot *last = cur + int(worldWidth * worldHeight);	// Точка после последней точки массива.
+	Dot *last = cur + int(worldSize.width * worldSize.height);	// Точка после последней точки массива.
 	Dot *dest;			// Конечная точка
 
 	while (true) {
@@ -312,22 +313,22 @@ void Earth::Diffusion()
 			dest = cur + 1;					// на восток.
 			break;
 		case 2 :
-			dest = cur + 1 + int(worldWidth);	// на юго-восток.
+			dest = cur + 1 + int(worldSize.width);	// на юго-восток.
 			break;
 		case 3 :
-			dest = cur + int(worldWidth);		// на юг.
+			dest = cur + int(worldSize.width);		// на юг.
 			break;
 		case 4 :
-			dest = cur - 1 + int(worldWidth);	// на юго-запад.
+			dest = cur - 1 + int(worldSize.width);	// на юго-запад.
 			break;
 		case 5 :
 			dest = cur - 1;					// на запад.
 			break;
 		case 6 :
-			dest = cur - 1 - int(worldWidth);	// на северо-запад.
+			dest = cur - 1 - int(worldSize.width);	// на северо-запад.
 			break;
 		default:
-			dest = cur - int(worldWidth);		// на север.
+			dest = cur - int(worldSize.width);		// на север.
 		}
 		
 		// Откорректируем в случае выхода за пределы, иначе всё вещество скопится у нижнего края из-за дрейфа
@@ -354,19 +355,18 @@ void Earth::Diffusion()
 }
 
 
-void Earth::AddGeothermal(int i, float x, float y)
+void Earth::AddGeothermal(int i, const clan::Pointf &coord)
 {
 	// Задаёт местоположение источников геотермальной энергии.
 	//
 
-	arEnergy[i].XPos = x;
-	arEnergy[i].YPos = y;
+	arEnergy[i].coord = coord;
 
 	// Так как геотермальные источники на данный момент считаем неизменяемыми, сразу же зададим распределение энергии.
 	//
 
 	// Определим систему координат.
-	LocalCoord coord(arDots, x, y);
+	LocalCoord geothermalCoord(arDots, coord);
 
 	for (float xp = -cGeothermRadius; xp <= cGeothermRadius; xp++)
 		for (float yp = -cGeothermRadius; yp <= cGeothermRadius; yp++) {
@@ -376,7 +376,7 @@ void Earth::AddGeothermal(int i, float x, float y)
 
 			// Если оно больше заданного радиуса, ничего не делаем, иначе зададим освещённость, обратную расстоянию в долях от 0 до 1.
 			if (r < cGeothermRadius) 
-				coord.get_dot(xp, yp).energy = (cGeothermRadius - r) / cGeothermRadius;
+				geothermalCoord.get_dot(xp, yp).energy = (cGeothermRadius - r) / cGeothermRadius;
 		}
 }
 
@@ -400,19 +400,18 @@ void Earth::LoadModel(const std::string &filename)
 	const clan::DomElement &prop = resDoc->get_resource(cResGlobalsEarthSize).get_element();
 
 	// Ширина мира.
-	worldWidth = 933.0f;
-	//worldWidth = float(prop.get_attribute_int(cResGlobalsEarthSizeWidth));
+	worldSize.width = float(prop.get_attribute_int(cResGlobalsEarthSizeWidth));
 
 	// Высота мира
-	worldHeight = 339.0f;
-	//worldHeight = round(worldWidth * prop.get_attribute_float(cResGlobalsEarthSizeHeightRatio));
+	worldSize.height = round(worldSize.width * prop.get_attribute_float(cResGlobalsEarthSizeHeightRatio));
 
-	if (worldWidth <= 0 || worldWidth > 30000 || worldHeight <= 0 || worldHeight > 30000)
-		throw clan::Exception("Invalid world size (width=" + clan::StringHelp::int_to_text(int(worldWidth)) + ", height=" + clan::StringHelp::int_to_text(int(worldHeight)) + ")");
+	if (worldSize.width <= 0 || worldSize.width > 30000 || worldSize.height <= 0 || worldSize.height > 30000)
+		throw clan::Exception("Invalid world size (width=" + clan::StringHelp::int_to_text(int(worldSize.width)) 
+			+ ", height=" + clan::StringHelp::int_to_text(int(worldSize.height)) + ")");
 
 	// Радиус солнечного пятна и высота тропиков зависит от размера мира.
-	lightRadius = round(0.9f * worldHeight / 2);
-	tropicHeight = round(worldHeight / 5);
+	lightRadius = round(0.9f * worldSize.height / 2);
+	tropicHeight = round(worldSize.height / 5);
 
 	// Названия ресурсов.
 	const std::vector<std::string>& names = resDoc->get_resource_names_of_type(cResElementsType, cResElementsSection);
@@ -428,7 +427,7 @@ void Earth::LoadModel(const std::string &filename)
 
 	// Выделим память под массивы.
 	//
-	arDots = new Dot[int(worldWidth * worldHeight)];		// точки поверхности.
+	arDots = new Dot[int(worldSize.width * worldSize.height)];		// точки поверхности.
 	arResColors = new clan::Colorf[elemCount];
 	arResMax = new float[elemCount];
 	arResNames = new std::string[elemCount];
@@ -472,11 +471,11 @@ void Earth::LoadModel(const std::string &filename)
 
 			float r = float(rectItem.get_attribute_int("right"));
 			if (r == 0)
-				r = worldWidth;
+				r = worldSize.width;
 
 			float b = float(rectItem.get_attribute_int("bottom"));
 			if (b == 0)
-				b = worldHeight;
+				b = worldSize.height;
 
 			// Область.
 			clan::Rectf rect(float(rectItem.get_attribute_int("left")), float(rectItem.get_attribute_int("top")), r, b);
@@ -498,7 +497,7 @@ void Earth::LoadModel(const std::string &filename)
 			clan::DomElement &pointItem = nodes.item(j).to_element();
 
 			// Заполняем точки.
-			AddGeothermal(i, float(pointItem.get_attribute_int("x")), float(pointItem.get_attribute_int("y")));
+			AddGeothermal(i, clan::Pointf(float(pointItem.get_attribute_int("x")), float(pointItem.get_attribute_int("y"))));
 		}
 	}
 }

@@ -15,13 +15,24 @@ class SettingsStorage
 public:
 	SettingsStorage();
 
-	std::shared_ptr<clan::XMLResourceDocument> pResDoc;
+	// Внешние ресурсы.
+	clan::FileResourceDocument fileResDoc;
+	clan::XMLResourceDocument XMLResDoc;
+	clan::ResourceManager resManager;
 
 	// Положение и состояние главного окна.
 	const clan::Rectf getMainWindowPosition();
 	const bool getIsFullScreen() { return isFullScreen; }
 	const clan::WindowShowType getMainWindowState() { return mainWindowState; }
-	void setMainWindowPositionAndState(const clan::Rectf & rect, const clan::WindowShowType state, bool isFullScreen);
+	void setMainWindowSettings(const clan::Rectf & rect, 
+		const clan::WindowShowType state, 
+		bool isFullScreen, 
+		bool isWindowsSettingsVisible, 
+		bool isModelIlluminated);
+
+	// Состояние панели меню.
+	const bool getTopMenuIsSettingsWindowVisible() { return topMenuSettingsWindowVisible; }
+	const bool getTopMenuIsModelIlluminated() { return topMenuModelIlluminated; }
 
 	// Имя текущего проекта и чекбоксы
 	const std::string getProjectFilename() { return projectFilename; }
@@ -39,6 +50,10 @@ private:
 	int mainWindowHeight = 600;
 	clan::WindowShowType mainWindowState = clan::WindowShowType::show_default;
 	bool isFullScreen = false;
+
+	// Состояние панели меню
+	bool topMenuSettingsWindowVisible = false;
+	bool topMenuModelIlluminated = false;
 
 	// Имя текущего проекта и чекбоксы
 	std::string projectFilename = "";

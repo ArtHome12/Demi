@@ -10,8 +10,8 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 
 #include "precomp.h"
 #include "earth.h"
+#include "settings_storage.h"
 #include "model_render.h"
-
 
 // Масштаб, при котором происходит переключение отображения по точкам на отображение клеток.
 const float cPixelDetailLevel = 0.15f;
@@ -35,7 +35,9 @@ const float cScaleInc = 1.1f;
 const float xWorldInc = 120;
 const float yWorldInc = xWorldInc;
 
-ModelRender::ModelRender()
+ModelRender::ModelRender(std::shared_ptr<SettingsStorage> &pSettingsStorage) : pSettings(pSettingsStorage),
+	soundIlluminateOn("IlluminateOn.wav", false, pSettingsStorage->fileResDoc.get_file_system()),
+	soundIlluminateOff("IlluminateOff.wav", false, pSettingsStorage->fileResDoc.get_file_system())
 {
 	slots.connect(sig_pointer_press(), this, &ModelRender::on_mouse_down);
 	slots.connect(sig_pointer_release(), this, &ModelRender::on_mouse_up);
@@ -49,7 +51,7 @@ void ModelRender::render_content(clan::Canvas &canvas)
 	// Отрисовывает модель в указанном месте.
 	//
 	// Получим размеры для отображения.
-	clan::Sizef	windowSize = geometry().content_size();
+	const clan::Sizef	windowSize = geometry().content_size();
 
 	// Если некуда рисовать, выходим.
 	if (windowSize.width == 0 || windowSize.height == 0)
@@ -67,13 +69,12 @@ void ModelRender::render_content(clan::Canvas &canvas)
 	const float scaledHeight = windowSize.height * scale;
 
 	// Для оптимизации.
-	const float earthWidth = globalEarth.get_worldWidth();
-	const float earthHeight = globalEarth.get_worldHeight();
+	const clan::Sizef earthSize = globalEarth.get_worldSize();
 
 	// Если размер окна стал больше отображаемого мира, надо откорректировать масштаб.
-	if (scaledWidth > earthWidth || scaledHeight > earthHeight) {
-		float w = earthWidth / windowSize.width;
-		float h = earthHeight / windowSize.height;
+	if (scaledWidth > earthSize.width || scaledHeight > earthSize.height) {
+		float w = earthSize.width / windowSize.width;
+		float h = earthSize.height / windowSize.height;
 		scale = w < h ? w : h;
 	}
 	else {
@@ -81,18 +82,18 @@ void ModelRender::render_content(clan::Canvas &canvas)
 		// Если в результате увеличения размера окно выезжает за границу мира, надо откорректировать мировые координаты.
 		// По вертикали ограничиваем, по горизонтали - циклическая прокрутка.
 		if (topLeftWorld.x < 0.0f)
-			topLeftWorld.x += earthWidth;
-		else if (topLeftWorld.x >= earthWidth)
-			topLeftWorld.x -= earthWidth;
+			topLeftWorld.x += earthSize.width;
+		else if (topLeftWorld.x >= earthSize.width)
+			topLeftWorld.x -= earthSize.width;
 
 		if (topLeftWorld.y < 0.0f)
 			topLeftWorld.y = 0.0f;
-		else if (topLeftWorld.y + scaledHeight > earthHeight)
-			topLeftWorld.y = earthHeight - scaledHeight;
+		else if (topLeftWorld.y + scaledHeight > earthSize.height)
+			topLeftWorld.y = earthSize.height - scaledHeight;
 	}
 
 	// Определим систему координат.
-	LocalCoord coordSystem(globalEarth.getCopyDotsArray(), topLeftWorld.x, topLeftWorld.y);
+	LocalCoord coordSystem(globalEarth.getCopyDotsArray(), topLeftWorld);
 
 	// В зависимости от масштаба, отрисовываем точки либо клетки.
 	if (scale >= cPixelDetailLevel) {
@@ -221,8 +222,6 @@ int max1(float a)
 
 void ModelRender::on_mouse_down(clan::PointerEvent &e)
 {
-	//clan::InputDevice &keyboard = pMainWindow->get_ic().get_keyboard();
-
 	switch (e.button())
 	{
 	case clan::PointerButton::middle:
@@ -230,15 +229,14 @@ void ModelRender::on_mouse_down(clan::PointerEvent &e)
 		// Включаем флаг прокрутки и запоминаем позицию
 		//
 		isScrollStart = true;
-		scrollWindowX = e.pos(this).x;
-		scrollWindowY = e.pos(this).y;
-		scrollWorldX = topLeftWorld.x;
-		scrollWorldY = topLeftWorld.y;
+		scrollWindow = e.pos(this);
+		scrollWorld = topLeftWorld;
 
 		// Захватываем события мыши, чтобы узнать об отпускании кнопки.
 		//pMainWindow->capture_mouse(true);
 
 		break;
+
 	case clan::PointerButton::wheel_up:
 
 		// Если зажата клавиша Ctrl, прокрутка вверх, если Shift, прокрутка вправо, иначе приближение.
@@ -248,10 +246,7 @@ void ModelRender::on_mouse_down(clan::PointerEvent &e)
 		else if (e.ctrl_down() || e.cmd_down())
 			topLeftWorld.y -= max1(yWorldInc * scale);
 		else
-			Approach(e.pos(this));
-
-		// Приводим изменения в действие.
-		//updateScaleSize();
+			Approach(e.pos(this), cScaleInc);
 		break;
 
 	case clan::PointerButton::wheel_down:
@@ -260,31 +255,75 @@ void ModelRender::on_mouse_down(clan::PointerEvent &e)
 		else if (e.ctrl_down() || e.cmd_down())
 			topLeftWorld.y += max1(yWorldInc * scale);
 		else
-			ToDistance(e.pos(this));
-
-		//updateScaleSize();
-		break;
-	default:
+			ToDistance(e.pos(this), cScaleInc);
 		break;
 	}
 }
 
 void ModelRender::on_mouse_up(const clan::PointerEvent &e)
 {
-
+	switch (e.button())
+	{
+	case clan::PointerButton::middle:
+		isScrollStart = false;
+		//pMainWindow->capture_mouse(false);
+		break;
+	}
 }
 
 void ModelRender::on_mouse_move(const clan::PointerEvent &e)
 {
+	if (isScrollStart) {
 
+		// Смещение мыши относительно точки нажатия средней кнопки.
+		clan::Pointf dif = scrollWindow - e.pos(this);
+
+		// По определённому смещению задаём новую мировую координату с учётом масштаба.
+		topLeftWorld = scrollWorld + dif * scale;
+	}
 }
 
 void ModelRender::on_mouse_dblclk(const clan::PointerEvent &e)
 {
+	switch (e.button())
+	{
+	case clan::PointerButton::middle:
 
+		// Если масштаб клетки с надписями, надо максимально отдалиться, иначе максимально приблизиться.
+		float scaleStep = 0;
+
+		// Делаем несколько шагов от текущего масштаба до требуемого.
+		//
+		if (scale <= cCompactCellDetailLevel) {
+
+			// Размеры окна для отображения.
+			const clan::Sizef windowSize = geometry().content_size();
+
+			// Размеры мира (для удобства).
+			const clan::Sizef worldSize = globalEarth.get_worldSize();
+
+			// Определим максимально-возможный масштаб.
+			const float maxScale = std::min<float>(worldSize.width / windowSize.width, worldSize.height / windowSize.height);
+
+			// Масштабируем до максимума или до 1.
+			scaleStep = float(pow(scale / (maxScale < 1 ? maxScale : 1), 1.0 / 13));
+		}
+		else
+			scaleStep = float(pow(scale / cCompactCellDetailLevel, 1.0 / 12));
+
+
+		// Запускаем анимацию.
+		//
+		for (int i = 0; i <= 12; ++i) {
+			Approach(e.pos(this), scaleStep);
+			//render_content();
+		}
+
+		break;
+	}
 }
 
-void ModelRender::Approach(const clan::Pointf &pos)
+void ModelRender::Approach(const clan::Pointf &pos, float scaleStep)
 {
 	// Уменьшает масштаб - приближает поверхность.
 	//
@@ -295,12 +334,11 @@ void ModelRender::Approach(const clan::Pointf &pos)
 	//
 
 	// Координаты мира под курсором до масштабирования (без учёта прокрутки topLeftWorld.x для оптимизации).
-	//
 	float wx1 = pos.x * scale;
 	float wy1 = pos.y * scale;
 
 	// Уменьшаем масштаб или увеличиваем (приближаем) поверхность.
-	scale /= cScaleInc;
+	scale /= scaleStep;
 
 	// Координаты мира под курсором после масштабирования.
 	//
@@ -312,19 +350,21 @@ void ModelRender::Approach(const clan::Pointf &pos)
 }
 
 
-void ModelRender::ToDistance(const clan::Pointf &pos)
+void ModelRender::ToDistance(const clan::Pointf &pos, float scaleStep)
 {
 	// Увеличивает масштаб - отдаляет поверхность.
 	//
 	// Меняем масштаб, отодвигая поверхность.
-	scale *= cScaleInc;
+	scale *= scaleStep;
 
-	const clan::Rect &viewRect = geometry().content_box();
+	//const clan::Rect &viewRect = geometry().content_box();
+	const clan::Sizef viewSize = geometry().content_size() * scale;
+	const clan::Sizef worldSize = globalEarth.get_worldSize();
 
 	// Коррекцию проводим только если не достигли минимального масштаба.
-	if (viewRect.get_width() * scale <= globalEarth.get_worldWidth() && viewRect.get_height() * scale <= globalEarth.get_worldHeight()) {
-		float wx1 = pos.x * scale / cScaleInc;
-		float wy1 = pos.y * scale / cScaleInc;
+	if (viewSize.width <= worldSize.width && viewSize.height <= worldSize.height) {
+		float wx1 = pos.x * scale / scaleStep;
+		float wy1 = pos.y * scale / scaleStep;
 		float wx2 = pos.x * scale;
 		float wy2 = pos.y * scale;
 		topLeftWorld.x += int(wx1 - wx2);
@@ -332,3 +372,12 @@ void ModelRender::ToDistance(const clan::Pointf &pos)
 	}
 }
 
+// Постоянная подсветка мира.
+void ModelRender::setIlluminatedWorld(bool newValue) 
+{ 
+	illuminated = newValue;
+	if (illuminated)
+		soundIlluminateOn.play();
+	else
+		soundIlluminateOff.play();
+}

@@ -21,6 +21,9 @@ private:
 
 	clan::Canvas canvas;
 
+	// Настройки программы
+	std::shared_ptr<SettingsStorage> pSettings;
+
 	// Надпись для отображения FPS
 	int lastFPS;
 	std::shared_ptr<clan::LabelView> pLabelFPS;
@@ -36,6 +39,10 @@ private:
 	// Кнопка-надпись масштаба координат мира.
 	float lastScaleWorld = 0.0f;
 	std::shared_ptr<clan::ButtonView> pButtonScaleModel;
+
+	// Кнопка-надпись постоянного освещения мира.
+	bool lastIlluminatedWorld = false;
+	std::shared_ptr<clan::ButtonView> pButtonIlluminatedModel;
 
 	// Флаг завершения работы программы.
 	bool quit = false;
@@ -59,11 +66,15 @@ private:
 	// Кнопка меню - если нажата, то отображается панель настроек.
 	std::shared_ptr<clan::ButtonView> pMenuButton;
 
+	// Звуковая подсистема.
+	std::shared_ptr<clan::SoundOutput> pSoundOutput;
+
 	void on_input_down(const clan::KeyEvent &e);
 	void on_window_close();
 	void on_mouse_down(const clan::InputEvent &key);
 	void on_menuButton_down();
 	void on_menuTopLeftModelButton_down();
 	void on_menuScaleModelButton_down();
+	void on_menuIlluminatedModelButton_down();
 };
 

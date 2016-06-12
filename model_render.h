@@ -13,13 +13,10 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 class ModelRender: public clan::View
 {
 public:
-	ModelRender();
+	ModelRender(std::shared_ptr<SettingsStorage> &pSettingsStorage);
 
 	// Отрисовывает модель.
 	void draw(clan::Canvas &canvas);
-
-	// Включает или выключает подсетку.
-	void toggleIlluminated() { illuminated = !illuminated; }
 
 	// Координаты левого верхнего угла мира.
 	const clan::Pointf &getTopLeftWorld() { return topLeftWorld; }
@@ -29,11 +26,17 @@ public:
 	const float getScaleWorld() { return scale; }
 	void setScaleWorld(float newValue) { scale = newValue; }
 
+	// Постоянная подсветка мира.
+	const bool getIlluminatedWorld() { return illuminated; }
+	void setIlluminatedWorld(bool newValue);
+
 protected:
 	/// Renders the content of a view
 	virtual void render_content(clan::Canvas &canvas);
 
 private:
+	// Настройки.
+	std::shared_ptr<SettingsStorage> &pSettings;
 
 	// Размер области для отрисовки модели (используется для ускорения, если размер не менялся).
 	clan::Sizef oldWindowSize;
@@ -55,7 +58,8 @@ private:
 	bool isScrollStart = false;
 
 	// Точка нажатия кнопки мыши в оконных координатах и в мировых.
-	float scrollWindowX, scrollWindowY, scrollWorldX, scrollWorldY;
+	clan::Pointf scrollWindow;
+	clan::Pointf scrollWorld;
 
 	void on_mouse_down(clan::PointerEvent &e);
 	void on_mouse_up(const clan::PointerEvent &e);
@@ -63,10 +67,10 @@ private:
 	void on_mouse_dblclk(const clan::PointerEvent &e);
 
 	// Уменьшает масштаб - приближает поверхность.
-	void Approach(const clan::Pointf &pos);
+	void Approach(const clan::Pointf &pos, float scaleStep);
 
 	// Увеличивает масштаб - отдаляет поверхность.
-	void ToDistance(const clan::Pointf &pos);
+	void ToDistance(const clan::Pointf &pos, float scaleStep);
 
 	// Отрисовывает сетку.
 	void DrawGrid(int width, int height);
@@ -74,6 +78,10 @@ private:
 	// Отрисовывает клетку в компактном виде - с координатой и ресурсами, которые поместятся.
 	// В функцию передаётся точка поверхности, прямоугольник, где её необходимо отрисовать и мировые координаты точки относительно окна.
 	void DrawCellCompact(const Dot &d, const clan::Rectf &rect, int x, int y);
+
+	// Звуки включения и выключения подсветки.
+	clan::SoundBuffer soundIlluminateOn;
+	clan::SoundBuffer soundIlluminateOff;
 
 };
 

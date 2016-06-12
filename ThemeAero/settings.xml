@@ -3,11 +3,13 @@
 	<section name="MainWindow">
 		<!--Main window position, size and state (6-maximized, 7-minimized, 10-normal)-->
 		<item name="Appearance" left="171" top="75" width="1120" height="960" state="10" is_fullscreen="false"/>
+		<!--Top menu states-->
+		<item name="TopMenuState" SettingsWindowVisible="true" ModelIlluminated="false"/>
 	</section>--&gt;
 	<section name="Project">
 		<!--Project filename, XML-part. Using a relative path for easy moving/copying the application, if possible.-->
 		<item name="ProjectName" filename=""/>
 		<!--Checkboxes on settings window-->
-		<item name="Checkboxes" autorun="true" autosave="true" autosave_hourly="false" top="71" state="7" width="1145" height="956" left="196"/>
+		<item name="Checkboxes" autorun="true" autosave="true" autosave_hourly="false" top="0" state="7" width="1280" height="1024" left="0"/>
 	</section>--&gt;
 </resources>
