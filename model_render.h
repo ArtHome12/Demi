@@ -14,17 +14,10 @@ class ModelRender: public clan::View
 {
 public:
 	ModelRender(std::shared_ptr<SettingsStorage> &pSettingsStorage);
+	~ModelRender();
 
 	// Отрисовывает модель.
 	void draw(clan::Canvas &canvas);
-
-	// Координаты левого верхнего угла мира.
-	const clan::Pointf &getTopLeftWorld() { return topLeftWorld; }
-	void setTopLeftWorld(const clan::Pointf &newValue) { topLeftWorld = newValue; }
-
-	// Масштаб координат мира.
-	const float getScaleWorld() { return scale; }
-	void setScaleWorld(float newValue) { scale = newValue; }
 
 	// Постоянная подсветка мира.
 	const bool getIlluminatedWorld() { return pSettings->getTopMenuIsModelIlluminated(); }
@@ -32,7 +25,7 @@ public:
 
 protected:
 	/// Renders the content of a view
-	virtual void render_content(clan::Canvas &canvas);
+	void render_content(clan::Canvas &canvas) override;
 
 private:
 	// Настройки.
@@ -42,17 +35,14 @@ private:
 	clan::Sizef oldWindowSize;
 
 	// Буфер для отображения мира в виде точек при соответствующем масштабе.
-	std::shared_ptr<clan::PixelBuffer> pPixelBuf;
+	std::shared_ptr<clan::PixelBuffer> pPixelBufToWrite;
+	std::shared_ptr<clan::PixelBuffer> pPixelBufToDraw;
 
 	// Буфер для отрисовки по точкам, пересоздаётся при изменении размера, тут для оптимизации.
 	std::shared_ptr<clan::Image> pImage;
 
 	// Шрифт для отрисовки надписей в клетке.
 	clan::Font cellFont;
-
-	// Мировые координаты левого верхнего угла окна и масштаб.
-	clan::Pointf topLeftWorld;
-	float scale = 1;
 
 	// Истина, когда нажата средняя кнопка мыши и мы в режиме прокрутки.
 	bool isScrollStart = false;
@@ -83,5 +73,20 @@ private:
 	clan::SoundBuffer soundIlluminateOn;
 	clan::SoundBuffer soundIlluminateOff;
 
+	// Поток, создающий пиксельбуфер.
+	std::thread thread;
+
+	// Флаги потока, создающего пиксельбуфер.
+	bool threadExitFlag = false;		// Если истина, поток должен завершиться.
+	bool threadRunFlag = false;		// Если истина, то поток работает и изменяет модель, иначе простаивает.
+	bool threadCrashedFlag = false;	// Если истина, значит поток завершился аварийно.
+	std::mutex threadMutex;
+	std::condition_variable threadEvent;
+
+	// Рабочая функция потока, вычисляющего модель.
+	void workerThread();
+
+	// Корректирует масштаб и верхний левый угол модели после изменения размеров.
+	void CorrectScale();
 };
 

@@ -142,7 +142,7 @@ App::App()
 	pButtonIlluminatedModel->style()->set("margin: 3px");
 	pButtonIlluminatedModel->style()->set("width: 23px");
 	pButtonIlluminatedModel->set_sticky(true);
-	pButtonIlluminatedModel->image_view()->set_image(clan::Image(canvas, "Options.png", pSettings->fileResDoc.get_file_system()));
+	pButtonIlluminatedModel->image_view()->set_image(clan::Image(canvas, "IlluminateOn.png", pSettings->fileResDoc.get_file_system()));
 	pButtonIlluminatedModel->image_view()->style()->set("padding: 0 3px");
 	pButtonIlluminatedModel->func_clicked() = clan::bind_member(this, &App::on_menuIlluminatedModelButton_down);
 	pTopPanel->add_child(pButtonIlluminatedModel);
@@ -222,7 +222,7 @@ bool App::update()
 	bool isDirty = false;
 
 	// Выведем координаты левого верхнего угла мира.
-	const clan::Pointf &topLeftWorld = pModelRender->getTopLeftWorld();
+	const clan::Pointf &topLeftWorld = globalEarth.getAppearanceTopLeft();
 	if (lastTopLeftWorld != topLeftWorld) {
 		lastTopLeftWorld = topLeftWorld;
 		pButtonTopLeftModelCoordinate->label()->set_text("X:Y "
@@ -232,7 +232,7 @@ bool App::update()
 	}
 
 	// Выведем масштаб координат мира.
-	float scaleWorld = pModelRender->getScaleWorld();
+	float scaleWorld = globalEarth.getAppearanceScale();
 	if (lastScaleWorld != scaleWorld) {
 		lastScaleWorld = scaleWorld;
 		pButtonScaleModel->label()->set_text("Scale " + clan::StringHelp::float_to_text(scaleWorld, 3, false), true);
@@ -254,11 +254,10 @@ bool App::update()
 		isDirty = true; 
 	}
 
-	if (isDirty) 
+	//if (isDirty) 
 		pModelRender->draw(canvas);
 
-	//pWindow->display_window().flip();
-	pWindow->display_window().flip(0);
+	pWindow->display_window().flip();
 
 	return !quit;
 }
@@ -335,13 +334,13 @@ void App::on_menuButton_down()
 void App::on_menuTopLeftModelButton_down()
 {
 	// Reset top left coordinate of the world.
-	pModelRender->setTopLeftWorld(clan::Pointf());
+	globalEarth.setAppearanceTopLeft(clan::Pointf());
 }
 
 void App::on_menuScaleModelButton_down()
 {
 	// Reset the scale.
-	pModelRender->setScaleWorld(1.0f);
+	globalEarth.setAppearanceScale(1.0f);
 }
 
 void App::on_menuIlluminatedModelButton_down()

@@ -47,7 +47,6 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	pLabelModelName->style()->set("flex: none;");
 	pLabelModelName->style()->set("margin: 5px;");
 	pLabelModelName->style()->set("font: 12px 'tahoma';");
-	set_modelFilename(pSettings->getProjectFilename());
 	panelGeneral->add_child(pLabelModelName);
 
 	// Панель с кнопками
@@ -58,23 +57,23 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 
 	// Кнопки 
 	//
-	auto bNew = Theme::create_button();
-	bNew->style()->set("width: 80px");
-	bNew->style()->set("margin-left: 5px");
-	bNew->image_view()->set_image(clan::Image(canvas, "New.png", pSettings->fileResDoc.get_file_system()));
-	bNew->image_view()->style()->set("padding-left: 3px");
-	bNew->label()->set_text("New");
-	bNew->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownNew);
-	panelGeneral_panelButtons->add_child(bNew);
+	pButtonNew = Theme::create_button();
+	pButtonNew->style()->set("width: 80px");
+	pButtonNew->style()->set("margin-left: 5px");
+	pButtonNew->image_view()->set_image(clan::Image(canvas, "New.png", pSettings->fileResDoc.get_file_system()));
+	pButtonNew->image_view()->style()->set("padding-left: 3px");
+	pButtonNew->label()->set_text("New");
+	pButtonNew->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownNew);
+	panelGeneral_panelButtons->add_child(pButtonNew);
 
-	auto bOpen = Theme::create_button();
-	bOpen->style()->set("width: 80px");
-	bOpen->style()->set("margin-left: 12px");
-	bOpen->image_view()->set_image(clan::Image(canvas, "Open.png", pSettings->fileResDoc.get_file_system()));
-	bOpen->image_view()->style()->set("padding-left: 3px");
-	bOpen->label()->set_text("Open");
-	bOpen->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownOpen);
-	panelGeneral_panelButtons->add_child(bOpen);
+	pButtonOpen = Theme::create_button();
+	pButtonOpen->style()->set("width: 80px");
+	pButtonOpen->style()->set("margin-left: 12px");
+	pButtonOpen->image_view()->set_image(clan::Image(canvas, "Open.png", pSettings->fileResDoc.get_file_system()));
+	pButtonOpen->image_view()->style()->set("padding-left: 3px");
+	pButtonOpen->label()->set_text("Open");
+	pButtonOpen->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownOpen);
+	panelGeneral_panelButtons->add_child(pButtonOpen);
 
 	auto bSave = Theme::create_button();
 	bSave->style()->set("width: 80px");
@@ -94,14 +93,14 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	bSaveAs->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownSaveAs);
 	panelGeneral_panelButtons->add_child(bSaveAs);
 
-	auto bRestart = Theme::create_button();
-	bRestart->style()->set("width: 80px");
-	bRestart->style()->set("margin-left: 12px");
-	bRestart->image_view()->set_image(clan::Image(canvas, "Restart.png", pSettings->fileResDoc.get_file_system()));
-	bRestart->image_view()->style()->set("padding-left: 3px");
-	bRestart->label()->set_text("Restart");
-	bRestart->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownRestart);
-	panelGeneral_panelButtons->add_child(bRestart);
+	pButtonRestart = Theme::create_button();
+	pButtonRestart->style()->set("width: 80px");
+	pButtonRestart->style()->set("margin-left: 12px");
+	pButtonRestart->image_view()->set_image(clan::Image(canvas, "Restart.png", pSettings->fileResDoc.get_file_system()));
+	pButtonRestart->image_view()->style()->set("padding-left: 3px");
+	pButtonRestart->label()->set_text("Restart");
+	pButtonRestart->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownRestart);
+	panelGeneral_panelButtons->add_child(pButtonRestart);
 
 	pButtonRunPause = Theme::create_button();
 	pButtonRunPause->style()->set("width: 110px");
@@ -144,8 +143,25 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	panelModelInfo->style()->set("border: 1px solid gray");
 	add_child(panelModelInfo);
 
-	// Загрузим пустую модель.
-	onButtondownNew();
+	// Если имя предудыщей модели отсутствует, создаём новую.
+	const std::string lastModelFilename = pSettings->getProjectFilename();
+	if (lastModelFilename == "") {
+		onButtondownNew();
+	}
+	else {
+		// Попытаемся загрузить последнюю модель.
+		try {
+			// Преобразуем путь в абсолютный, если у нас относительный.
+			std::string absPath = clan::PathHelp::make_absolute(clan::System::get_exe_path(), lastModelFilename);
+			globalEarth.LoadModel(absPath);
+			set_modelFilename(lastModelFilename);
+		}
+		catch (const clan::Exception &e) {
+			// При ошибке загружаем чистую модель, а текст ошибки добавляем к названию модели в качестве пояснения.
+			onButtondownNew();
+			pLabelModelName->set_text(pLabelModelName->text() + " (" + e.message + ")");
+		}
+	}
 }
 
 WindowsSettings::~WindowsSettings()
@@ -216,15 +232,31 @@ void WindowsSettings::onButtondownSaveAs()
 		}
 
 		// Запоминаем новое имя проекта и перезаписываем XML-файл, сохраняем двоичный файл.
-		set_modelFilename(filename);
 		clan::FileHelp::copy_file(cProjectTemplate, filename, true);
+		set_modelFilename(filename);
 		globalEarth.SaveModel(filename);
 	}
 }
 
 void WindowsSettings::onButtondownRunPause()
 {
-	globalEarth.RunEvolution(pButtonRunPause->pressed());
+	// Надо остановить или наоборот, запустить модель.
+	bool toStart = pButtonRunPause->pressed();
+
+	// Запускаем модель.
+	globalEarth.RunEvolution(toStart);
+
+	// Переключаем доступность кнопок - загрузить и создать можно только при остановленной модели.
+	if (toStart) {
+		pButtonNew->set_disabled();
+		pButtonOpen->set_disabled();
+		pButtonRestart->set_disabled();
+	}
+	else {
+		pButtonNew->set_enabled();
+		pButtonOpen->set_enabled();
+		pButtonRestart->set_enabled();
+	}
 }
 
 void WindowsSettings::onButtondownRestart()

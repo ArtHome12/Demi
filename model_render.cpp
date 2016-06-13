@@ -14,10 +14,7 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 #include "model_render.h"
 
 // Масштаб, при котором происходит переключение отображения по точкам на отображение клеток.
-const float cPixelDetailLevel = 0.15f;
-
-// Масштаб, при котором включается отображение линий клеток.
-const float cLinesDetailLevel = 0.1f;
+const float cPixelDetailLevel = 0.1f;
 
 // Масштаб, при котором включается отображение координаты и компактной формы наличия ресурсов в клетке.
 const float cCompactCellDetailLevel = 0.01f;
@@ -48,13 +45,25 @@ ModelRender::ModelRender(std::shared_ptr<SettingsStorage> &pSettingsStorage) : p
 	slots.connect(sig_pointer_release(), this, &ModelRender::on_mouse_up);
 	slots.connect(sig_pointer_move(), this, &ModelRender::on_mouse_move);
 	slots.connect(sig_pointer_double_click(), this, &ModelRender::on_mouse_dblclk);
+
+	// Создадим поток.
+	thread = std::thread(&ModelRender::workerThread, this);
 }
 
+ModelRender::~ModelRender()
+{
+	// Завершим работу потока, если он упал раньше, то код всё равно выполняется корректно.
+	std::unique_lock<std::mutex> lock(threadMutex);
+	threadExitFlag = true;
+	lock.unlock();
+	threadEvent.notify_all();
+	thread.join();
+}
 
 void ModelRender::render_content(clan::Canvas &canvas)
 {
 	// Отрисовывает модель в указанном месте.
-	//
+
 	// Получим размеры для отображения.
 	const clan::Sizef windowSize = geometry().content_size();
 
@@ -65,74 +74,50 @@ void ModelRender::render_content(clan::Canvas &canvas)
 	if (windowSize.width == 0 || windowSize.height == 0 || earthSize.width == 0 || earthSize.height == 0)
 		return;
 
-	// Если размер поменялся, пересоздадим пиксельбуфер.
-	if (oldWindowSize != windowSize) {
-		oldWindowSize = windowSize;
-		pPixelBuf = std::make_shared<clan::PixelBuffer> (int(windowSize.width), int(windowSize.height), clan::tf_rgba8);
-		pImage = std::make_shared<clan::Image>(canvas, *pPixelBuf, clan::Rectf(0, 0, windowSize));
-	}
+	// Корректируем масштаб и верхний левый угол модели на случай изменения размеров.
+	CorrectScale();
 
-	// Для удобства, размер в мировых координатах.
-	const float scaledWidth = windowSize.width * scale;
-	const float scaledHeight = windowSize.height * scale;
-
-	// Если размер окна стал больше отображаемого мира, надо откорректировать масштаб.
-	if (scaledWidth > earthSize.width || scaledHeight > earthSize.height) {
-		float w = earthSize.width / windowSize.width;
-		float h = earthSize.height / windowSize.height;
-		scale = w < h ? w : h;
-	}
-	else {
-
-		// Если в результате увеличения размера окно выезжает за границу мира, надо откорректировать мировые координаты.
-		// По вертикали ограничиваем, по горизонтали - циклическая прокрутка.
-		if (topLeftWorld.x < 0.0f)
-			topLeftWorld.x += earthSize.width;
-		else if (topLeftWorld.x >= earthSize.width)
-			topLeftWorld.x -= earthSize.width;
-
-		if (topLeftWorld.y < 0.0f)
-			topLeftWorld.y = 0.0f;
-		else if (topLeftWorld.y + scaledHeight > earthSize.height)
-			topLeftWorld.y = earthSize.height - scaledHeight;
-	}
-
-	// Определим систему координат.
-	LocalCoord coordSystem(globalEarth.getCopyDotsArray(), topLeftWorld);
-
-	// Включена ли постоянная подсветка, для удобства.
-	bool illuminated = getIlluminatedWorld();
-
-	// Цвет точки, для оптимизации объявление вынесено сюда.
-	clan::Colorf color;
+	// Мировые координаты левого верхнего угла окна и масштаб.
+	clan::Pointf topLeftWorld = globalEarth.getAppearanceTopLeft();
+	float scale = globalEarth.getAppearanceScale();
 
 	// В зависимости от масштаба, отрисовываем точки либо клетки.
 	if (scale >= cPixelDetailLevel) {
 		// Рисуем точками.
 
-		// Указатель на точки буфера.
-		pPixelBuf->lock(canvas, clan::access_write_only);
-		unsigned char *pixels = (unsigned char *)pPixelBuf->get_data();
+		// Если поток остановился, значит готов результат.
+		std::unique_lock<std::mutex> lock(threadMutex);
+		if (!threadRunFlag) {
 
-		for (int ypos = 0; ypos < windowSize.height; ypos++)
-		{
-			for (int xpos = 0; xpos < windowSize.width; xpos++)
-			{
-				// Точка мира. Доступ через индекс потому, что в физической матрице точки могут быть расположены иначе, хотя это повод для оптимизации.
-				const Dot &d = coordSystem.get_dot(xpos * scale, ypos * scale);
+			// Если размер поменялся, пересоздадим пиксельбуфер.
+			if (oldWindowSize != windowSize) {
+				oldWindowSize = windowSize;
+				pPixelBufToDraw = std::make_shared<clan::PixelBuffer>(int(windowSize.width), int(windowSize.height), clan::tf_rgba8);
+				pPixelBufToWrite = std::make_shared<clan::PixelBuffer>(int(windowSize.width), int(windowSize.height), clan::tf_rgba8);
+				pImage = std::make_shared<clan::Image>(canvas, *pPixelBufToDraw, clan::Rectf(0, 0, windowSize));
 
-				d.get_color(color);
-
-				*(pixels++) = (unsigned char)(color.get_red() * 255);
-				*(pixels++) = (unsigned char)(color.get_green() * 255);
-				*(pixels++) = (unsigned char)(color.get_blue() * 255);
-				*(pixels++) = illuminated ? 255 : (unsigned char)(color.get_alpha() * 255);
+				// Запустим поток и дождёмся нового пиксельбуфера.
+				threadRunFlag = true;
+				threadEvent.notify_all();
+				do {
+					lock.unlock();
+					clan::System::sleep(100);
+					lock.lock();
+				} while (threadRunFlag);
 			}
+
+			// Меняем буфера местами для сохранения готового результата.
+			std::shared_ptr<clan::PixelBuffer> tmp = pPixelBufToWrite;
+			pPixelBufToWrite = pPixelBufToDraw;
+			pPixelBufToDraw = tmp;
+
+			// Запустим поток.
+			threadRunFlag = true;
+			threadEvent.notify_all();
 		}
 
-		// Отрисовываем картинку на канве. Пиксельбуфер уже связан с картинкой при создании её выше.
-		pPixelBuf->unlock();
-		pImage->set_subimage(canvas, 0, 0, *pPixelBuf, clan::Rect(0, 0, pPixelBuf->get_size()));
+		// Отрисовываем картинку на канве.
+		pImage->set_subimage(canvas, 0, 0, *pPixelBufToDraw, clan::Rect(0, 0, pPixelBufToDraw->get_size()));
 		pImage->draw(canvas, 0, 0);
 		// Рисование точками завершено.
 	}
@@ -148,6 +133,15 @@ void ModelRender::render_content(clan::Canvas &canvas)
 
 		// Помещается ли текст, для оптимизации.
 		bool showTextInCell = scale < cCompactCellDetailLevel;
+
+		// Определим систему координат.
+		LocalCoord coordSystem(globalEarth.getCopyDotsArray(), topLeftWorld);
+
+		// Включена ли постоянная подсветка, для удобства.
+		bool illuminated = getIlluminatedWorld();
+
+		// Цвет точки, для оптимизации объявление вынесено сюда.
+		clan::Colorf color;
 
 		// В цикле двигаемся, пока не выйдем за границу окна.
 		//
@@ -187,10 +181,8 @@ void ModelRender::render_content(clan::Canvas &canvas)
 			++yDotIndex;
 		}
 
-		// Отрисуем линии, если они помещаются.
-		//
-		if (scale < cLinesDetailLevel)
-			DrawGrid(canvas, windowSize);
+		// Отрисуем сетку.
+		DrawGrid(canvas, windowSize);
 
 		// Рисование клеток завершено.
 	}
@@ -201,27 +193,28 @@ void ModelRender::DrawGrid(clan::Canvas &canvas, const clan::Sizef &windowSize)
 {
 	// Отрисовывает сетку.
 
+	// Масштаб.
+	float scale = globalEarth.getAppearanceScale();
+
 	// Расстояние между линиями это обратная к масштабу величина. Количество линий, помещающихся в окне.
-	//
-	float numHLines = roundf(windowSize.height * scale);
-	float numVLines = roundf(windowSize.width * scale);
+	clan::Sizef numLines(windowSize * scale);
 
 	// Отрисовываем горизонтальные и вертикальные линии.
-	for (float i = 0; i <= numHLines; i++) {
+	for (float i = 1; i <= numLines.height; i++) {
 		float y = i / scale;
 		canvas.draw_line(0, y, windowSize.width, y, clan::Colorf::darkblue);
 	}
-	for (float i = 0; i <= numVLines; i++) {
+	for (float i = 1; i <= numLines.width; i++) {
 		float x = i / scale;
 		canvas.draw_line(x, 0, x, windowSize.height, clan::Colorf::darkblue);
 	}
 }
 
-// Отрисовывает клетку в компактном виде - с координатой и ресурсами, которые поместятся.
-// В функцию передаётся точка поверхности, прямоугольник, где её необходимо отрисовать и мировые координаты точки относительно окна.
-//
 void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan::Rectf &rect, int xLabel, int yLabel)
 {
+	// Отрисовывает клетку в компактном виде - с координатой и ресурсами, которые поместятся.
+	// В функцию передаётся точка поверхности, прямоугольник, где её необходимо отрисовать и мировые координаты точки относительно окна.
+	//
 	// Ограничиваем область отрисовки
 	//canvas.set_cliprect(rect);
 
@@ -294,31 +287,35 @@ int max1(float a)
 
 void ModelRender::on_mouse_down(clan::PointerEvent &e)
 {
+	// Мировые координаты левого верхнего угла окна и масштаб.
+	clan::Pointf topLeftWorld = globalEarth.getAppearanceTopLeft();
+	float scale = globalEarth.getAppearanceScale();
+
 	switch (e.button())
 	{
 	case clan::PointerButton::middle:
 
 		// Включаем флаг прокрутки и запоминаем позицию
-		//
 		isScrollStart = true;
 		scrollWindow = e.pos(this);
 		scrollWorld = topLeftWorld;
-
-		// Захватываем события мыши, чтобы узнать об отпускании кнопки.
-		//pMainWindow->capture_mouse(true);
-
 		break;
 
 	case clan::PointerButton::wheel_up:
 
 		// Если зажата клавиша Ctrl, прокрутка вверх, если Shift, прокрутка вправо, иначе приближение.
-		//
 		if (e.shift_down())
 			topLeftWorld.x -= max1(xWorldInc * scale);
 		else if (e.ctrl_down() || e.cmd_down())
 			topLeftWorld.y -= max1(yWorldInc * scale);
 		else
 			Approach(e.pos(this), cScaleInc);
+
+		// Сохраним изменения.
+		globalEarth.setAppearanceTopLeft(topLeftWorld);
+
+		// Корректируем масштаб и верхний левый угол модели во-избежание выхода за границы.
+		CorrectScale();
 		break;
 
 	case clan::PointerButton::wheel_down:
@@ -328,6 +325,8 @@ void ModelRender::on_mouse_down(clan::PointerEvent &e)
 			topLeftWorld.y += max1(yWorldInc * scale);
 		else
 			ToDistance(e.pos(this), cScaleInc);
+		globalEarth.setAppearanceTopLeft(topLeftWorld);
+		CorrectScale();
 		break;
 	}
 }
@@ -338,7 +337,6 @@ void ModelRender::on_mouse_up(const clan::PointerEvent &e)
 	{
 	case clan::PointerButton::middle:
 		isScrollStart = false;
-		//pMainWindow->capture_mouse(false);
 		break;
 	}
 }
@@ -351,7 +349,10 @@ void ModelRender::on_mouse_move(const clan::PointerEvent &e)
 		clan::Pointf dif = scrollWindow - e.pos(this);
 
 		// По определённому смещению задаём новую мировую координату с учётом масштаба.
-		topLeftWorld = scrollWorld + dif * scale;
+		globalEarth.setAppearanceTopLeft(scrollWorld + dif * globalEarth.getAppearanceScale());
+
+		// Корректируем масштаб и верхний левый угол модели во-избежание выхода за границы.
+		CorrectScale();
 	}
 }
 
@@ -366,7 +367,7 @@ void ModelRender::on_mouse_dblclk(const clan::PointerEvent &e)
 
 		// Делаем несколько шагов от текущего масштаба до требуемого.
 		//
-		if (scale <= cCompactCellDetailLevel) {
+		if (globalEarth.getAppearanceScale() <= cCompactCellDetailLevel) {
 
 			// Размеры окна для отображения.
 			const clan::Sizef windowSize = geometry().content_size();
@@ -378,10 +379,10 @@ void ModelRender::on_mouse_dblclk(const clan::PointerEvent &e)
 			const float maxScale = std::min<float>(worldSize.width / windowSize.width, worldSize.height / windowSize.height);
 
 			// Масштабируем до максимума или до 1.
-			scaleStep = float(pow(scale / (maxScale < 1 ? maxScale : 1), 1.0 / 13));
+			scaleStep = float(pow(globalEarth.getAppearanceScale() / (maxScale < 1 ? maxScale : 1), 1.0 / 13));
 		}
 		else
-			scaleStep = float(pow(scale / cCompactCellDetailLevel, 1.0 / 12));
+			scaleStep = float(pow(globalEarth.getAppearanceScale() / cCompactCellDetailLevel, 1.0 / 12));
 
 
 		// Запускаем анимацию.
@@ -405,6 +406,10 @@ void ModelRender::Approach(const clan::Pointf &pos, float scaleStep)
 	// и на эту дельту сделать прокрутку.
 	//
 
+	// Мировые координаты левого верхнего угла окна и масштаб.
+	clan::Pointf topLeftWorld = globalEarth.getAppearanceTopLeft();
+	float scale = globalEarth.getAppearanceScale();
+
 	// Координаты мира под курсором до масштабирования (без учёта прокрутки topLeftWorld.x для оптимизации).
 	float wx1 = pos.x * scale;
 	float wy1 = pos.y * scale;
@@ -419,13 +424,21 @@ void ModelRender::Approach(const clan::Pointf &pos, float scaleStep)
 
 	topLeftWorld.x += int(wx1 - wx2);
 	topLeftWorld.y += int(wy1 - wy2);
+
+	// Сохраним изменения.
+	globalEarth.setAppearanceTopLeft(topLeftWorld);
+	globalEarth.setAppearanceScale(scale);
 }
 
 
 void ModelRender::ToDistance(const clan::Pointf &pos, float scaleStep)
 {
 	// Увеличивает масштаб - отдаляет поверхность.
-	//
+
+	// Мировые координаты левого верхнего угла окна и масштаб.
+	clan::Pointf topLeftWorld = globalEarth.getAppearanceTopLeft();
+	float scale = globalEarth.getAppearanceScale();
+
 	// Меняем масштаб, отодвигая поверхность.
 	scale *= scaleStep;
 
@@ -442,6 +455,10 @@ void ModelRender::ToDistance(const clan::Pointf &pos, float scaleStep)
 		topLeftWorld.x += int(wx1 - wx2);
 		topLeftWorld.y += int(wy1 - wy2);
 	}
+
+	// Сохраним изменения.
+	globalEarth.setAppearanceTopLeft(topLeftWorld);
+	globalEarth.setAppearanceScale(scale);
 }
 
 // Постоянная подсветка мира.
@@ -452,4 +469,118 @@ void ModelRender::setIlluminatedWorld(bool newValue)
 		soundIlluminateOn.play();
 	else
 		soundIlluminateOff.play();
+}
+
+void ModelRender::workerThread()
+{
+	// Рабочая функция потока, вычисляющего пиксельбуфер.
+	try
+	{
+		while (true)
+		{
+			// Останавливаемся до установки флагов, блокируя при необходимости основной поток.
+			std::unique_lock<std::mutex> lock(threadMutex);
+			threadEvent.wait(lock, [&]() { return threadRunFlag || threadExitFlag; });
+
+			// Если дана команда на выход, завершаем работу.
+			if (threadExitFlag)
+				break;
+
+			// Получим размеры для отображения.
+			const clan::Sizef windowSize = geometry().content_size();
+			float width = windowSize.width;
+			float height = windowSize.height;
+			float scale = globalEarth.getAppearanceScale();
+
+			// Определим систему координат.
+			LocalCoord coordSystem(globalEarth.getCopyDotsArray(), globalEarth.getAppearanceTopLeft());
+
+			// Включена ли постоянная подсветка, для удобства.
+			bool illuminated = getIlluminatedWorld();
+
+			// Разблокируем основной поток.
+			lock.unlock();
+
+			// Выполняем расчёт пиксельбуфера.
+
+			// Указатель на точки буфера.
+			unsigned char *pixels = (unsigned char *)pPixelBufToWrite->get_data();
+
+			// Цвет точки, для оптимизации объявление вынесено сюда.
+			clan::Colorf color;
+
+			for (float ypos = 0; ypos < height; ypos++)
+			{
+				for (float xpos = 0; xpos < width; xpos++)
+				{
+					// Точка мира. Доступ через индекс потому, что в физической матрице точки могут быть расположены иначе, хотя это повод для оптимизации.
+					const Dot &d = coordSystem.get_dot(xpos * scale, ypos * scale);
+
+					d.get_color(color);
+
+					*(pixels++) = (unsigned char)(color.get_red() * 255);
+					*(pixels++) = (unsigned char)(color.get_green() * 255);
+					*(pixels++) = (unsigned char)(color.get_blue() * 255);
+					*(pixels++) = illuminated ? 255 : (unsigned char)(color.get_alpha() * 255);
+				}
+			}
+
+			// Блокируем основной поток для сохранения результата.
+			lock.lock();
+
+			// Сообщаем о наличии результата, при этом остановимся.
+			threadRunFlag = false;
+
+			// Тут основной поток разблокируется при завершении блока {}
+		}
+	}
+	catch (clan::Exception &)
+	{
+		// Сообщим об аварийном завершении работы. Текст ошибки допишем потом.
+		std::unique_lock<std::mutex> lock(threadMutex);
+		threadCrashedFlag = true;
+	}
+}
+
+// Корректирует масштаб и верхний левый угол модели после изменения размеров.
+void ModelRender::CorrectScale()
+{
+	// Получим размеры для отображения.
+	const clan::Sizef windowSize = geometry().content_size();
+
+	// Размер мира.
+	const clan::Sizef earthSize = globalEarth.get_worldSize();
+
+	// Если некуда или нечего рисовать, выходим.
+	if (windowSize.width == 0 || windowSize.height == 0 || earthSize.width == 0 || earthSize.height == 0)
+		return;
+
+	// Размер в мировых координатах.
+	const clan::Sizef scaledSize(windowSize * globalEarth.getAppearanceScale());
+
+	// Если размер окна стал больше отображаемого мира, надо откорректировать масштаб.
+	if (scaledSize.width > earthSize.width || scaledSize.height > earthSize.height) {
+		float w = earthSize.width / windowSize.width;
+		float h = earthSize.height / windowSize.height;
+		globalEarth.setAppearanceScale(w < h ? w : h);
+	}
+	else {
+		// Мировые координаты левого верхнего угла окна.
+		clan::Pointf topLeftWorld = globalEarth.getAppearanceTopLeft();
+
+		// Если в результате увеличения размера окно выезжает за границу мира, надо откорректировать мировые координаты.
+		// По вертикали ограничиваем, по горизонтали - циклическая прокрутка.
+		if (topLeftWorld.x < 0.0f)
+			topLeftWorld.x += earthSize.width;
+		else if (topLeftWorld.x >= earthSize.width)
+			topLeftWorld.x -= earthSize.width;
+
+		if (topLeftWorld.y < 0.0f)
+			topLeftWorld.y = 0.0f;
+		else if (topLeftWorld.y + scaledSize.height > earthSize.height)
+			topLeftWorld.y = earthSize.height - scaledSize.height;
+		
+		// Сохраняем результат.
+		globalEarth.setAppearanceTopLeft(topLeftWorld);
+	}
 }

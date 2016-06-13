@@ -25,6 +25,12 @@ private:
 	std::shared_ptr<clan::LabelView> pLabelModelName;
 
 public:
+	//  нопка создани€ новой модели.
+	std::shared_ptr<clan::ButtonView> pButtonNew;
+	//  нопка открыти€ модели.
+	std::shared_ptr<clan::ButtonView> pButtonOpen;
+	//  нопка перезапуска модели.
+	std::shared_ptr<clan::ButtonView> pButtonRestart;
 	//  нопка запуска или приостановки расчЄта.
 	std::shared_ptr<clan::ButtonView> pButtonRunPause;
 private:

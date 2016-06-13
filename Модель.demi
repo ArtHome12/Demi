@@ -4,8 +4,12 @@
 	<section name="Globals">
 		<!-- Ширина мира и пропорция для высоты, максимум 30 000. Для проекции Меркатора 24:11 или 0.4583 -->
 		<item name="EarthSize" width="1000" heightRatio="0.4583" />
+
+		<!-- Последнее представление модели - координата левого верхнего угла, масштаб -->
+		<item name="Appearance" top="791" left="156" scale="0.470" />
 	</section>
 
+	<!-- Геотермальные источники энергии -->
 	<section name="Energy">
 	        <Geothermal name="Point0">
 			<point x="300" y="30"/>

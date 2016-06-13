@@ -52,13 +52,17 @@ public:
 //
 class LocalCoord { 
 public:
-	LocalCoord(Dot *arDots, const clan::Pointf &coord) : dots(arDots), center(coord) {};
+	LocalCoord(Dot *arDots, const clan::Pointf &coord);
 
 	Dot& get_dot(float x, float y) const;
 
 private:
 	// Массив с точками поверхности.
 	Dot *dots;
+
+	// Размеры мира на момент создания, для оптимизаци.
+	float worldWidth;
+	float worldHeight;
 
 	// Центр локальных координат, выраженный в глобальных координатах.
 	clan::Pointf center;
@@ -154,6 +158,10 @@ public:
 	float getTropicHeight() { return tropicHeight; }
 	float getResMaxValue(int index) { return arResMax[index]; }
 	const std::string &getResName(int index) { return arResNames[index]; }
+	const clan::Pointf &getAppearanceTopLeft() { return appearanceTopLeft; }
+	void setAppearanceTopLeft(const clan::Pointf newTopLeft) { appearanceTopLeft = newTopLeft; }
+	float getAppearanceScale() { return appearanceScale; }
+	void setAppearanceScale(float newScale) { appearanceScale = newScale; }
 
 private:
 
@@ -176,6 +184,10 @@ private:
 
 	// Размеры мира.
 	clan::Sizef worldSize;
+
+	// Свойства, используемые для отображения модели - координата левого верхнего угла, масштаб.
+	clan::Pointf appearanceTopLeft;
+	float appearanceScale = 1.0f;
 
 	// Количество химических элементов, существующих в модели.
 	int elemCount = 0;
@@ -206,25 +218,24 @@ private:
 	// Летучесть ресурса для диффузии, значение от 0 до 1.
 	float* arResVolatility = nullptr;
 
-	// Рабочий поток
-	std::thread thread;
-
 	// Задаёт распределение ресурсов по указанной прямоугольной области в указанном количестве.
 	void FillRectResource(int resId, float amount, const clan::Rectf &rect);
 
 	// Задаёт местоположение источников геотермальной энергии.
 	void AddGeothermal(int i, const clan::Pointf &coord);
 
-private:
+	// Рабочий поток
+	std::thread thread;
 
-	bool thread_exit_flag = false;		// Если истина, поток должен завершиться.
-	bool thread_run_flag = false;		// Если истина, то поток работает и изменяет модель, иначе простаивает.
-	bool thread_crashed_flag = false;	// Если истина, значит поток завершился аварийно.
-	std::mutex thread_mutex;
-	std::condition_variable threadMainToWorkerEvent;
+	// Флаги для управления потоком.
+	bool threadExitFlag = false;		// Если истина, поток должен завершиться.
+	bool threadRunFlag = false;		// Если истина, то поток работает и изменяет модель, иначе простаивает.
+	bool threadCrashedFlag = false;	// Если истина, значит поток завершился аварийно.
+	std::mutex threadMutex;
+	std::condition_variable threadEvent;
 
 	// Рабочая функция потока, вычисляющего модель.
-	void worker_thread();
+	void workerThread();
 };
 
 

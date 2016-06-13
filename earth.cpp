@@ -19,6 +19,12 @@ const std::string cResGlobalsEarthSize = "Globals/EarthSize";
 const std::string cResGlobalsEarthSizeWidth = "width";
 const std::string cResGlobalsEarthSizeHeightRatio = "heightRatio";
 
+const std::string cResGlobalsAppearance = "Globals/Appearance";
+const std::string cResGlobalsAppearanceTop = "top";
+const std::string cResGlobalsAppearanceLeft = "left";
+const std::string cResGlobalsAppearanceScale = "scale";
+
+
 const std::string cResElementsSection = "Elements";
 const std::string cResElementsType = "Element";
 
@@ -103,30 +109,33 @@ void Dot::get_color(clan::Colorf &aValue) const
 // =============================================================================
 // Локальные координаты - центр всегда в точке 0, 0 и можно адресовать отрицательные координаты.
 // =============================================================================
+LocalCoord::LocalCoord(Dot *arDots, const clan::Pointf &coord) : dots(arDots),
+	center(coord),
+	worldWidth(globalEarth.get_worldSize().width),
+	worldHeight(globalEarth.get_worldSize().height) 
+{
+};
+
 Dot& LocalCoord::get_dot(float x, float y) const
 {
-	// Для удобства.
-	float ww = globalEarth.get_worldSize().width;
-	float wh = globalEarth.get_worldSize().height;
-
 	// По горизонтали координату переносим с одного края на другой.
 	x = roundf(x + center.x);
 	if (x < 0)
-		x += ww;
-	else if (x >= ww)
-		x -= ww;
+		x += worldWidth;
+	else if (x >= worldWidth)
+		x -= worldWidth;
 
 	// По вертикали пока просто отрезаем.
 	y = roundf(y + center.y);
 	if (y < 0) 
 		y = 0;
-	else if (y >= wh)
-		y = wh - 1;
+	else if (y >= worldHeight)
+		y = worldHeight - 1;
 
 	//_ASSERT(x < globalEarth.get_worldWidth());
 	//_ASSERT(y < globalEarth.get_worldHeight());
 
-	return dots[int(x + y * ww)];
+	return dots[int(x + y * worldWidth)];
 }
 
 // =============================================================================
@@ -228,7 +237,7 @@ Earth::Earth()
 	srand((unsigned)::time(NULL));
 
 	// Создадим поток. Он не стартанёт до установки флага.
-	thread = std::thread(&Earth::worker_thread, this);
+	thread = std::thread(&Earth::workerThread, this);
 }
 
 
@@ -236,11 +245,10 @@ Earth::Earth()
 Earth::~Earth()
 {
 	// Завершим работу потока, если он упал раньше, то код всё равно выполняется корректно.
-	//
-	std::unique_lock<std::mutex> lock(thread_mutex);
-	thread_exit_flag = true;
+	std::unique_lock<std::mutex> lock(threadMutex);
+	threadExitFlag = true;
 	lock.unlock();
-	threadMainToWorkerEvent.notify_all();
+	threadEvent.notify_all();
 	thread.join();
 
 	delete[] arDots;
@@ -387,8 +395,8 @@ void Earth::LoadModel(const std::string &filename)
 	//
 	// Если поток был запущен, сообщим об ошибке.
 	{
-		std::unique_lock<std::mutex> lock(thread_mutex);
-		if (thread_run_flag)
+		std::unique_lock<std::mutex> lock(threadMutex);
+		if (threadRunFlag)
 			throw clan::Exception("Need to stop the evolution prior to load!");
 	}
 
@@ -396,14 +404,13 @@ void Earth::LoadModel(const std::string &filename)
 	auto resDoc = std::make_shared<clan::XMLResourceDocument>(filename);
 
 	// Инициализируем размеры мира.
-	//
-	const clan::DomElement &prop = resDoc->get_resource(cResGlobalsEarthSize).get_element();
+	clan::DomElement &prop = resDoc->get_resource(cResGlobalsEarthSize).get_element();
 
 	// Ширина мира.
-	worldSize.width = float(prop.get_attribute_int(cResGlobalsEarthSizeWidth));
+	worldSize.width = float(prop.get_attribute_int(cResGlobalsEarthSizeWidth, 1000));
 
 	// Высота мира
-	worldSize.height = round(worldSize.width * prop.get_attribute_float(cResGlobalsEarthSizeHeightRatio));
+	worldSize.height = round(worldSize.width * prop.get_attribute_float(cResGlobalsEarthSizeHeightRatio, 1.0f));
 
 	if (worldSize.width <= 0 || worldSize.width > 30000 || worldSize.height <= 0 || worldSize.height > 30000)
 		throw clan::Exception("Invalid world size (width=" + clan::StringHelp::int_to_text(int(worldSize.width)) 
@@ -412,6 +419,12 @@ void Earth::LoadModel(const std::string &filename)
 	// Радиус солнечного пятна и высота тропиков зависит от размера мира.
 	lightRadius = round(0.9f * worldSize.height / 2);
 	tropicHeight = round(worldSize.height / 5);
+
+	// Инициализируем внешний вид проекта.
+	prop = resDoc->get_resource(cResGlobalsAppearance).get_element();
+	appearanceTopLeft.x = float(prop.get_attribute_int(cResGlobalsAppearanceLeft, int(appearanceTopLeft.x)));
+	appearanceTopLeft.y = float(prop.get_attribute_int(cResGlobalsAppearanceTop, int(appearanceTopLeft.y)));
+	appearanceScale = prop.get_attribute_float(cResGlobalsAppearanceScale, appearanceScale);
 
 	// Названия ресурсов.
 	const std::vector<std::string>& names = resDoc->get_resource_names_of_type(cResElementsType, cResElementsSection);
@@ -435,14 +448,11 @@ void Earth::LoadModel(const std::string &filename)
 	arEnergy = new Geothermal[energyCount];			// геотермальные источники.
 
 	// Инициализируем массив максимумов единицами, во-избежание деления на ноль.
-	//
 	for (int i = 0; i < elemCount; ++i)
 		arResMax[i] = 1.0f;
 
 
-	//
 	// Считываем названия элементов.
-	//
 	for (int i = 0; i < elemCount; ++i) {
 
 		// Элемент.
@@ -461,7 +471,7 @@ void Earth::LoadModel(const std::string &filename)
 		arResVolatility[i] = prop.get_attribute_float(cElementsResVolatility);
 
 		// Области для заполнения ресурсом.
-		//
+
 		// Ищем прямоугольные области и задаём распределение ресурса.
 		clan::DomNodeList nodes = prop.get_elements_by_tag_name(cResAreaRect);
 		for (int j = nodes.get_length() - 1; j >= 0; --j) {
@@ -485,9 +495,7 @@ void Earth::LoadModel(const std::string &filename)
 		}
 	}
 
-
 	// Считываем местоположение геотермальных источников.
-	//
 	for (int i = 0; i < energyCount; ++i) {
 		clan::DomElement &prop = resDoc->get_resource(energy[i]).get_element();
 		clan::DomNodeList nodes = prop.get_elements_by_tag_name(cResAreaPoint);
@@ -511,24 +519,20 @@ void Earth::SaveModel(const std::string &filename)
 }
 
 
-void Earth::worker_thread()
+void Earth::workerThread()
 {
 	// Рабочая функция потока, вычисляющего модель.
-	//
 	try
 	{
 		while (true)
 		{
 			// Останавливаемся до установки флагов, блокируя при необходимости основной поток.
-			std::unique_lock<std::mutex> lock(thread_mutex);
-			threadMainToWorkerEvent.wait(lock, [&]() { return thread_run_flag || thread_exit_flag; });
+			std::unique_lock<std::mutex> lock(threadMutex);
+			threadEvent.wait(lock, [&]() { return threadRunFlag || threadExitFlag; });
 
 			// Если дана команда на выход, завершаем работу.
-			if (thread_exit_flag)
+			if (threadExitFlag)
 				break;
-
-			// Сбрасываем флаг наличия результата.
-			//thread_complete_flag = false;
 
 			// Разблокируем основной поток.
 			lock.unlock();
@@ -542,30 +546,25 @@ void Earth::worker_thread()
 			// Копируем расчётную модель в буфер, используемый для отображения.
 			timeBackup = timeModel;
 
-			// Сообщаем о наличии результата.
-			//thread_complete_flag = true;
-			//threadWorkerToMainEvent.notify_all();
-
-
 			//throw clan::Exception("Bang!");	// <--- Use this to test the application handles exceptions in threads
+
 			// Тут основной поток разблокируется при завершении блока {}
 		}
 	}
 	catch (clan::Exception &)
 	{
 		// Сообщим об аварийном завершении работы. Текст ошибки допишем потом.
-		std::unique_lock<std::mutex> lock(thread_mutex);
-		thread_crashed_flag = true;
+		std::unique_lock<std::mutex> lock(threadMutex);
+		threadCrashedFlag = true;
 	}
 }
 
 void Earth::RunEvolution(bool is_active)
 {
 	// Приостанавливает или продолжает расчёт модели
-	//
-	std::unique_lock<std::mutex> lock(thread_mutex);
-	thread_run_flag = is_active;
-	threadMainToWorkerEvent.notify_all();
+	std::unique_lock<std::mutex> lock(threadMutex);
+	threadRunFlag = is_active;
+	threadEvent.notify_all();
 }
 
 
