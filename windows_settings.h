@@ -19,23 +19,25 @@ public:
 	WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsStorage> &pSettingsStorage);
 	~WindowsSettings();
 
+	// Для получения уведомлений об отработке основного цикла (для возможного автосохранения модели).
+	void modelRenderNotify(float secondsElapsed);
+
 private:
 	// Название текущей модели
 	std::string modelFilename;
 	std::shared_ptr<clan::LabelView> pLabelModelName;
 
-public:
 	// Кнопка создания новой модели.
 	std::shared_ptr<clan::ButtonView> pButtonNew;
+
 	// Кнопка открытия модели.
 	std::shared_ptr<clan::ButtonView> pButtonOpen;
+
 	// Кнопка перезапуска модели.
 	std::shared_ptr<clan::ButtonView> pButtonRestart;
+
 	// Кнопка запуска или приостановки расчёта.
 	std::shared_ptr<clan::ButtonView> pButtonRunPause;
-private:
-	// Настройки.
-	std::shared_ptr<SettingsStorage> &pSettings;
 
 	// Чекбокс автозапуска модели
 	std::shared_ptr<clan::CheckBoxView> pCBAutoRun;
@@ -45,6 +47,12 @@ private:
 
 	// Чекбокс периодического (ежечасного) автосохранения модели.
 	std::shared_ptr<clan::CheckBoxView> pCBAutoSaveHourly;
+
+	// Настройки.
+	std::shared_ptr<SettingsStorage> &pSettings;
+
+	// Количество прошедших секунд с момента старта программы.
+	float secondsElapsed = 0;
 
 	// Обработчики событий
 	void onButtondownNew();

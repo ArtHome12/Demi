@@ -1,37 +1,32 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <resources>
-
 	<section name="Globals">
-		<!-- Øèðèíà ìèðà è ïðîïîðöèÿ äëÿ âûñîòû, ìàêñèìóì 30 000. Äëÿ ïðîåêöèè Ìåðêàòîðà 24:11 èëè 0.4583 -->
-		<item name="EarthSize" width="1000" heightRatio="0.4583" />
-
-		<!-- Ïîñëåäíåå ïðåäñòàâëåíèå ìîäåëè - êîîðäèíàòà ëåâîãî âåðõíåãî óãëà, ìàñøòàá -->
-		<item name="Appearance" top="791" left="156" scale="0.470" />
+		<!--Øèðèíà ìèðà è ïðîïîðöèÿ äëÿ âûñîòû, ìàêñèìóì 30 000. Äëÿ ïðîåêöèè Ìåðêàòîðà 24:11 èëè 0.4583-->
+		<item name="WorldSize" width="1000" heightRatio="0.4583"/>
+		<!--Ïîñëåäíåå ïðåäñòàâëåíèå ìîäåëè - êîîðäèíàòà ëåâîãî âåðõíåãî óãëà, ìàñøòàá-->
+		<item name="Appearance" top="0" left="0" scale="1"/>
+		<!--Âðåìÿ ìîäåëè - ãîä, äåíü, ñåêóíäà-->
+		<item name="Time" year="1" day="1" second="16494"/>
 	</section>
-
-	<!-- Ãåîòåðìàëüíûå èñòî÷íèêè ýíåðãèè -->
+	<!--Ãåîòåðìàëüíûå èñòî÷íèêè ýíåðãèè-->
 	<section name="Energy">
-	        <Geothermal name="Point0">
+		<Geothermal name="Point0">
 			<point x="300" y="30"/>
 		</Geothermal>
-	        <Geothermal name="Point1">
+		<Geothermal name="Point1">
 			<point x="500" y="21"/>
 		</Geothermal>
-	        <Geothermal name="Point2">
+		<Geothermal name="Point2">
 			<point x="700" y="39"/>
 		</Geothermal>
 	</section>
-
 	<section name="Elements">
-
-		<!-- Âîäà - îñíîâà âñåãî, è â êà÷åñòâå îñíîâû å¸ ëåòó÷åñòü ìåíüøå ÷åì ó òâ¸ðäûõ âåùåñòâ -->
-	        <Element name="Water" color="cornflowerblue" volatility="0.01">
+		<!--Âîäà - îñíîâà âñåãî, è â êà÷åñòâå îñíîâû å¸ ëåòó÷åñòü ìåíüøå ÷åì ó òâ¸ðäûõ âåùåñòâ-->
+		<Element name="Water" color="cornflowerblue" volatility="0.01">
 			<rect left="0" top="0" right="max" bottom="max" amount="100000"/>
 		</Element>
-
-
-		<!-- Ãàçû -->
-	        <Element name="Oxygen" color="green" volatility="0.12">
+		<!--Ãàçû-->
+		<Element name="Oxygen" color="green" volatility="0.12">
 			<rect left="0" top="0" right="0" bottom="0" amount="0"/>
 		</Element>
 		<Element name="CarbonDioxide" color="yellow" volatility="0.12">
@@ -46,20 +41,14 @@
 		<Element name="Hydrogen sulfide" color="aliceblue" volatility="0.12">
 			<rect left="0" top="0" right="0" bottom="0" amount="0"/>
 		</Element>
-
-
-		<!-- Òâ¸ðäûå âåùåñòâà -->
+		<!--Òâ¸ðäûå âåùåñòâà-->
 		<Element name="Sulphur" color="lightyellow" volatility="0.03">
 			<rect left="0" top="0" right="max" bottom="max" amount="32"/>
 		</Element>
-
 	</section>
-
-	<section name="Organisms">
-	</section>
+	<section name="Organisms"/>
 </resources>
-
-<!-- Öâåòà C:\Development\Environment\ClanLib\Documentation\img\colors 
+<!--Öâåòà C:\Development\Environment\ClanLib\Documentation\img\colors 
 
 	static Color aliceblue;			Hydrogen sulfide
 	static Color antiquewhite;
@@ -216,5 +205,4 @@
 	static Color gray60;
 	static Color gray70;
 	static Color gray80;
-	static Color gray90;
--->
+	static Color gray90;-->

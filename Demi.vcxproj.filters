@@ -33,10 +33,13 @@
     <ClCompile Include="settings_storage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="earth.cpp">
+    <ClCompile Include="model_render.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="model_render.cpp">
+    <ClCompile Include="organism.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="world.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -56,10 +59,13 @@
     <ClInclude Include="settings_storage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="earth.h">
+    <ClInclude Include="model_render.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="model_render.h">
+    <ClInclude Include="organism.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="world.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

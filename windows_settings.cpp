@@ -11,7 +11,7 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 #include "precomp.h"
 #include "windows_settings.h"
 #include "Theme/theme.h"
-#include "earth.h"
+#include "world.h"
 
 // Расширение xml-файла и двоичного файла модели и их описания.
 const std::string cProjectXMLExtension = "demi";
@@ -23,8 +23,11 @@ const std::string cProjectAllExtensionDesc = "All files (*.*)";
 const std::string cProjectTemplate = "ThemeAero/template.demi";
 
 
-// Строки для запроса перезаписи.
-const std::string cMessageBoxText = "File %1 exists. Rewrite it?";
+// Строка для запроса перезаписи файла.
+const std::string cMessageBoxTextFileRewrite = "File %1 exists. Rewrite it?";
+
+// Строка для запроса рестарта модели.
+const std::string cMessageBoxTextRestartModel = "Start simulation of the world anew?";
 
 
 WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsStorage> &pSettingsStorage) : pSettings(pSettingsStorage)
@@ -153,7 +156,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 		try {
 			// Преобразуем путь в абсолютный, если у нас относительный.
 			std::string absPath = clan::PathHelp::make_absolute(clan::System::get_exe_path(), lastModelFilename);
-			globalEarth.LoadModel(absPath);
+			globalWorld.LoadModel(absPath);
 			set_modelFilename(lastModelFilename);
 		}
 		catch (const clan::Exception &e) {
@@ -162,10 +165,19 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 			pLabelModelName->set_text(pLabelModelName->text() + " (" + e.message + ")");
 		}
 	}
+
+	// Если установлена галочка автозапуска модели, запустим расчёт.
+	if (pCBAutoRun->checked()) {
+		pButtonRunPause->set_pressed(true);
+		onButtondownRunPause();
+	}
 }
 
 WindowsSettings::~WindowsSettings()
 {
+	// Если установлена галочка автосохранения, сделаем это.
+	if (pCBAutoSave->checked())
+		onButtondownSave();
 }
 
 
@@ -174,7 +186,7 @@ void WindowsSettings::onButtondownNew()
 {
 	// Сбросим имя модели и загрузим в модель шаблон.
 	set_modelFilename("");
-	globalEarth.LoadModel(cProjectTemplate);
+	globalWorld.LoadModel(cProjectTemplate);
 }
 
 void WindowsSettings::onButtondownOpen()
@@ -187,7 +199,7 @@ void WindowsSettings::onButtondownOpen()
 	if (dlg->show()) {
 		// Сохраним имя модели и загрузим её.
 		set_modelFilename(dlg->filename());
-		globalEarth.LoadModel(dlg->filename());
+		globalWorld.LoadModel(dlg->filename());
 	}
 }
 
@@ -199,7 +211,7 @@ void WindowsSettings::onButtondownSave()
 	else {
 		// Преобразуем путь в абсолютный, если у нас относительный.
 		std::string absPath = clan::PathHelp::make_absolute(clan::System::get_exe_path(), modelFilename);
-		globalEarth.SaveModel(absPath);
+		globalWorld.SaveModel(absPath);
 	}
 }
 
@@ -225,7 +237,7 @@ void WindowsSettings::onButtondownSaveAs()
 		if (clan::FileHelp::file_exists(filename)) {
 			// Надо переделать на платформонезависимое решение!
 			const clan::DisplayWindow &window = view_tree()->display_window();
-			auto text = std::string(clan::string_format(cMessageBoxText, filename));
+			auto text = std::string(clan::string_format(cMessageBoxTextFileRewrite, filename));
 			if (MessageBox(window.get_handle().hwnd, text.c_str(), window.get_title().c_str(), MB_OKCANCEL) != IDOK)
 				// Пользователь отказался продолжать, выходим.
 				return;
@@ -234,7 +246,7 @@ void WindowsSettings::onButtondownSaveAs()
 		// Запоминаем новое имя проекта и перезаписываем XML-файл, сохраняем двоичный файл.
 		clan::FileHelp::copy_file(cProjectTemplate, filename, true);
 		set_modelFilename(filename);
-		globalEarth.SaveModel(filename);
+		globalWorld.SaveModel(filename);
 	}
 }
 
@@ -244,7 +256,7 @@ void WindowsSettings::onButtondownRunPause()
 	bool toStart = pButtonRunPause->pressed();
 
 	// Запускаем модель.
-	globalEarth.RunEvolution(toStart);
+	globalWorld.RunEvolution(toStart);
 
 	// Переключаем доступность кнопок - загрузить и создать можно только при остановленной модели.
 	if (toStart) {
@@ -261,7 +273,30 @@ void WindowsSettings::onButtondownRunPause()
 
 void WindowsSettings::onButtondownRestart()
 {
-	pCBAutoRun->set_disabled();
+	// Начать расчёт заново.
+
+	// Получим подтверждение пользователя. Надо переделать на платформонезависимое решение!
+	const clan::DisplayWindow &window = view_tree()->display_window();
+	auto text = std::string(cMessageBoxTextRestartModel);
+	if (MessageBox(window.get_handle().hwnd, text.c_str(), window.get_title().c_str(), MB_OKCANCEL) != IDOK)
+		// Пользователь отказался продолжать, выходим.
+		return;
+
+	// Преобразуем путь в абсолютный, если у нас относительный.
+	std::string absPath = clan::PathHelp::make_absolute(clan::System::get_exe_path(), modelFilename);
+
+	// Удаляем двоичный файл.
+	if (clan::FileHelp::file_exists(absPath + "b")) 
+		clan::FileHelp::delete_file(absPath + "b");
+
+	// Попытаемся загрузить последнюю модель.
+	try {
+		globalWorld.LoadModel(absPath);
+	}
+	catch (...) {
+		// При ошибке загружаем чистую модель.
+		onButtondownNew();
+	}
 }
 
 void WindowsSettings::onCBAutoRunToggle()
@@ -298,4 +333,18 @@ void WindowsSettings::set_modelFilename(const std::string &newName)
 
 	// Сохраняем в настройках как последний открытый проект.
 	pSettings->setProjectFilename(modelFilename);
+}
+
+void WindowsSettings::modelRenderNotify(float secondsElapsed)
+{
+	// Для получения уведомлений об отработке основного цикла (для возможного автосохранения модели).
+
+	// Если прошёл час и установлена галочка регулярного автосохранения модели, сделаем это.
+	if (abs(secondsElapsed - this->secondsElapsed) > 3600.0f) {
+		this->secondsElapsed = secondsElapsed;
+
+		// Если стоит галочка, сохраним модель.
+		if (pCBAutoSaveHourly->checked())
+			onButtondownSave();
+	}
 }

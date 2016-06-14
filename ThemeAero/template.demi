@@ -3,10 +3,13 @@
 
 	<section name="Globals">
 		<!-- Ширина мира и пропорция для высоты, максимум 30 000. Для проекции Меркатора 24:11 или 0.4583 -->
-		<item name="EarthSize" width="1000" heightRatio="0.4583" />
+		<item name="WorldSize" width="1000" heightRatio="0.4583" />
 
 		<!-- Последнее представление модели - координата левого верхнего угла, масштаб -->
 		<item name="Appearance" top="0" left="0" scale="1.0" />
+
+		<!-- Время модели - год, день, секунда -->
+		<item name="Time" year="1" day="1" second="0" />
 	</section>
 
 	<!-- Геотермальные источники энергии -->

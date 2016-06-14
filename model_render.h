@@ -66,8 +66,7 @@ private:
 	void DrawGrid(clan::Canvas &canvas, const clan::Sizef &windowSize);
 
 	// Отрисовывает клетку в компактном виде - с координатой и ресурсами, которые поместятся.
-	// В функцию передаётся точка поверхности, прямоугольник, где её необходимо отрисовать и мировые координаты точки относительно окна.
-	void DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan::Rectf &rect, int xLabel, int yLabel);
+	void DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan::Rectf &rect, int xLabel, int yLabel, clan::Colorf color);
 
 	// Звуки включения и выключения подсветки.
 	clan::SoundBuffer soundIlluminateOn;

@@ -12,7 +12,7 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 #include "windows_settings.h"
 #include "Theme/theme.h"
 #include "settings_storage.h"
-#include "earth.h"
+#include "world.h"
 #include "model_render.h"
 #include "app.h"
 
@@ -202,15 +202,13 @@ bool App::update()
 	game_time.update();
 
 	// Check for fullscreen switch.
-	//
 	if (fullscreen_requested != is_fullscreen)
 	{
 		is_fullscreen = fullscreen_requested;
 		pWindow->display_window().toggle_fullscreen();
 	}
 	
-	// Выведем скорость обновления экрана, но только если она изменилась.
-	//
+	// Выведем скорость обновления экрана, но только если она изменилась, так как операция медленная.
 	int fps = int(game_time.get_updates_per_second());
 	if (lastFPS != fps) {
 		lastFPS = fps;
@@ -218,45 +216,42 @@ bool App::update()
 		pLabelFPS->set_text(fpsStr, true);
 	}
 
-	// Истина, если что-либо в модели изменилось и необходима перерисовка.
-	bool isDirty = false;
-
 	// Выведем координаты левого верхнего угла мира.
-	const clan::Pointf &topLeftWorld = globalEarth.getAppearanceTopLeft();
+	const clan::Pointf &topLeftWorld = globalWorld.getAppearanceTopLeft();
 	if (lastTopLeftWorld != topLeftWorld) {
 		lastTopLeftWorld = topLeftWorld;
 		pButtonTopLeftModelCoordinate->label()->set_text("X:Y "
 			+ clan::StringHelp::int_to_text(int(topLeftWorld.x)) + ":"
 			+ clan::StringHelp::int_to_text(int(topLeftWorld.y)), true);
-		isDirty = true; // Пометим, что необхдимо перерисовать модель.
 	}
 
 	// Выведем масштаб координат мира.
-	float scaleWorld = globalEarth.getAppearanceScale();
+	float scaleWorld = globalWorld.getAppearanceScale();
 	if (lastScaleWorld != scaleWorld) {
 		lastScaleWorld = scaleWorld;
 		pButtonScaleModel->label()->set_text("Scale " + clan::StringHelp::float_to_text(scaleWorld, 3, false), true);
-		isDirty = true; 
 	}
 
 	// Проверим, не изменилась ли освещённость.
 	bool illuminatedWorld = pModelRender->getIlluminatedWorld();
 	if (lastIlluminatedWorld != illuminatedWorld) {
 		lastIlluminatedWorld = illuminatedWorld;
-		isDirty = true; 
 	} 
 
 	// Отрисуем содержимое окна с моделью.
-	DemiTime modelTime = globalEarth.getModelTime();
+	DemiTime modelTime = globalWorld.getModelTime();
 	if (lastModelTime != modelTime) {
 		lastModelTime = modelTime;
 		pLabelModelTime->set_text(modelTime.getDateStr(), true);
-		isDirty = true; 
 	}
 
-	//if (isDirty) 
-		pModelRender->draw(canvas);
+	// Отрисовываем модель.
+	pModelRender->draw(canvas);
 
+	// Уведомляем окно настроек об отрисовке (для проверки наступления момента сохранения модели).
+	pWindowSettings->modelRenderNotify(game_time.get_current_time());
+
+	// Выводим заэкранный буфер на экран.
 	pWindow->display_window().flip();
 
 	return !quit;
@@ -334,13 +329,13 @@ void App::on_menuButton_down()
 void App::on_menuTopLeftModelButton_down()
 {
 	// Reset top left coordinate of the world.
-	globalEarth.setAppearanceTopLeft(clan::Pointf());
+	globalWorld.setAppearanceTopLeft(clan::Pointf());
 }
 
 void App::on_menuScaleModelButton_down()
 {
 	// Reset the scale.
-	globalEarth.setAppearanceScale(1.0f);
+	globalWorld.setAppearanceScale(1.0f);
 }
 
 void App::on_menuIlluminatedModelButton_down()

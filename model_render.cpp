@@ -9,7 +9,7 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 #include "precomp.h"
-#include "earth.h"
+#include "world.h"
 #include "settings_storage.h"
 #include "model_render.h"
 
@@ -68,7 +68,7 @@ void ModelRender::render_content(clan::Canvas &canvas)
 	const clan::Sizef windowSize = geometry().content_size();
 
 	// Для оптимизации.
-	const clan::Sizef earthSize = globalEarth.get_worldSize();
+	const clan::Sizef earthSize = globalWorld.get_worldSize();
 
 	// Если некуда или нечего рисовать, выходим.
 	if (windowSize.width == 0 || windowSize.height == 0 || earthSize.width == 0 || earthSize.height == 0)
@@ -78,8 +78,8 @@ void ModelRender::render_content(clan::Canvas &canvas)
 	CorrectScale();
 
 	// Мировые координаты левого верхнего угла окна и масштаб.
-	clan::Pointf topLeftWorld = globalEarth.getAppearanceTopLeft();
-	float scale = globalEarth.getAppearanceScale();
+	clan::Pointf topLeftWorld = globalWorld.getAppearanceTopLeft();
+	float scale = globalWorld.getAppearanceScale();
 
 	// В зависимости от масштаба, отрисовываем точки либо клетки.
 	if (scale >= cPixelDetailLevel) {
@@ -135,7 +135,7 @@ void ModelRender::render_content(clan::Canvas &canvas)
 		bool showTextInCell = scale < cCompactCellDetailLevel;
 
 		// Определим систему координат.
-		LocalCoord coordSystem(globalEarth.getCopyDotsArray(), topLeftWorld);
+		LocalCoord coordSystem(globalWorld.getCopyDotsArray(), topLeftWorld);
 
 		// Включена ли постоянная подсветка, для удобства.
 		bool illuminated = getIlluminatedWorld();
@@ -172,9 +172,9 @@ void ModelRender::render_content(clan::Canvas &canvas)
 				// Отрисовываем клетку.
 				canvas.fill_rect(r, color);
 
-				// Отрисовываем её координату, если помещается.
+				// Отрисовываем её внутренности, если помещаются.
 				if (showTextInCell)
-					DrawCellCompact(canvas, d, r, int(topLeftWorld.x + xDotIndex - 1), int(topLeftWorld.y + yDotIndex));
+					DrawCellCompact(canvas, d, r, int(topLeftWorld.x + xDotIndex - 1), int(topLeftWorld.y + yDotIndex), color);
 			}
 
 			// Переходим к следующему ряду клеток.
@@ -194,7 +194,7 @@ void ModelRender::DrawGrid(clan::Canvas &canvas, const clan::Sizef &windowSize)
 	// Отрисовывает сетку.
 
 	// Масштаб.
-	float scale = globalEarth.getAppearanceScale();
+	float scale = globalWorld.getAppearanceScale();
 
 	// Расстояние между линиями это обратная к масштабу величина. Количество линий, помещающихся в окне.
 	clan::Sizef numLines(windowSize * scale);
@@ -210,22 +210,21 @@ void ModelRender::DrawGrid(clan::Canvas &canvas, const clan::Sizef &windowSize)
 	}
 }
 
-void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan::Rectf &rect, int xLabel, int yLabel)
+void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan::Rectf &rect, int xLabel, int yLabel, clan::Colorf color)
 {
 	// Отрисовывает клетку в компактном виде - с координатой и ресурсами, которые поместятся.
-	// В функцию передаётся точка поверхности, прямоугольник, где её необходимо отрисовать и мировые координаты точки относительно окна.
-	//
-	// Ограничиваем область отрисовки
-	//canvas.set_cliprect(rect);
 
 	// Кличество строк, которые влезли бы в указанное пространство, исключая место под координату.
 	float numLinesInRect = roundf(rect.get_height() / cCompactCellResLineHeight - 1);
 
 	// Количество строк с ресурсами - все, включая энергии, или сколько поместится.
-	float numLines = clan::min(float(globalEarth.getElemCount() + 2), numLinesInRect);
+	float numLines = clan::min(float(globalWorld.getElemCount() + 2), numLinesInRect);
 
 	// Отступ слева для надписей.
 	const float indent = rect.left + 3;
+
+	// Цвет шрифта либо белый либо чёрный в зависимости от цвета самой клетки.
+	color = (color.get_red() + color.get_green() + color.get_blue()) * color.get_alpha() < 1.5f ? clan::Colorf::white : clan::Colorf::black;
 
 	// Отрисовываем солнечную энергию, геотермальную и количества элементов.
 	if (numLines > 0) {
@@ -233,12 +232,12 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 		// Координата строки.
 		float yLine = rect.top + 16;
 
-		cellFont.draw_text(canvas, indent, yLine, cSolar + '\t' + clan::StringHelp::float_to_text(d.solarEnergy * 100) + "%");
+		cellFont.draw_text(canvas, indent, yLine, cSolar + '\t' + clan::StringHelp::float_to_text(d.solarEnergy * 100) + "%", color);
 
 		if (numLines > 1) {
 
 			yLine += cCompactCellResLineHeight;
-			cellFont.draw_text(canvas, indent, yLine, cEnergy + '\t' + clan::StringHelp::float_to_text(d.energy * 100) + "%");
+			cellFont.draw_text(canvas, indent, yLine, cEnergy + '\t' + clan::StringHelp::float_to_text(d.energy * 100) + "%", color);
 			yLine += cCompactCellResLineHeight;
 
 
@@ -247,19 +246,16 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 
 				// Значение в процентах.
 				//float percent = d.res[i];
-				float percent = d.res[i] * 100 / globalEarth.getResMaxValue(i);
+				float percent = d.res[i] * 100 / globalWorld.getResMaxValue(i);
 
-				cellFont.draw_text(canvas, indent, yLine, globalEarth.getResName(i) + '\t' + clan::StringHelp::float_to_text(percent) + "%");
+				cellFont.draw_text(canvas, indent, yLine, globalWorld.getResName(i) + '\t' + clan::StringHelp::float_to_text(percent) + "%", color);
 				yLine += cCompactCellResLineHeight;
 			}
 		}
 	}
 
 	// Отрисовываем в нижнем левом углу координату.
-	cellFont.draw_text(canvas, indent, rect.bottom - 3, "X:Y " + clan::StringHelp::int_to_text(xLabel) + ":" + clan::StringHelp::int_to_text(yLabel));
-
-	// Восстановим область отрисовки на всё полотно.
-	//canvas.reset_cliprect();
+	cellFont.draw_text(canvas, indent, rect.bottom - 3, "X:Y " + clan::StringHelp::int_to_text(xLabel) + ":" + clan::StringHelp::int_to_text(yLabel), color);
 }
 
 // Отрисовывает модель.
@@ -288,8 +284,8 @@ int max1(float a)
 void ModelRender::on_mouse_down(clan::PointerEvent &e)
 {
 	// Мировые координаты левого верхнего угла окна и масштаб.
-	clan::Pointf topLeftWorld = globalEarth.getAppearanceTopLeft();
-	float scale = globalEarth.getAppearanceScale();
+	clan::Pointf topLeftWorld = globalWorld.getAppearanceTopLeft();
+	float scale = globalWorld.getAppearanceScale();
 
 	switch (e.button())
 	{
@@ -312,7 +308,7 @@ void ModelRender::on_mouse_down(clan::PointerEvent &e)
 			Approach(e.pos(this), cScaleInc);
 
 		// Сохраним изменения.
-		globalEarth.setAppearanceTopLeft(topLeftWorld);
+		globalWorld.setAppearanceTopLeft(topLeftWorld);
 
 		// Корректируем масштаб и верхний левый угол модели во-избежание выхода за границы.
 		CorrectScale();
@@ -325,7 +321,7 @@ void ModelRender::on_mouse_down(clan::PointerEvent &e)
 			topLeftWorld.y += max1(yWorldInc * scale);
 		else
 			ToDistance(e.pos(this), cScaleInc);
-		globalEarth.setAppearanceTopLeft(topLeftWorld);
+		globalWorld.setAppearanceTopLeft(topLeftWorld);
 		CorrectScale();
 		break;
 	}
@@ -349,7 +345,7 @@ void ModelRender::on_mouse_move(const clan::PointerEvent &e)
 		clan::Pointf dif = scrollWindow - e.pos(this);
 
 		// По определённому смещению задаём новую мировую координату с учётом масштаба.
-		globalEarth.setAppearanceTopLeft(scrollWorld + dif * globalEarth.getAppearanceScale());
+		globalWorld.setAppearanceTopLeft(scrollWorld + dif * globalWorld.getAppearanceScale());
 
 		// Корректируем масштаб и верхний левый угол модели во-избежание выхода за границы.
 		CorrectScale();
@@ -367,22 +363,22 @@ void ModelRender::on_mouse_dblclk(const clan::PointerEvent &e)
 
 		// Делаем несколько шагов от текущего масштаба до требуемого.
 		//
-		if (globalEarth.getAppearanceScale() <= cCompactCellDetailLevel) {
+		if (globalWorld.getAppearanceScale() <= cCompactCellDetailLevel) {
 
 			// Размеры окна для отображения.
 			const clan::Sizef windowSize = geometry().content_size();
 
 			// Размеры мира (для удобства).
-			const clan::Sizef worldSize = globalEarth.get_worldSize();
+			const clan::Sizef worldSize = globalWorld.get_worldSize();
 
 			// Определим максимально-возможный масштаб.
 			const float maxScale = std::min<float>(worldSize.width / windowSize.width, worldSize.height / windowSize.height);
 
 			// Масштабируем до максимума или до 1.
-			scaleStep = float(pow(globalEarth.getAppearanceScale() / (maxScale < 1 ? maxScale : 1), 1.0 / 13));
+			scaleStep = float(pow(globalWorld.getAppearanceScale() / (maxScale < 1 ? maxScale : 1), 1.0 / 13));
 		}
 		else
-			scaleStep = float(pow(globalEarth.getAppearanceScale() / cCompactCellDetailLevel, 1.0 / 12));
+			scaleStep = float(pow(globalWorld.getAppearanceScale() / cCompactCellDetailLevel, 1.0 / 12));
 
 
 		// Запускаем анимацию.
@@ -407,8 +403,8 @@ void ModelRender::Approach(const clan::Pointf &pos, float scaleStep)
 	//
 
 	// Мировые координаты левого верхнего угла окна и масштаб.
-	clan::Pointf topLeftWorld = globalEarth.getAppearanceTopLeft();
-	float scale = globalEarth.getAppearanceScale();
+	clan::Pointf topLeftWorld = globalWorld.getAppearanceTopLeft();
+	float scale = globalWorld.getAppearanceScale();
 
 	// Координаты мира под курсором до масштабирования (без учёта прокрутки topLeftWorld.x для оптимизации).
 	float wx1 = pos.x * scale;
@@ -426,8 +422,8 @@ void ModelRender::Approach(const clan::Pointf &pos, float scaleStep)
 	topLeftWorld.y += int(wy1 - wy2);
 
 	// Сохраним изменения.
-	globalEarth.setAppearanceTopLeft(topLeftWorld);
-	globalEarth.setAppearanceScale(scale);
+	globalWorld.setAppearanceTopLeft(topLeftWorld);
+	globalWorld.setAppearanceScale(scale);
 }
 
 
@@ -436,15 +432,15 @@ void ModelRender::ToDistance(const clan::Pointf &pos, float scaleStep)
 	// Увеличивает масштаб - отдаляет поверхность.
 
 	// Мировые координаты левого верхнего угла окна и масштаб.
-	clan::Pointf topLeftWorld = globalEarth.getAppearanceTopLeft();
-	float scale = globalEarth.getAppearanceScale();
+	clan::Pointf topLeftWorld = globalWorld.getAppearanceTopLeft();
+	float scale = globalWorld.getAppearanceScale();
 
 	// Меняем масштаб, отодвигая поверхность.
 	scale *= scaleStep;
 
 	//const clan::Rect &viewRect = geometry().content_box();
 	const clan::Sizef viewSize = geometry().content_size() * scale;
-	const clan::Sizef worldSize = globalEarth.get_worldSize();
+	const clan::Sizef worldSize = globalWorld.get_worldSize();
 
 	// Коррекцию проводим только если не достигли минимального масштаба.
 	if (viewSize.width <= worldSize.width && viewSize.height <= worldSize.height) {
@@ -457,8 +453,8 @@ void ModelRender::ToDistance(const clan::Pointf &pos, float scaleStep)
 	}
 
 	// Сохраним изменения.
-	globalEarth.setAppearanceTopLeft(topLeftWorld);
-	globalEarth.setAppearanceScale(scale);
+	globalWorld.setAppearanceTopLeft(topLeftWorld);
+	globalWorld.setAppearanceScale(scale);
 }
 
 // Постоянная подсветка мира.
@@ -490,10 +486,10 @@ void ModelRender::workerThread()
 			const clan::Sizef windowSize = geometry().content_size();
 			float width = windowSize.width;
 			float height = windowSize.height;
-			float scale = globalEarth.getAppearanceScale();
+			float scale = globalWorld.getAppearanceScale();
 
 			// Определим систему координат.
-			LocalCoord coordSystem(globalEarth.getCopyDotsArray(), globalEarth.getAppearanceTopLeft());
+			LocalCoord coordSystem(globalWorld.getCopyDotsArray(), globalWorld.getAppearanceTopLeft());
 
 			// Включена ли постоянная подсветка, для удобства.
 			bool illuminated = getIlluminatedWorld();
@@ -549,24 +545,24 @@ void ModelRender::CorrectScale()
 	const clan::Sizef windowSize = geometry().content_size();
 
 	// Размер мира.
-	const clan::Sizef earthSize = globalEarth.get_worldSize();
+	const clan::Sizef earthSize = globalWorld.get_worldSize();
 
 	// Если некуда или нечего рисовать, выходим.
 	if (windowSize.width == 0 || windowSize.height == 0 || earthSize.width == 0 || earthSize.height == 0)
 		return;
 
 	// Размер в мировых координатах.
-	const clan::Sizef scaledSize(windowSize * globalEarth.getAppearanceScale());
+	const clan::Sizef scaledSize(windowSize * globalWorld.getAppearanceScale());
 
 	// Если размер окна стал больше отображаемого мира, надо откорректировать масштаб.
 	if (scaledSize.width > earthSize.width || scaledSize.height > earthSize.height) {
 		float w = earthSize.width / windowSize.width;
 		float h = earthSize.height / windowSize.height;
-		globalEarth.setAppearanceScale(w < h ? w : h);
+		globalWorld.setAppearanceScale(w < h ? w : h);
 	}
 	else {
 		// Мировые координаты левого верхнего угла окна.
-		clan::Pointf topLeftWorld = globalEarth.getAppearanceTopLeft();
+		clan::Pointf topLeftWorld = globalWorld.getAppearanceTopLeft();
 
 		// Если в результате увеличения размера окно выезжает за границу мира, надо откорректировать мировые координаты.
 		// По вертикали ограничиваем, по горизонтали - циклическая прокрутка.
@@ -581,6 +577,6 @@ void ModelRender::CorrectScale()
 			topLeftWorld.y = earthSize.height - scaledSize.height;
 		
 		// Сохраняем результат.
-		globalEarth.setAppearanceTopLeft(topLeftWorld);
+		globalWorld.setAppearanceTopLeft(topLeftWorld);
 	}
 }
