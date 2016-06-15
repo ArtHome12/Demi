@@ -232,12 +232,12 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 		// Координата строки.
 		float yLine = rect.top + 16;
 
-		cellFont.draw_text(canvas, indent, yLine, cSolar + '\t' + clan::StringHelp::float_to_text(d.solarEnergy * 100) + "%", color);
+		cellFont.draw_text(canvas, indent, yLine, cSolar + '\t' + clan::StringHelp::float_to_text(d.getSolarEnergy() * 100) + "%", color);
 
 		if (numLines > 1) {
 
 			yLine += cCompactCellResLineHeight;
-			cellFont.draw_text(canvas, indent, yLine, cEnergy + '\t' + clan::StringHelp::float_to_text(d.energy * 100) + "%", color);
+			cellFont.draw_text(canvas, indent, yLine, cEnergy + '\t' + clan::StringHelp::float_to_text(d.getGeothermalEnergy() * 100) + "%", color);
 			yLine += cCompactCellResLineHeight;
 
 

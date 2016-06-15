@@ -9,6 +9,7 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 #include "precomp.h"
+#include "string_resources.h"
 #include "settings_storage.h"
 
 // ‘айл с настройками программы
@@ -27,6 +28,10 @@ const std::string cMainWindowSectionFullScreen = "is_fullscreen";
 const std::string cMainWindowSectionMenu = "MainWindow/TopMenuState";
 const std::string cMainWindowSectionSettingsWindowVisible = "SettingsWindowVisible";
 const std::string cMainWindowSectionModelIlluminated = "ModelIlluminated";
+
+// язык интерфейса.
+const std::string cMainWindowSectionLocale = "MainWindow/Locale";
+const std::string cMainWindowSectionLanguage = "Language";
 
 // »нформаци€ о проекте
 const std::string cProjectSectionName = "Project/ProjectName";
@@ -47,6 +52,12 @@ SettingsStorage::SettingsStorage() :
 	XMLResDoc(cSettingsXML), 
 	fileResDoc(clan::FileSystem("ThemeAero"))
 {
+	// язык интерфейса.
+	auto sectionLocale = XMLResDoc.get_resource(cMainWindowSectionLocale).get_element();
+	const std::string &lang = sectionLocale.get_attribute(cMainWindowSectionLanguage, "Eng");
+
+	// «агрузим строковые ресурсы с учЄтом €зыка.
+	globalStr.LoadRes(XMLResDoc, lang);
 }
 
 SettingsStorage::~SettingsStorage()

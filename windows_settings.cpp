@@ -285,18 +285,8 @@ void WindowsSettings::onButtondownRestart()
 	// Преобразуем путь в абсолютный, если у нас относительный.
 	std::string absPath = clan::PathHelp::make_absolute(clan::System::get_exe_path(), modelFilename);
 
-	// Удаляем двоичный файл.
-	if (clan::FileHelp::file_exists(absPath + "b")) 
-		clan::FileHelp::delete_file(absPath + "b");
-
-	// Попытаемся загрузить последнюю модель.
-	try {
-		globalWorld.LoadModel(absPath);
-	}
-	catch (...) {
-		// При ошибке загружаем чистую модель.
-		onButtondownNew();
-	}
+	// Сбрасываем модель.
+	globalWorld.ResetModel(absPath, cProjectTemplate);
 }
 
 void WindowsSettings::onCBAutoRunToggle()

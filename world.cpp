@@ -9,6 +9,7 @@
 =============================================================================== */
 
 #include "precomp.h"
+#include "string_resources.h"
 #include "world.h"
 
 
@@ -56,7 +57,8 @@ World globalWorld;
 // =============================================================================
 Dot::Dot() 
 {
-	int elemCount = globalWorld.getElemCount();
+	// Выделяем память под количества ресурсов плюс солнечная и геотермальная энергии.
+	int elemCount = globalWorld.getElemCount() + 2;
 	res = new float[elemCount];
 	memset(res, 0, sizeof(float) * elemCount);
 }
@@ -66,13 +68,18 @@ Dot::~Dot()
 	delete res;
 }
 
+int Dot::getSizeInMemory() 
+{
+	// Объём памяти в байтах под объект - массив количества ресурсов плюс солнечная и геотермальная энергии.
+	return (globalWorld.getElemCount() + 2) * sizeof(float);
+}
 
 void Dot::get_color(clan::Colorf &aValue) const
 {
 	// Возвращает цвет для точки на основе имеющихся ресурсов, передача по ссылке для оптимизации.
 	//
 	// Солнечный свет и энергия это альфа-канал.
-	aValue.set_alpha(solarEnergy > energy ? solarEnergy : energy);
+	aValue.set_alpha(clan::max<float, float>(getSolarEnergy(), getGeothermalEnergy()));
 
 	// Если складываем вместе цвета разных элементов, возникают точки неожиданных цветов. 
 	// Выходом может быть отображать преимущественный цвет для всей точки, то есть самый яркий. Начнём
@@ -80,7 +87,7 @@ void Dot::get_color(clan::Colorf &aValue) const
 	//
 
 	// Вклад (возможная яркость) ресурса для первого элемента.
-	float resBright = res[0] / globalWorld.arResMax[0];
+	float resBright = res[2] / globalWorld.arResMax[0];
 
 	// Цвет текущего ресурса.
 	clan::Colorf &col = globalWorld.arResColors[0];
@@ -97,7 +104,7 @@ void Dot::get_color(clan::Colorf &aValue) const
 	for (int i = 1; i < globalWorld.elemCount; ++i) {
 
 		// Вклад текущего ресурса.
-		const float curResBright = res[i] / globalWorld.arResMax[i];
+		const float curResBright = res[i + 2] / globalWorld.arResMax[i];
 
 		// Если яркость выше, запоминаем цвет.
 		//
@@ -194,7 +201,7 @@ void Solar::Shine(const DemiTime &timeModel)
 			float r = sqrt(x*x + y*y);
 
 			// Если оно больше заданного радиуса, ничего не делаем, иначе зададим освещённость, обратную расстоянию в долях от 0 до 1.
-			coord.get_dot(x, y).solarEnergy = r < lightRadius ? (lightRadius - r) / lightRadius : 0.0f;
+			coord.get_dot(x, y).setSolarEnergy(r < lightRadius ? (lightRadius - r) / lightRadius : 0.0f);
 		}
 
 }
@@ -293,25 +300,26 @@ void World::FillRectResource(int resId, float amount, const clan::Rectf &rect)
 
 	for (float x = rect.left; x < rect.right; ++x)
 		for (float y = rect.top; y < rect.bottom; ++y)
-			arDots[int(x + y * worldSize.width)].res[resId] = amount;
+			arDots[int(x + y * worldSize.width)].res[resId + 2] = amount;
 }
 
 
 void World::Diffusion()
 {
 	// Диффузия ресурсов.
-	//
-	// Граница массива, на которую заходить нельзя.
-	Dot *cur = arDots;	// Исходная точка для переноса ресурсов - первая точка массива.
+
+	// Границы массива, за которую заходить нельзя.
+	Dot *cur = arDots;											// Исходная точка для переноса ресурсов - первая точка массива.
 	Dot *last = cur + int(worldSize.width * worldSize.height);	// Точка после последней точки массива.
-	Dot *dest;			// Конечная точка
+	Dot *dest;													// Конечная точка
 
 	while (true) {
 
 		// Случайное число.
 		int random = rand();
-		int rnd = random % 7; // от 0 до 7, направление движения
-		int rndRes = random % elemCount; // случайный элемент.
+		int rnd = random % 7;					// от 0 до 7, направление движения
+		int rndResA = random % elemCount;		// случайный элемент.
+		int rndResB = rndResA + 2;				// плюс пропускаем ячейки под солнечную и геотермальную энергии.
 
 		// Определяем исходную координату отдельным случайным числом, иначе возникает корреляция между начальной точкой и направлением.
 		cur += rand() % 12;
@@ -346,24 +354,22 @@ void World::Diffusion()
 		
 		// Откорректируем в случае выхода за пределы, иначе всё вещество скопится у нижнего края из-за дрейфа
 		// в силу того, что перенесённое вперёд вещество снова участвует в переносе.
-		//
 		if (dest < arDots)
 			dest = last - (arDots - dest);
 		else if (dest >= last)
 			dest = arDots + (dest - last);
 
 		// Осуществим перенос вещества из исходной точки в конечную согласно летучести ресурса.
-		//
 		Dot &fromDot = *cur;
 		Dot &toDot = *dest;
-		const float amount = fromDot.res[rndRes] * arResVolatility[rndRes];
-		fromDot.res[rndRes] -= amount;
-		toDot.res[rndRes] += amount;
+		const float amount = fromDot.res[rndResB] * arResVolatility[rndResA];
+		fromDot.res[rndResB] -= amount;
+		toDot.res[rndResB] += amount;
 
 		// Обновим максимумы.
 		//
-		if (arResMax[rndRes] < toDot.res[rndRes])
-			arResMax[rndRes] = toDot.res[rndRes];
+		if (arResMax[rndResA] < toDot.res[rndResB])
+			arResMax[rndResA] = toDot.res[rndResB];
 	}
 }
 
@@ -389,7 +395,7 @@ void World::AddGeothermal(int i, const clan::Pointf &coord)
 
 			// Если оно больше заданного радиуса, ничего не делаем, иначе зададим освещённость, обратную расстоянию в долях от 0 до 1.
 			if (r < cGeothermRadius) 
-				geothermalCoord.get_dot(xp, yp).energy = (cGeothermRadius - r) / cGeothermRadius;
+				geothermalCoord.get_dot(xp, yp).setGeothermalEnergy((cGeothermRadius - r) / cGeothermRadius);
 		}
 }
 
@@ -402,7 +408,7 @@ void World::LoadModel(const std::string &filename)
 	{
 		std::unique_lock<std::mutex> lock(threadMutex);
 		if (threadRunFlag)
-			throw clan::Exception("Need to stop the evolution prior to load!");
+			throw clan::Exception(globalStr.getStr("WorldLoadModelErrorNeedToStop"));
 	}
 
 	// Откроем XML файл.
@@ -431,7 +437,7 @@ void World::LoadModel(const std::string &filename)
 	appearanceTopLeft.y = float(prop.get_attribute_int(cResGlobalsAppearanceTop, int(appearanceTopLeft.y)));
 	appearanceScale = prop.get_attribute_float(cResGlobalsAppearanceScale, appearanceScale);
 
-	// Прочитаем время. По-умолчанию дефолтные значения на случай рестарта.
+	// Прочитаем время.
 	prop = resDoc->get_resource(cResGlobalsTime).get_element();
 	timeModel.year = prop.get_attribute_int(cResGlobalsTimeYear, 1);
 	timeModel.day = prop.get_attribute_int(cResGlobalsTimeDay, 1);
@@ -451,12 +457,12 @@ void World::LoadModel(const std::string &filename)
 	energyCount = int(energy.size());
 
 	// Выделим память под массивы.
-	arDots = new Dot[int(worldSize.width * worldSize.height)];		// точки поверхности.
-	arResColors = new clan::Colorf[elemCount];
-	arResMax = new float[elemCount];
-	arResNames = new std::string[elemCount];
-	arResVolatility = new float[elemCount];
-	arEnergy = new Geothermal[energyCount];			// геотермальные источники.
+	arDots = new Dot[int(worldSize.width * worldSize.height)];	// точки поверхности.
+	arResColors = new clan::Colorf[elemCount];					// цвета элементов.
+	arResMax = new float[elemCount];							// максимальные концентрации элементов в одной точке.
+	arResNames = new std::string[elemCount];					// названия элементов.
+	arResVolatility = new float[elemCount];						// летучесть элементов.
+	arEnergy = new Geothermal[energyCount];						// геотермальные источники.
 
 	// Инициализируем массив максимумов единицами, во-избежание деления на ноль.
 	for (int i = 0; i < elemCount; ++i)
@@ -554,11 +560,21 @@ void World::LoadModel(const std::string &filename)
 
 		// Считываем точки.
 		int dotsCount = int(worldSize.width * worldSize.height);
-		int dotSize = elemCount * sizeof(float);
+		int dotSize = Dot::getSizeInMemory();
 		for (int i = 0; i < dotsCount; i++) {
 			if (binFile.read(arDots[i].res, dotSize) != dotSize)
 				throw clan::Exception("Incorrect version binary file: cannot read dot #" + clan::StringHelp::int_to_text(i));
 		}
+
+		// Маркер начала массива концентраций.
+		const std::string &strResMaxMarker = binFile.read_string_nul();
+		if (strResMaxMarker != "ResMax:")
+			throw clan::Exception("Incorrect version binary file: need ResMax:, really " + strDotsMarker);
+
+		// Считываем максимальные концентрации.
+		dotSize = elemCount * sizeof(float);
+		if (binFile.read(arResMax, dotSize) != dotSize)
+			throw clan::Exception("Incorrect version binary file: cannot read ResMax");
 
 		// Закроем файл.
 		binFile.close();
@@ -626,9 +642,15 @@ void World::SaveModel(const std::string &filename)
 
 	// Записываем точки. Сразу все не получается, так как массив не плоский.
 	int dotsCount = int(worldSize.width * worldSize.height);
-	int dotSize = elemCount * sizeof(float);
+	int dotSize = Dot::getSizeInMemory();
 	for (int i = 0; i < dotsCount; i++)
 		binFile.write(arDots[i].res, dotSize);
+
+	// Записываем маркер начала массива максимумов.
+	binFile.write_string_nul("ResMax:");
+
+	// Записываем максимумы концентраций ресурсов.
+	binFile.write(arResMax, elemCount * sizeof(float));
 
 	// Закроем файл.
 	binFile.close();
@@ -689,6 +711,24 @@ void World::RunEvolution(bool is_active)
 	threadEvent.notify_all();
 }
 
+// Начинает расчёт заново.
+void World::ResetModel(const std::string &modelFilename, const std::string &defaultFilename)
+{
+	// Удаляем двоичный файл.
+	if (clan::FileHelp::file_exists(modelFilename + "b"))
+		clan::FileHelp::delete_file(modelFilename + "b");
+
+	// Попытаемся загрузить модель.
+	try {
+		globalWorld.LoadModel(modelFilename);
+		timeModel = DemiTime();
+		timeBackup = timeModel;
+	}
+	catch (...) {
+		// При ошибке загружаем чистую модель.
+		globalWorld.LoadModel(defaultFilename);
+	}
+}
 
 //Dot * World::getCopyDotsArray()
 //{

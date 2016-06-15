@@ -6,7 +6,7 @@
 		<!--Последнее представление модели - координата левого верхнего угла, масштаб-->
 		<item name="Appearance" top="0" left="0" scale="1"/>
 		<!--Время модели - год, день, секунда-->
-		<item name="Time" year="1" day="1" second="16494"/>
+		<item name="Time" year="1" day="1" second="1746"/>
 	</section>
 	<!--Геотермальные источники энергии-->
 	<section name="Energy">

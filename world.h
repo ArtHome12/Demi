@@ -18,7 +18,7 @@ const int cDaysInYear = 365;
 const int cTicksInDay = 86400;
 //const int cTicksInDay = 10;
 
-// Глобальная переменная - указатель на мир.
+// Глобальная переменная - мир.
 class World;
 extern World globalWorld;
 
@@ -30,12 +30,17 @@ class Dot {
 public:
 	
 	// Солнечная энергия в точке.
-	float solarEnergy = 0;
+	float getSolarEnergy() const { return res[0]; }
+	void setSolarEnergy(float newVal) { res[0] = newVal; }
 
 	// Геотермальная энергия в точке.
-	float energy = 0;
+	float getGeothermalEnergy() const { return res[1]; }
+	void setGeothermalEnergy(float newVal) { res[1] = newVal; }
 
-	// Имеющиеся в ней ресурсы
+	// Объём памяти в байтах под объект - массив количества ресурсов плюс солнечная и геотермальная энергии.
+	static int getSizeInMemory();
+
+	// Имеющиеся в ней ресурсы - первые два элемента это солнечная и геотермальная энергии (для ускорения сохранения).
 	float *res;
 
 	// Конструктор, массив ресов обнуляем.
@@ -144,6 +149,9 @@ public:
 
 	// Приостанавливает или продолжает расчёт модели
 	void RunEvolution(bool is_active);
+
+	// Начинает расчёт заново.
+	void ResetModel(const std::string &modelFilename, const std::string &defaultFilename);
 
 	// Возвращает точки поверхности.
 	//Dot *getCopyDotsArray() { return arDotsCopy; }
