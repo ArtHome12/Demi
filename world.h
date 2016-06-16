@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "settings_storage.h"
 
 // Продолжительность года в днях.
 const int cDaysInYear = 365;
@@ -171,6 +172,9 @@ public:
 	float getAppearanceScale() { return appearanceScale; }
 	void setAppearanceScale(float newScale) { appearanceScale = newScale; }
 
+	// Инициализация настроек.
+	void setSettingsStorage(SettingsStorage* pSettingsStorage) { pSettings = pSettingsStorage; }
+
 private:
 
 	// Текущий момент времени в расчётной модели и в сохранённой для отрисовки на экране копии.
@@ -218,6 +222,10 @@ private:
 
 	// Летучесть ресурса для диффузии, значение от 0 до 1.
 	float* arResVolatility = nullptr;
+
+	// Настройки программы - не используем shared_ptr, так как к моменту вызова деструктора ~SettingsStorage графическая 
+	// подсистема должна ещё существовать - а объект World глобальный и может умереть позже неё.
+	SettingsStorage* pSettings;
 
 	// Обновить состояние.
 	void MakeTick();

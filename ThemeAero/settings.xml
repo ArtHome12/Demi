@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="iso-8859-1"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <resources>
 	<section name="MainWindow">
 		<!--Main window position, size and state (6-maximized, 7-minimized, 10-normal)-->
@@ -6,7 +6,7 @@
 		<!--Top menu states-->
 		<item name="TopMenuState" SettingsWindowVisible="true" ModelIlluminated="false"/>
 		<!--Language-->
-		<item name="Locale" Language="eng"/>
+		<item name="Locale" Language="rus"/>
 	</section>--&gt;
 	<section name="Project">
 		<!--Project filename, XML-part. Using a relative path for easy moving/copying the application, if possible.-->
@@ -16,11 +16,35 @@
 	</section>--&gt;
 	<section name="Language">
 		<!--User message in module: app-->
-		<lang name="AppModelTimeLabel" eng="Model time:" rus="����� ������:"/>
-		<lang name="AppMainWindowTitle" eng="Demi: Hello World" rus="Demi: ���������� ���"/>
-		<lang name="AppScaleLabel" eng="Scale " rus="������� "/>
+		<lang name="AppModelTimeLabel" eng="Model time:" rus="Время модели:"/>
+		<lang name="AppMainWindowTitle" eng="Demi: Hello World" rus="Demi: Здравствуй мир"/>
+		<lang name="AppScaleLabel" eng="Scale " rus="Масштаб "/>
 		<!--User message in module: world-->
-		<lang name="WorldLoadModelErrorNeedToStop" eng="Need to stop the evolution prior to load!" rus="���������� ���������� ������ ����� ���������!"/>
-		<lang name="World" eng="" rus=""/>
+		<lang name="WorldLoadModelErrorNeedToStop" eng="Need to stop the evolution prior to load!" rus="Необходимо остановить расчёт перед загрузкой!"/>
+		<lang name="WorldWrongSize" eng="Invalid world size, must be less 30 000 (width=%1, height=%2)" rus="Неверный размер мира, должен быть менее 30 000 (width=%1, height=%2)"/>
+		<lang name="WorldWrongBinaryFileVersion" eng="Incorrect version binary file: need Ver:1, read %1" rus="Неверная версия двоичного файла: ожидается Ver:1, прочитано %1"/>
+		<lang name="WorldWrongBinaryFileElementsCount" eng="Error reading binary file elements count: need %1, read %2" rus="Ошибка чтения количества элементов из двоичного файла: ожидается %1, прочитано %2"/>
+		<lang name="WorldWrongBinaryFileElementsName" eng="Error reading binary file elements names: need %1, read %2" rus="Ошибка чтения названий элементов из двоичного файла: ожидается %1, прочитано %2"/>
+		<lang name="WorldWrongBinaryFileDotMarker" eng="Error reading binary file: need Dots:, read %1" rus="Ошибка чтения двоичного файла: ожидается маркер Dots:, прочитано %1"/>
+		<lang name="WorldWrongBinaryFileCannotReadDots" eng="Error reading binary file: cannot read dot #%1" rus="Ошибка чтения двоичного файла: невозможно прочитать точку №%1"/>
+		<lang name="WorldWrongBinaryFileResmaxMarker" eng="Error reading binary file: need ResMax:, read %1" rus="Ошибка чтения двоичного файла: ожидается маркер ResMax:, прочитано %1"/>
+		<lang name="WorldWrongBinaryFileCannotReadResmax" eng="Error reading binary file: cannot read ResMax" rus="Ошибка чтения двоичного файла: не удалось прочитать ResMax"/>
+		<!--User message in module: model_render-->
+		<lang name="ModelRenderSolar" eng="Solar " rus="Солнце "/>
+		<lang name="ModelRenderGeothermal" eng="Geothermal " rus="Геотерм "/>
+		<!--User message in module: windows_settings-->
+		<lang name="WindowsSettingsFileExistDlg" eng="File %1 exists. Rewrite it?" rus="Файл %1 существует. Перезаписать его?"/>
+		<lang name="WindowsSettingsRestartModel" eng="Start simulation of the world anew?" rus="Начать расчёт модели заново?"/>
+		<lang name="WindowsSettingsButtonNew" eng="New" rus="Новый"/>
+		<lang name="WindowsSettingsButtonOpen" eng="Open" rus="Открыть"/>
+		<lang name="WindowsSettingsButtonSave" eng="Save" rus="Сохранить"/>
+		<lang name="WindowsSettingsButtonSaveAs" eng="SaveAs" rus="СоранитьКак"/>
+		<lang name="WindowsSettingsButtonRestart" eng="Restart" rus="Рестарт"/>
+		<lang name="WindowsSettingsButtonRun" eng="Run / Pause" rus="Старт / Пауза"/>
+		<lang name="WindowsSettingsCheckboxAutoRun" eng="Autostart last project on program load" rus="Автостарт последнего проекта при загрузке"/>
+		<lang name="WindowsSettingsCheckboxAutoSave" eng="Autosave project on program exit" rus="Сохранять проект при выходе"/>
+		<lang name="WindowsSettingsCheckboxAutoSaveHourly" eng="Autosave project every hour" rus="Автосохранение каждый час"/>
+		<lang name="WindowsSettingsProjectName" eng="Project name: " rus="Проект: "/>
+		<lang name="WindowsSettingsProjectNameAbsent" eng="not selected or not available" rus="не выбран или недоступен"/>
 	</section>--&gt;
 </resources>

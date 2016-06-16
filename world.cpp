@@ -9,44 +9,53 @@
 =============================================================================== */
 
 #include "precomp.h"
-#include "string_resources.h"
 #include "world.h"
 
 
 const float cGeothermRadius = 12.0f;
 
 // Константы для чтения XML-файла модели
-const std::string cResGlobalsWorldSize = "Globals/WorldSize";
-const std::string cResGlobalsWorldSizeWidth = "width";
-const std::string cResGlobalsWorldSizeHeightRatio = "heightRatio";
+auto cResGlobalsWorldSize = "Globals/WorldSize";
+auto cResGlobalsWorldSizeWidth = "width";
+auto cResGlobalsWorldSizeHeightRatio = "heightRatio";
 
-const std::string cResGlobalsAppearance = "Globals/Appearance";
-const std::string cResGlobalsAppearanceTop = "top";
-const std::string cResGlobalsAppearanceLeft = "left";
-const std::string cResGlobalsAppearanceScale = "scale";
+auto cResGlobalsAppearance = "Globals/Appearance";
+auto cResGlobalsAppearanceTop = "top";
+auto cResGlobalsAppearanceLeft = "left";
+auto cResGlobalsAppearanceScale = "scale";
 
-const std::string cResGlobalsTime = "Globals/Time";
-const std::string cResGlobalsTimeYear = "year";
-const std::string cResGlobalsTimeDay = "day";
-const std::string cResGlobalsTimeSecond = "second";
+auto cResGlobalsTime = "Globals/Time";
+auto cResGlobalsTimeYear = "year";
+auto cResGlobalsTimeDay = "day";
+auto cResGlobalsTimeSecond = "second";
 
-const std::string cResElementsSection = "Elements";
-const std::string cResElementsType = "Element";
+auto cResElementsSection = "Elements";
+auto cResElementsType = "Element";
 
-const std::string cResEnergySection = "Energy";
-const std::string cResEnergyType = "Geothermal";
+auto cResEnergySection = "Energy";
+auto cResEnergyType = "Geothermal";
 
-const std::string cResOrganismsSection = "Organisms";
-const std::string cResOrganismsType = "Organism";
+auto cResOrganismsSection = "Organisms";
+auto cResOrganismsType = "Organism";
 
-const std::string cResAreaRect = "rect";	// Тег для прямоугольной области начального распределения ресурса/организмов.
-const std::string cResAreaPoint = "point";	// Тег для точки.
+auto cResAreaRect = "rect";	// Тег для прямоугольной области начального распределения ресурса/организмов.
+auto cResAreaPoint = "point";	// Тег для точки.
 
-const std::string cElementsResColor = "color";
-const std::string cElementsResVolatility = "volatility";
+auto cElementsResColor = "color";
+auto cElementsResVolatility = "volatility";
 
-const std::string cSolar = "Solar";			// Обозначение солнечной энергии.
-const std::string cEnergy = "Geothermal";			// Обозначение энергии.
+auto cSolar = "Solar";			// Обозначение солнечной энергии.
+auto cEnergy = "Geothermal";	// Обозначение геотермальной энергии.
+
+// Строковые ресурсы
+auto cWrongSize = "WorldWrongSize";
+auto cWrongBinVer = "WorldWrongBinaryFileVersion";
+auto cWrongBinElemCount = "WorldWrongBinaryFileElementsCount";
+auto cWrongBinElemName = "WorldWrongBinaryFileElementsName";
+auto cWrongBinDotMarker = "WorldWrongBinaryFileDotMarker";
+auto cWrongBinCannotReadDots = "WorldWrongBinaryFileCannotReadDots";
+auto cWrongBinResmaxMarker = "WorldWrongBinaryFileResmaxMarker";
+auto cWrongBinCannotReadResmax = "WorldWrongBinaryFileCannotReadResmax";
 
 
 // Глобальный объект - неживой мир.
@@ -408,7 +417,7 @@ void World::LoadModel(const std::string &filename)
 	{
 		std::unique_lock<std::mutex> lock(threadMutex);
 		if (threadRunFlag)
-			throw clan::Exception(globalStr.getStr("WorldLoadModelErrorNeedToStop"));
+			throw clan::Exception(pSettings->LocaleStr("WorldLoadModelErrorNeedToStop"));
 	}
 
 	// Откроем XML файл.
@@ -422,10 +431,8 @@ void World::LoadModel(const std::string &filename)
 
 	// Высота мира
 	worldSize.height = round(worldSize.width * prop.get_attribute_float(cResGlobalsWorldSizeHeightRatio, 1.0f));
-
 	if (worldSize.width <= 0 || worldSize.width > 30000 || worldSize.height <= 0 || worldSize.height > 30000)
-		throw clan::Exception("Invalid world size (width=" + clan::StringHelp::int_to_text(int(worldSize.width)) 
-			+ ", height=" + clan::StringHelp::int_to_text(int(worldSize.height)) + ")");
+		throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongSize), int(worldSize.width), int(worldSize.height)));
 
 	// Радиус солнечного пятна и высота тропиков зависит от размера мира.
 	lightRadius = round(0.9f * worldSize.height / 2);
@@ -535,46 +542,45 @@ void World::LoadModel(const std::string &filename)
 			clan::File::ShareFlags::share_read);
 
 		// Версия файла.
-		const std::string &strVer = binFile.read_string_nul();
+		auto &strVer = binFile.read_string_nul();
 		if (strVer != "Ver:1")
-			throw clan::Exception("Incorrect version binary file: need Ver:1, really " + strVer);
+			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinVer), strVer));
 
 		// Количество элементов.
-		const std::string &strElemCount = binFile.read_string_nul();
-		const std::string &strElemCountAwait = "ElementsCount:" + clan::StringHelp::int_to_text(elemCount);
+		auto &strElemCount = binFile.read_string_nul();
+		auto &strElemCountAwait = "ElementsCount:" + clan::StringHelp::int_to_text(elemCount);
 		if (strElemCount != strElemCountAwait)
-			throw clan::Exception("Incorrect version binary file: need " + strElemCountAwait + ", really " + strElemCount);
-
+			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinElemCount), strElemCountAwait, strElemCount));
 
 		// Названия элементов.
 		for (int i = 0; i < elemCount; i++) {
-			const std::string &elemName = binFile.read_string_nul();
+			auto &elemName = binFile.read_string_nul();
 			if (elemName != arResNames[i])
-				throw clan::Exception("Incorrect version binary file: need " + arResNames[i] + ", really " + elemName);
+				throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinElemName), arResNames[i], elemName));
 		}
 
 		// Маркер начала массива точек.
-		const std::string &strDotsMarker = binFile.read_string_nul();
+		auto &strDotsMarker = binFile.read_string_nul();
 		if (strDotsMarker != "Dots:")
-			throw clan::Exception("Incorrect version binary file: need Dots:, really " + strDotsMarker);
+			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinDotMarker), strDotsMarker));
 
 		// Считываем точки.
 		int dotsCount = int(worldSize.width * worldSize.height);
 		int dotSize = Dot::getSizeInMemory();
 		for (int i = 0; i < dotsCount; i++) {
 			if (binFile.read(arDots[i].res, dotSize) != dotSize)
-				throw clan::Exception("Incorrect version binary file: cannot read dot #" + clan::StringHelp::int_to_text(i));
+				throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinCannotReadDots), i));
 		}
 
 		// Маркер начала массива концентраций.
-		const std::string &strResMaxMarker = binFile.read_string_nul();
+		auto &strResMaxMarker = binFile.read_string_nul();
 		if (strResMaxMarker != "ResMax:")
-			throw clan::Exception("Incorrect version binary file: need ResMax:, really " + strDotsMarker);
+			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinResmaxMarker), strResMaxMarker));
 
 		// Считываем максимальные концентрации.
 		dotSize = elemCount * sizeof(float);
 		if (binFile.read(arResMax, dotSize) != dotSize)
-			throw clan::Exception("Incorrect version binary file: cannot read ResMax");
+			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinCannotReadResmax)));
 
 		// Закроем файл.
 		binFile.close();

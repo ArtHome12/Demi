@@ -38,6 +38,7 @@ private:
 
 	// Кнопка-надпись масштаба координат мира.
 	float lastScaleWorld = 0.0f;
+	std::string scaleLabelTemplate;
 	std::shared_ptr<clan::ButtonView> pButtonScaleModel;
 
 	// Кнопка-надпись постоянного освещения мира.

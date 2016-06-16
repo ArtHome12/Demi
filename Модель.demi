@@ -1,12 +1,12 @@
-<?xml version="1.0" encoding="iso-8859-1"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <resources>
 	<section name="Globals">
 		<!--Øèðèíà ìèðà è ïðîïîðöèÿ äëÿ âûñîòû, ìàêñèìóì 30 000. Äëÿ ïðîåêöèè Ìåðêàòîðà 24:11 èëè 0.4583-->
 		<item name="WorldSize" width="1000" heightRatio="0.4583"/>
 		<!--Ïîñëåäíåå ïðåäñòàâëåíèå ìîäåëè - êîîðäèíàòà ëåâîãî âåðõíåãî óãëà, ìàñøòàá-->
-		<item name="Appearance" top="0" left="0" scale="1"/>
+		<item name="Appearance" top="164" left="420" scale="0.007494"/>
 		<!--Âðåìÿ ìîäåëè - ãîä, äåíü, ñåêóíäà-->
-		<item name="Time" year="1" day="1" second="1746"/>
+		<item name="Time" year="1" day="1" second="49842"/>
 	</section>
 	<!--Ãåîòåðìàëüíûå èñòî÷íèêè ýíåðãèè-->
 	<section name="Energy">

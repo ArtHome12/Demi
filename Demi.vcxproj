@@ -100,7 +100,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="app.cpp" />
-    <ClCompile Include="string_resources.cpp" />
     <ClCompile Include="world.cpp" />
     <ClCompile Include="model_render.cpp" />
     <ClCompile Include="organism.cpp" />
@@ -112,7 +111,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="app.h" />
-    <ClInclude Include="string_resources.h" />
     <ClInclude Include="world.h" />
     <ClInclude Include="model_render.h" />
     <ClInclude Include="organism.h" />

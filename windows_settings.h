@@ -16,7 +16,7 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 class WindowsSettings :	public clan::View
 {
 public:
-	WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsStorage> &pSettingsStorage);
+	WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsStorage> pSettingsStorage);
 	~WindowsSettings();
 
 	// Для получения уведомлений об отработке основного цикла (для возможного автосохранения модели).
@@ -49,7 +49,7 @@ private:
 	std::shared_ptr<clan::CheckBoxView> pCBAutoSaveHourly;
 
 	// Настройки.
-	std::shared_ptr<SettingsStorage> &pSettings;
+	std::shared_ptr<SettingsStorage> pSettings;
 
 	// Количество прошедших секунд с момента старта программы.
 	float secondsElapsed = 0;

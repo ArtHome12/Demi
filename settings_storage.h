@@ -45,6 +45,8 @@ public:
 	void setProjectAutosave(bool newValue);
 	void setProjectAutosaveHourly(bool newValue);
 
+	// Возвращает строку по заданному ключу либо сам ключ, если не найдена.
+	std::string LocaleStr(const std::string &key);
 
 private:
 	// Разделы XML-файла.
@@ -52,5 +54,11 @@ private:
 	clan::DomElement sectionMainWindowTopMenu;				// Раздел с параметрами меню главного окна.
 	clan::DomElement sectionProjectName;					// Раздел с названием файлов проекта.
 	clan::DomElement sectionProjectCheckBoxes;				// Раздел с настройками проекта.
+
+	// Локализованные строковые ресурсы.
+	std::map <std::string, std::string> langMap;
+
+	// Загружает локализованные строковые ресурсы из файла.
+	void LoadLocaleStrings(const std::string &lang);
 };
 

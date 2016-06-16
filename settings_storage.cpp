@@ -9,39 +9,41 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 #include "precomp.h"
-#include "string_resources.h"
 #include "settings_storage.h"
 
 // Файл с настройками программы
-const std::string cSettingsXML = "ThemeAero/settings.xml";
+auto cSettingsXML = "ThemeAero/settings.xml";
 
 // Местоположение главного окна
-const std::string cMainWindowSectionAppearance = "MainWindow/Appearance";
-const std::string cMainWindowSectionLeft = "left";
-const std::string cMainWindowSectionTop = "top";
-const std::string cMainWindowSectionWidth = "width";
-const std::string cMainWindowSectionHeight = "height";
-const std::string cMainWindowSectionState = "state";
-const std::string cMainWindowSectionFullScreen = "is_fullscreen";
+auto cMainWindowSectionAppearance = "MainWindow/Appearance";
+auto cMainWindowSectionLeft = "left";
+auto cMainWindowSectionTop = "top";
+auto cMainWindowSectionWidth = "width";
+auto cMainWindowSectionHeight = "height";
+auto cMainWindowSectionState = "state";
+auto cMainWindowSectionFullScreen = "is_fullscreen";
 
 // Состояние панели меню
-const std::string cMainWindowSectionMenu = "MainWindow/TopMenuState";
-const std::string cMainWindowSectionSettingsWindowVisible = "SettingsWindowVisible";
-const std::string cMainWindowSectionModelIlluminated = "ModelIlluminated";
+auto cMainWindowSectionMenu = "MainWindow/TopMenuState";
+auto cMainWindowSectionSettingsWindowVisible = "SettingsWindowVisible";
+auto cMainWindowSectionModelIlluminated = "ModelIlluminated";
 
 // Язык интерфейса.
-const std::string cMainWindowSectionLocale = "MainWindow/Locale";
-const std::string cMainWindowSectionLanguage = "Language";
+auto cMainWindowSectionLocale = "MainWindow/Locale";
+auto cMainWindowSectionLanguage = "Language";
+auto cLangSection = "Language";
+auto cLangType = "lang";
 
 // Информация о проекте
-const std::string cProjectSectionName = "Project/ProjectName";
-const std::string cProjectSectionNameFilename = "filename";
+auto cProjectSectionName = "Project/ProjectName";
+auto cProjectSectionNameFilename = "filename";
 
 // Чекбоксы проекта
-const std::string cProjectSectionCheckboxes = "Project/Checkboxes";
-const std::string cProjectSectionAutorun = "autorun";
-const std::string cProjectSectionAutosave = "autosave";
-const std::string cProjectSectionAutosaveHourly = "autosave_hourly";
+auto cProjectSectionCheckboxes = "Project/Checkboxes";
+auto cProjectSectionAutorun = "autorun";
+auto cProjectSectionAutosave = "autosave";
+auto cProjectSectionAutosaveHourly = "autosave_hourly";
+
 
 SettingsStorage::SettingsStorage() : 
 	sectionMainWindowApperance(XMLResDoc.get_resource(cMainWindowSectionAppearance).get_element()),
@@ -54,10 +56,10 @@ SettingsStorage::SettingsStorage() :
 {
 	// Язык интерфейса.
 	auto sectionLocale = XMLResDoc.get_resource(cMainWindowSectionLocale).get_element();
-	const std::string &lang = sectionLocale.get_attribute(cMainWindowSectionLanguage, "Eng");
+	auto &lang = sectionLocale.get_attribute(cMainWindowSectionLanguage, "Eng");
 
 	// Загрузим строковые ресурсы с учётом языка.
-	globalStr.LoadRes(XMLResDoc, lang);
+	LoadLocaleStrings(lang);
 }
 
 SettingsStorage::~SettingsStorage()
@@ -181,4 +183,44 @@ void SettingsStorage::setProjectAutosaveHourly(bool newValue)
 {
 	// Имя текущего проекта и чекбоксы
 	sectionProjectCheckBoxes.set_attribute_bool(cProjectSectionAutosaveHourly, newValue);
+}
+
+std::string SettingsStorage::LocaleStr(const std::string &key)
+{
+	// Возвращает строку по заданному ключу либо сам ключ, если не найдена.
+	try {
+		return langMap.at(key);
+	}
+	catch (...) {
+		return key;
+	}
+}
+
+// Загружает ресурсы из файла.
+void SettingsStorage::LoadLocaleStrings(const std::string &lang)
+{
+	// Названия ресурсов.
+	const std::vector<std::string>& names = XMLResDoc.get_resource_names_of_type(cLangType, cLangSection);
+
+	// Количество ресурсов.
+	int elemCount = int(names.size());
+
+	// Считываем ресурсы.
+	for (int i = 0; i < elemCount; ++i) {
+
+		// Строковый ресурс с разными языками.
+		clan::XMLResourceNode &res = XMLResDoc.get_resource(names[i]);
+
+		// Свойства элемента.
+		clan::DomElement &prop = res.get_element();
+
+		// Ключ.
+		auto &strKey = res.get_name();
+
+		// Значение на нужном языке.
+		auto &strVal = prop.get_attribute(lang);
+
+		// Сохраняем пару ключ-значение для нужного языка.
+		langMap[strKey] = strVal;
+	}
 }

@@ -51,6 +51,10 @@ private:
 	clan::Pointf scrollWindow;
 	clan::Pointf scrollWorld;
 
+	// Подписи для солнечной и геотермальной энергий.
+	std::string solarTitle;
+	std::string geothermalTitle;
+
 	void on_mouse_down(clan::PointerEvent &e);
 	void on_mouse_up(const clan::PointerEvent &e);
 	void on_mouse_move(const clan::PointerEvent &e);

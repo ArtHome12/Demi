@@ -14,7 +14,6 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 #include "settings_storage.h"
 #include "world.h"
 #include "model_render.h"
-#include "string_resources.h"
 #include "app.h"
 
 
@@ -25,6 +24,12 @@ const int cTopMenuHeight = 30;
 const int cMenuButtonTop = 5;
 const int cMenuButtonLeft = 5;
 
+// Строковые ресурсы
+auto cMainWindowTitle = "AppMainWindowTitle";
+auto cModelTimeLabel = "AppModelTimeLabel";
+auto cScaleLabel = "AppScaleLabel";
+
+// Инициализируем библиотеку.
 clan::ApplicationInstance<App> clanapp;
 
 App::App()
@@ -44,9 +49,12 @@ App::App()
 	// Mark this thread as the UI thread
 	ui_thread = clan::UIThread(pSettings->resManager);
 
+	// Доинициализируем глобальный мир.
+	globalWorld.setSettingsStorage(pSettings.get());
+
 	// Create a window:
 	clan::DisplayWindowDescription desc;
-	desc.set_title(globalStr.getStr("AppMainWindowTitle"));
+	desc.set_title(pSettings->LocaleStr(cMainWindowTitle));
 	desc.set_allow_resize(true);
 	desc.set_position(pSettings->getMainWindowPosition(), false);
 	desc.set_visible(false);
@@ -104,7 +112,7 @@ App::App()
 	pLabelModelTimeTitle->style()->set("margin: 8px");
 	pLabelModelTimeTitle->style()->set("font: 12px 'tahoma'");
 	//pLabelModelTimeTitle->style()->set("border: 1px solid #003B2A");
-	pLabelModelTimeTitle->set_text(globalStr.getStr("AppModelTimeLabel"));
+	pLabelModelTimeTitle->set_text(pSettings->LocaleStr(cModelTimeLabel));
 	pTopPanel->add_child(pLabelModelTimeTitle);
 
 	// Надпись для отображения времени модели
@@ -168,6 +176,9 @@ App::App()
 		on_menuIlluminatedModelButton_down();
 	}
 
+	// Строковые ресурсы.
+	scaleLabelTemplate = pSettings->LocaleStr(cScaleLabel);
+
 	// Показываем окно в состоянии, в котором оно было при закрытии (свёрнуто, максимизировано и т.д.)
 	pWindow->show(pSettings->getMainWindowState());
 
@@ -228,7 +239,7 @@ bool App::update()
 	float scaleWorld = globalWorld.getAppearanceScale();
 	if (lastScaleWorld != scaleWorld) {
 		lastScaleWorld = scaleWorld;
-		pButtonScaleModel->label()->set_text(globalStr.getStr("AppScaleLabel") + clan::StringHelp::float_to_text(scaleWorld, 3, false), true);
+		pButtonScaleModel->label()->set_text(scaleLabelTemplate + clan::StringHelp::float_to_text(scaleWorld, 3, false), true);
 	}
 
 	// Проверим, не изменилась ли освещённость.
