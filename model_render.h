@@ -16,9 +16,6 @@ public:
 	ModelRender(std::shared_ptr<SettingsStorage> &pSettingsStorage);
 	~ModelRender();
 
-	// Отрисовывает модель.
-	void draw(clan::Canvas &canvas);
-
 	// Постоянная подсветка мира.
 	const bool getIlluminatedWorld() { return pSettings->getTopMenuIsModelIlluminated(); }
 	void setIlluminatedWorld(bool newValue);

@@ -75,8 +75,8 @@ void ModelRender::render_content(clan::Canvas &canvas)
 	// Для оптимизации.
 	const clan::Sizef earthSize = globalWorld.get_worldSize();
 
-	// Если некуда или нечего рисовать, выходим.
-	if (windowSize.width == 0 || windowSize.height == 0 || earthSize.width == 0 || earthSize.height == 0)
+	// Если некуда или нечего рисовать, выходим. Что windowSize не пуст было проверено библиотекой.
+	if (earthSize.width == 0 || earthSize.height == 0)
 		return;
 
 	// Корректируем масштаб и верхний левый угол модели на случай изменения размеров.
@@ -153,7 +153,7 @@ void ModelRender::render_content(clan::Canvas &canvas)
 		while (r.top < windowSize.height) {
 
 			r.top = r.bottom;
-			r.bottom = (yDotIndex + 1) / scale;
+			r.bottom = std::min((yDotIndex + 1) / scale, windowSize.height);
 
 			r.left = r.right = 0;
 			xDotIndex = 0;
@@ -172,7 +172,7 @@ void ModelRender::render_content(clan::Canvas &canvas)
 
 				// Сразу переходим к следующей клетке, см. оператор ++!.
 				r.left = r.right;
-				r.right = (xDotIndex++ + 1) / scale;
+				r.right = std::min((xDotIndex++ + 1) / scale, windowSize.width);
 
 				// Отрисовываем клетку.
 				canvas.fill_rect(r, color);
@@ -263,23 +263,6 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 	cellFont.draw_text(canvas, indent, rect.bottom - 3, "X:Y " + clan::StringHelp::int_to_text(xLabel) + ":" + clan::StringHelp::int_to_text(yLabel), color);
 }
 
-// Отрисовывает модель.
-void ModelRender::draw(clan::Canvas &canvas)
-{
-	// For convenience and optimization get refs
-	const clan::ViewGeometry &geom = geometry();
-
-	// Очистим канву.
-	canvas.fill_rect(geom.content_box(), clan::Colorf::black);
-
-	// Prepare the canvas for render_content()
-	clan::Pointf translate = geom.content_pos();
-	clan::TransformState transform_state(&canvas);
-	canvas.set_transform(transform_state.matrix * clan::Mat4f::translate(translate.x, translate.y, 0) * view_transform());
-	
-	// Draw
-	render_content(canvas);
-}
 
 int max1(float a)
 {

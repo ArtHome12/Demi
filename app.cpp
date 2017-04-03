@@ -63,7 +63,7 @@ App::App()
 	const std::shared_ptr<clan::View> pRootView = pWindow->root_view();
 
 	// Дочерние панели распологаются в столбик
-	pRootView->style()->set("flex-direction: column");
+	pRootView->style()->set("flex-direction: column; padding: 11px;");
 
 	// Обработчики событий.
 	pRootView->slots.connect(pRootView->sig_close(), [&](clan::CloseEvent &e) { on_window_close(); });
@@ -157,12 +157,12 @@ App::App()
 	// Окно настроек
 	pWindowSettings = std::make_shared<WindowsSettings>(canvas, pSettings);
 	pWindowSettings->set_hidden(true);
-	pWindow->root_view()->add_child(pWindowSettings);
+	pRootView->add_child(pWindowSettings);
 
 	// Окно модели
 	pModelRender = std::make_shared<ModelRender>(pSettings);
-	pModelRender->style()->set("flex: auto");
-	pWindow->root_view()->add_child(pModelRender);
+	pModelRender->style()->set("flex: auto; background-color: black;");
+	pRootView->add_child(pModelRender);
 
 	// Отобразим окно настроек.
 	if (pSettings->getTopMenuIsSettingsWindowVisible()) {
@@ -256,9 +256,9 @@ bool App::update()
 	}
 
 	// Отрисовываем модель.
-	pModelRender->draw(canvas);
+	pModelRender->draw_without_layout();
 
-	// Уведомляем окно настроек об отрисовке (для проверки наступления момента сохранения модели).
+	// Уведомляем окно настроек об отрисовке (для проверки наступления момента автосохранения модели).
 	pWindowSettings->modelRenderNotify(game_time.get_current_time());
 
 	// Выводим заэкранный буфер на экран.
