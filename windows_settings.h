@@ -11,6 +11,7 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 #pragma once
 
 #include "settings_storage.h"
+#include "tree_view.h"
 
 
 class WindowsSettings :	public clan::View
@@ -48,6 +49,9 @@ private:
 	// Чекбокс периодического (ежечасного) автосохранения модели.
 	std::shared_ptr<clan::CheckBoxView> pCBAutoSaveHourly;
 
+	// Дерево с галочками видимости элементов.
+	std::shared_ptr<TreeView> pTreeView;
+
 	// Настройки.
 	std::shared_ptr<SettingsStorage> pSettings;
 
@@ -65,7 +69,13 @@ private:
 	void onCBAutoSaveToggle();
 	void onCBAutoSaveHourlyToggle();
 
+	// Обработчик события, вызываемый после переключения галочки на элементе древовидного списка.
+	void onTreeCheckChanged(TreeItem &item);
+
 	// Сохраняет новое имя модели и обновляет надпись на экране.
 	void set_modelFilename(const std::string &newName);
+
+	// Обновляет дерево с галочками видимости элементов.
+	void initElemVisibilityTree();
 };
 

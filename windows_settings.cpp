@@ -36,6 +36,11 @@ auto cCBAutoSave = "WindowsSettingsCheckboxAutoSave";
 auto cCBAutoSaveHourly = "WindowsSettingsCheckboxAutoSaveHourly";
 auto cLabelModelName = "WindowsSettingsProjectName";
 auto cLabelModelAbsent = "WindowsSettingsProjectNameAbsent";
+// Для дерева
+auto cTreeInanimate = "WindowsSettingsTreeInanimateSubTree";
+auto cTreeAnimate = "WindowsSettingsTreeAnimateSubTree";
+
+
 
 
 WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsStorage> pSettingsStorage) : pSettings(pSettingsStorage)
@@ -154,6 +159,11 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	panelModelInfo->style()->set("border: 1px solid gray");
 	add_child(panelModelInfo);
 
+	// Дерево с галочками видимости элементов.
+	pTreeView = std::make_shared<TreeView>();
+	//pTreeView->style()->set("flex: auto; border: 1px solid red");
+	panelModelInfo->add_child(pTreeView);
+
 	// Если имя предудыщей модели отсутствует, создаём новую.
 	auto lastModelFilename = pSettings->getProjectFilename();
 	if (lastModelFilename == "") {
@@ -166,6 +176,9 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 			std::string absPath = clan::PathHelp::make_absolute(clan::System::get_exe_path(), lastModelFilename);
 			globalWorld.LoadModel(absPath);
 			set_modelFilename(lastModelFilename);
+
+			// Обновим дерево с галочками видимости элементов.
+			initElemVisibilityTree();
 		}
 		catch (const clan::Exception &e) {
 			// При ошибке загружаем чистую модель, а текст ошибки добавляем к названию модели в качестве пояснения.
@@ -195,6 +208,9 @@ void WindowsSettings::onButtondownNew()
 	// Сбросим имя модели и загрузим в модель шаблон.
 	set_modelFilename("");
 	globalWorld.LoadModel(cProjectTemplate);
+
+	// Обновим дерево с галочками видимости элементов.
+	initElemVisibilityTree();
 }
 
 void WindowsSettings::onButtondownOpen()
@@ -208,6 +224,9 @@ void WindowsSettings::onButtondownOpen()
 		// Сохраним имя модели и загрузим её.
 		set_modelFilename(dlg->filename());
 		globalWorld.LoadModel(dlg->filename());
+
+		// Обновим дерево с галочками видимости элементов.
+		initElemVisibilityTree();
 	}
 }
 
@@ -313,6 +332,15 @@ void WindowsSettings::onCBAutoSaveHourlyToggle()
 }
 
 
+// Обработчик события, вызываемый после переключения галочки на элементе древовидного списка.
+void WindowsSettings::onTreeCheckChanged(TreeItem &item)
+{
+	// Сообщим об изменении видимости элемента модели, если узел соответствует какому-либо элементу.
+	if (item.tag >=0)
+		globalWorld.setResVisibility(item.tag, item.checked);
+}
+
+
 // Сохраняет новое имя модели и обновляет надпись на экране.
 void WindowsSettings::set_modelFilename(const std::string &newName)
 {
@@ -345,4 +373,26 @@ void WindowsSettings::modelRenderNotify(float secondsElapsed)
 		if (pCBAutoSaveHourly->checked())
 			onButtondownSave();
 	}
+}
+
+
+// Обновляет дерево с галочками видимости элементов.
+void WindowsSettings::initElemVisibilityTree()
+{
+	auto rootNode = std::make_shared<TreeItem>("", -1);
+	
+	// Первый узел - под химические элементы.
+	auto firstNode = std::make_shared<TreeItem>(pSettings->LocaleStr(cTreeInanimate), -1);
+
+	for (int i = 0; i < globalWorld.getElemCount(); ++i)
+		firstNode->children.push_back(std::make_shared<TreeItem>(globalWorld.getResName(i), i, globalWorld.getResVisibility(i)));
+
+	rootNode->children.push_back(firstNode);
+	rootNode->children.push_back(std::make_shared<TreeItem>(pSettings->LocaleStr(cTreeAnimate), -1, true));
+
+	// Устанавливаем обработчик событий на переключение галочек.
+	pTreeView->func_check_changed() = clan::bind_member(this, &WindowsSettings::onTreeCheckChanged);
+
+	// Добавляем дерево в список.
+	pTreeView->set_root_item(rootNode);
 }

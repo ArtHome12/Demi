@@ -63,7 +63,8 @@ App::App()
 	const std::shared_ptr<clan::View> pRootView = pWindow->root_view();
 
 	// Дочерние панели распологаются в столбик
-	pRootView->style()->set("flex-direction: column; padding: 11px;");
+	//pRootView->style()->set("flex-direction: column; padding: 11px;");
+	pRootView->style()->set("flex-direction: column;");
 
 	// Обработчики событий.
 	pRootView->slots.connect(pRootView->sig_close(), [&](clan::CloseEvent &e) { on_window_close(); });

@@ -25,6 +25,9 @@ const float cAmountDetailLevel = 0.008f;
 // Высота одной строки для отображения ресурсов в клетке в компактной форме.
 const int cCompactCellResLineHeight = 30;
 
+// Минимальная ширина клетки в компактной форме, при которой выводим текст.
+const int cCompactCellMinWidth = 30;
+
 // Приращение масштаба при прокрутке колёсика мыши.
 const float cScaleInc = 1.1f;
 
@@ -219,47 +222,59 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 {
 	// Отрисовывает клетку в компактном виде - с координатой и ресурсами, которые поместятся.
 
-	// Кличество строк, которые влезли бы в указанное пространство, исключая место под координату.
-	float numLinesInRect = roundf(rect.get_height() / cCompactCellResLineHeight - 1);
+	// Высота, отведённая под отрисовку, за вычетом строки под координату внизу.
+	const float h = rect.bottom - cCompactCellResLineHeight;
 
-	// Количество строк с ресурсами - все, включая энергии, или сколько поместится.
-	float numLines = clan::min(float(globalWorld.getElemCount() + 2), numLinesInRect);
+	// Проверка на минимальный размер.
+	if (rect.get_width() < cCompactCellMinWidth || h < 0)
+		return;
 
 	// Отступ слева для надписей.
 	const float indent = rect.left + 3;
 
+	// Количество элементов.
+	const int elemCount = globalWorld.getElemCount();
+
+	// Координата текущей строки для вывода информации.
+	float yLine = rect.top + 16;
+
 	// Цвет шрифта либо белый либо чёрный в зависимости от цвета самой клетки.
 	color = (color.get_red() + color.get_green() + color.get_blue()) * color.get_alpha() < 1.5f ? clan::Colorf::white : clan::Colorf::black;
 
-	// Отрисовываем солнечную энергию, геотермальную и количества элементов.
-	if (numLines > 0) {
-
-		// Координата строки.
-		float yLine = rect.top + 16;
-
+	// Выводим солнечную энергию.
+	if (yLine < h) {
 		cellFont.draw_text(canvas, indent, yLine, solarTitle + clan::StringHelp::float_to_text(d.getSolarEnergy() * 100) + "%", color);
+		yLine += cCompactCellResLineHeight;
 
-		if (numLines > 1) {
-
-			yLine += cCompactCellResLineHeight;
+		// Выводим геотермальную энергию.
+		if (yLine < h) {
 			cellFont.draw_text(canvas, indent, yLine, geothermalTitle + clan::StringHelp::float_to_text(d.getGeothermalEnergy() * 100) + "%", color);
 			yLine += cCompactCellResLineHeight;
 
+			// Отрисовываем строки с ресурсами, сколько поместится.
+			int i = 0;
+			while (yLine < h) {
 
-			// В цикле отрисовываем строки с ресурсами.
-			for (int i = 0; i < numLines - 2; i++) {
+				// Если ресурс не включен для отображения, пропускаем его.
+				if (globalWorld.getResVisibility(i)) {
 
-				// Значение в процентах.
-				//float percent = d.res[i];
-				float percent = d.res[i] * 100 / globalWorld.getResMaxValue(i);
+					// Значение в процентах.
+					float percent = d.getElemAmountPercent(i);
 
-				cellFont.draw_text(canvas, indent, yLine, globalWorld.getResName(i) + '\t' + clan::StringHelp::float_to_text(percent) + "%", color);
-				yLine += cCompactCellResLineHeight;
+					cellFont.draw_text(canvas, indent, yLine, globalWorld.getResName(i) + '\t' + clan::StringHelp::float_to_text(percent) + "%", color);
+
+					yLine += cCompactCellResLineHeight;
+				}
+
+				// Переходим к следующему элементу, если есть.
+				if (++i >= elemCount)
+					break;
 			}
 		}
 	}
 
 	// Отрисовываем в нижнем левом углу координату.
+	// Наличие пространства не проверяем, так как расчитываем, что раз попали сюда, наличие было проверено.
 	cellFont.draw_text(canvas, indent, rect.bottom - 3, "X:Y " + clan::StringHelp::int_to_text(xLabel) + ":" + clan::StringHelp::int_to_text(yLabel), color);
 }
 

@@ -2,7 +2,7 @@
 <resources>
 	<section name="MainWindow">
 		<!--Main window position, size and state (6-maximized, 7-minimized, 10-normal)-->
-		<item name="Appearance" left="163" top="45" width="1291" height="998" state="10" is_fullscreen="false"/>
+		<item name="Appearance" left="163" top="45" width="1278" height="998" state="10" is_fullscreen="false"/>
 		<!--Top menu states-->
 		<item name="TopMenuState" SettingsWindowVisible="true" ModelIlluminated="false"/>
 		<!--Language-->
@@ -46,5 +46,7 @@
 		<lang name="WindowsSettingsCheckboxAutoSaveHourly" eng="Autosave project every hour" rus="Автосохранение каждый час"/>
 		<lang name="WindowsSettingsProjectName" eng="Project name: " rus="Проект: "/>
 		<lang name="WindowsSettingsProjectNameAbsent" eng="not selected or not available" rus="не выбран или недоступен"/>
+		<lang name="WindowsSettingsTreeInanimateSubTree" eng="Inanimate world" rus="Неживой мир"/>
+		<lang name="WindowsSettingsTreeAnimateSubTree" eng="First Organism" rus="Праорганизм"/>
 	</section>--&gt;
 </resources>

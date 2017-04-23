@@ -38,6 +38,13 @@ public:
 	float getGeothermalEnergy() const { return res[1]; }
 	void setGeothermalEnergy(float newVal) { res[1] = newVal; }
 
+	// Количество указанного элемента в абсолютной величине.
+	float getElemAmount(int index) const { return res[index + 2]; }
+
+	// Количество указанного элемента в процентах.
+	float getElemAmountPercent(int index) const;
+
+
 	// Объём памяти в байтах под объект - массив количества ресурсов плюс солнечная и геотермальная энергии.
 	static int getSizeInMemory();
 
@@ -167,6 +174,8 @@ public:
 	float getTropicHeight() { return tropicHeight; }
 	float getResMaxValue(int index) { return arResMax[index]; }
 	const std::string &getResName(int index) { return arResNames[index]; }
+	const bool getResVisibility(int index) { return arResVisible[index]; }
+	void setResVisibility(int index, bool visible) { arResVisible[index] = visible; }
 	const clan::Pointf &getAppearanceTopLeft() { return appearanceTopLeft; }
 	void setAppearanceTopLeft(const clan::Pointf newTopLeft) { appearanceTopLeft = newTopLeft; }
 	float getAppearanceScale() { return appearanceScale; }
@@ -217,6 +226,9 @@ private:
 	// Названия ресурсов. Инициализируется извне.
 	std::string *arResNames = nullptr;
 	
+	// Включено отображение элемента или нет (видимость определяется пользователем в настройках).
+	bool *arResVisible = nullptr;
+
 	// Массив максимальных значений ресурсов для целей визуализации на экране.
 	float *arResMax = nullptr;
 

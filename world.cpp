@@ -43,6 +43,7 @@ auto cResAreaPoint = "point";	// Тег для точки.
 
 auto cElementsResColor = "color";
 auto cElementsResVolatility = "volatility";
+auto cElementsResVisibility = "visibility";
 
 auto cSolar = "Solar";			// Обозначение солнечной энергии.
 auto cEnergy = "Geothermal";	// Обозначение геотермальной энергии.
@@ -88,6 +89,7 @@ void Dot::get_color(clan::Colorf &aValue) const
 	// Возвращает цвет для точки на основе имеющихся ресурсов, передача по ссылке для оптимизации.
 	//
 	// Солнечный свет и энергия это альфа-канал.
+	aValue = clan::Colorf::black;
 	aValue.set_alpha(clan::max<float, float>(getSolarEnergy(), getGeothermalEnergy()));
 
 	// Если складываем вместе цвета разных элементов, возникают точки неожиданных цветов. 
@@ -95,37 +97,38 @@ void Dot::get_color(clan::Colorf &aValue) const
 	// с первого элемента и проверим остальные элементы.
 	//
 
-	// Вклад (возможная яркость) ресурса для первого элемента.
-	float resBright = res[2] / globalWorld.arResMax[0];
+	// Текущая яркость.
+	float resBright = 0.0f;
 
-	// Цвет текущего ресурса.
-	clan::Colorf &col = globalWorld.arResColors[0];
+	// Перебираем в цикле все и ищем наиболее яркий, то есть с наибольшей относительной концентрацией.
+	for (int i = 0; i < globalWorld.elemCount; i++) {
 
-	// Цвет ресурса, уменьшенный пропорционально вкладу.
-	// Встроенный оператор изменяет 4 компоненты, поэтому для оптимизации делаем это вручную.
-	//
-	aValue.x = col.x;
-	aValue.y = col.y;
-	aValue.z = col.z;
+		// Ищем только среди элементов, выранных для отображения.
+		if (globalWorld.arResVisible[i]) {
 
-	// В цикле проверим яркости остальных элементов.
-	//
-	for (int i = 1; i < globalWorld.elemCount; ++i) {
+			// Яркость (концентрация) текущего элемента.
+			const float curResBright = res[i + 2] / globalWorld.getResMaxValue(i);
 
-		// Вклад текущего ресурса.
-		const float curResBright = res[i + 2] / globalWorld.arResMax[i];
+			// Если яркость выше, запоминаем цвет.
+			if (resBright < curResBright) {
+				resBright = curResBright;
 
-		// Если яркость выше, запоминаем цвет.
-		//
-		if (resBright < curResBright) {
-			resBright = curResBright;
-			clan::Colorf &col = globalWorld.arResColors[i];
-			aValue.x = col.x;
-			aValue.y = col.y;
-			aValue.z = col.z;
+				// Встроенный оператор изменяет 4 компоненты, поэтому причваивание делаем вручную.
+				clan::Colorf &col = globalWorld.arResColors[i];
+				aValue.x = col.x;
+				aValue.y = col.y;
+				aValue.z = col.z;
+			}
 		}
 	}
 }
+
+// Количество указанного элемента в процентах.
+float Dot::getElemAmountPercent(int index) const 
+{ 
+	return res[index + 2] * 100 / globalWorld.getResMaxValue(index); 
+}
+
 
 // =============================================================================
 // Локальные координаты - центр всегда в точке 0, 0 и можно адресовать отрицательные координаты.
@@ -277,6 +280,7 @@ World::~World()
 	delete[] arResColors;
 	delete[] arResMax;
 	delete[] arResNames;
+	delete[] arResVisible;
 	delete[] arResVolatility;
 	delete[] arEnergy;
 }
@@ -468,6 +472,7 @@ void World::LoadModel(const std::string &filename)
 	arResColors = new clan::Colorf[elemCount];					// цвета элементов.
 	arResMax = new float[elemCount];							// максимальные концентрации элементов в одной точке.
 	arResNames = new std::string[elemCount];					// названия элементов.
+	arResVisible = new bool[elemCount];							// Видимость элементов.
 	arResVolatility = new float[elemCount];						// летучесть элементов.
 	arEnergy = new Geothermal[energyCount];						// геотермальные источники.
 
@@ -494,13 +499,16 @@ void World::LoadModel(const std::string &filename)
 		// Летучесть, значение от 0 до 1.
 		arResVolatility[i] = prop.get_attribute_float(cElementsResVolatility);
 
+		// Видимость элемента.
+		arResVisible[i] = prop.get_attribute_bool(cElementsResVisibility, true);
+
 		// Области для заполнения ресурсом.
 
 		// Ищем прямоугольные области и задаём распределение ресурса.
 		clan::DomNodeList nodes = prop.get_elements_by_tag_name(cResAreaRect);
 		for (int j = nodes.get_length() - 1; j >= 0; --j) {
 
-			// Надйенный элемент с информацией о распределении ресурса.
+			// Найденный элемент с информацией о распределении ресурса.
 			clan::DomElement &rectItem = nodes.item(j).to_element();
 
 			float r = float(rectItem.get_attribute_int("right"));
@@ -624,6 +632,16 @@ void World::SaveModel(const std::string &filename)
 	prop.set_attribute_int(cResGlobalsTimeDay, timeModel.day);
 	prop.set_attribute_int(cResGlobalsTimeSecond, timeModel.sec);
 
+	// Запишем видимость элементов.
+	for (int i = 0; i < elemCount; ++i) {
+
+		// Элемент.
+		prop = pResDoc->get_resource(cResElementsSection + std::string("/") + arResNames[i]).get_element();
+
+		// Видимость элемента.
+		prop.set_attribute_bool(cElementsResVisibility, arResVisible[i]);
+	}
+		
 	// Записываем изменения на диск.
 	pResDoc->save(filename);
 
