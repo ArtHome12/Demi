@@ -10,7 +10,9 @@
 
 #pragma once
 
+#include <random>
 #include "settings_storage.h"
+#include "organism.h"
 
 // Продолжительность года в днях.
 const int cDaysInYear = 365;
@@ -57,6 +59,9 @@ public:
 
 	// Возвращает цвет для точки на основе имеющихся ресурсов, передача по ссылке для оптимизации.
 	void get_color(clan::Colorf &aValue) const;
+
+	// Клетки организмов, размещённые в точке.
+	std::forward_list<demi::GenericCell*> cells;
 };
 
 
@@ -180,6 +185,7 @@ public:
 	void setAppearanceTopLeft(const clan::Pointf newTopLeft) { appearanceTopLeft = newTopLeft; }
 	float getAppearanceScale() { return appearanceScale; }
 	void setAppearanceScale(float newScale) { appearanceScale = newScale; }
+	std::shared_ptr<demi::Species> getSpecies() { return species; }
 
 	// Инициализация настроек.
 	void setSettingsStorage(SettingsStorage* pSettingsStorage) { pSettings = pSettingsStorage; }
@@ -239,6 +245,22 @@ private:
 	// подсистема должна ещё существовать - а объект World глобальный и может умереть позже неё.
 	SettingsStorage* pSettings;
 
+	// Известные виды организмов. Древовидный список, в вершине - вид протоорганизма.
+	std::shared_ptr<demi::Species> species;
+
+	// Сами организмы. Для начала - один.
+	std::shared_ptr<demi::Organism> animal;
+
+	std::random_device random_device; // Источник энтропии.
+	std::mt19937 generator; // Генератор случайных чисел.
+	
+	// Для генерации случайного числа. Направление движения при диффузии
+	std::uniform_int_distribution<> rnd_angle;
+
+	// Для генерации случайного числа. Приращение координаты при диффузии.
+	std::uniform_int_distribution<> rnd_Coord;
+
+
 	// Обновить состояние.
 	void MakeTick();
 
@@ -263,6 +285,16 @@ private:
 
 	// Рабочая функция потока, вычисляющего модель.
 	void workerThread();
+
+	// Рекурсивная функция для считывания видов организмов.
+	std::shared_ptr<demi::Species> DoReadSpecies(clan::File &binFile, std::shared_ptr<demi::Species> ancestor);
+
+	// Рекурсивная функция для записи видов организмов.
+	void DoWriteSpecies(clan::File &binFile, std::shared_ptr<demi::Species> aSpecies);
+
+	// Функции для перемещения организма по поверхности из точек.
+	void removeOrganismFromDots(std::shared_ptr<demi::Organism> organism);
+	void insertOrganismIntoDots(std::shared_ptr<demi::Organism> organism);
 };
 
 

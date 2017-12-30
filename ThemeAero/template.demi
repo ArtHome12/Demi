@@ -59,6 +59,8 @@
 	</section>
 
 	<section name="Organisms">
+		<!-- ѕротоорганизм, от которого произойдут все остальные, ему нужна геотермальна€ энерги€ -->
+		<item name="LUCA" author="DEMI" visibility="true" x="300" y="30" />
 	</section>
 </resources>
 

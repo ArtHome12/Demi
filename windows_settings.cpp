@@ -1,6 +1,6 @@
-/* ===============================================================================
-Моделирование эволюции живого мира.
-Окно с настройками.
+п»ї/* ===============================================================================
+РњРѕРґРµР»РёСЂРѕРІР°РЅРёРµ СЌРІРѕР»СЋС†РёРё Р¶РёРІРѕРіРѕ РјРёСЂР°.
+РћРєРЅРѕ СЃ РЅР°СЃС‚СЂРѕР№РєР°РјРё.
 27 may 2016.
 ----------------------------------------------------------------------------
 Licensed under the terms of the GPL version 3.
@@ -13,18 +13,18 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 #include "Theme/theme.h"
 #include "world.h"
 
-// Расширение xml-файла и двоичного файла модели и их описания.
+// Р Р°СЃС€РёСЂРµРЅРёРµ xml-С„Р°Р№Р»Р° Рё РґРІРѕРёС‡РЅРѕРіРѕ С„Р°Р№Р»Р° РјРѕРґРµР»Рё Рё РёС… РѕРїРёСЃР°РЅРёСЏ.
 auto cProjectXMLExtension = "demi";
 auto cProjectXMLExtensionDesc = "Project files (*.demi)";
 auto cProjectAllExtensionDesc = "All files (*.*)";
 
-// Шаблон модели.
+// РЁР°Р±Р»РѕРЅ РјРѕРґРµР»Рё.
 auto cProjectTemplate = "ThemeAero/template.demi";
 
 
-// Строковые ресурсы
-auto cMessageBoxTextFileRewrite = "WindowsSettingsFileExistDlg";	// Строка для запроса перезаписи файла.
-auto cMessageBoxTextRestartModel = "WindowsSettingsRestartModel";	// Строка для запроса рестарта модели.
+// РЎС‚СЂРѕРєРѕРІС‹Рµ СЂРµСЃСѓСЂСЃС‹
+auto cMessageBoxTextFileRewrite = "WindowsSettingsFileExistDlg";	// РЎС‚СЂРѕРєР° РґР»СЏ Р·Р°РїСЂРѕСЃР° РїРµСЂРµР·Р°РїРёСЃРё С„Р°Р№Р»Р°.
+auto cMessageBoxTextRestartModel = "WindowsSettingsRestartModel";	// РЎС‚СЂРѕРєР° РґР»СЏ Р·Р°РїСЂРѕСЃР° СЂРµСЃС‚Р°СЂС‚Р° РјРѕРґРµР»Рё.
 auto cButtonLabelNew = "WindowsSettingsButtonNew";
 auto cButtonLabelOpen = "WindowsSettingsButtonOpen";
 auto cButtonLabelSave = "WindowsSettingsButtonSave";
@@ -36,7 +36,7 @@ auto cCBAutoSave = "WindowsSettingsCheckboxAutoSave";
 auto cCBAutoSaveHourly = "WindowsSettingsCheckboxAutoSaveHourly";
 auto cLabelModelName = "WindowsSettingsProjectName";
 auto cLabelModelAbsent = "WindowsSettingsProjectNameAbsent";
-// Для дерева
+// Р”Р»СЏ РґРµСЂРµРІР°
 auto cTreeInanimate = "WindowsSettingsTreeInanimateSubTree";
 auto cTreeAnimate = "WindowsSettingsTreeAnimateSubTree";
 
@@ -50,7 +50,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	style()->set("flex-direction: column");
 	style()->set("border-top: 3px solid bisque");
 
-	// Панель с общими настройками/инструментами
+	// РџР°РЅРµР»СЊ СЃ РѕР±С‰РёРјРё РЅР°СЃС‚СЂРѕР№РєР°РјРё/РёРЅСЃС‚СЂСѓРјРµРЅС‚Р°РјРё
 	//
 	auto panelGeneral = std::make_shared<clan::View>();
 	panelGeneral->style()->set("flex-direction: column");
@@ -58,20 +58,20 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	panelGeneral->style()->set("border: 1px solid gray");
 	add_child(panelGeneral);
 
-	// Название модели
+	// РќР°Р·РІР°РЅРёРµ РјРѕРґРµР»Рё
 	pLabelModelName = std::make_shared<clan::LabelView>();
 	pLabelModelName->style()->set("flex: none;");
 	pLabelModelName->style()->set("margin: 5px;");
 	pLabelModelName->style()->set("font: 12px 'tahoma';");
 	panelGeneral->add_child(pLabelModelName);
 
-	// Панель с кнопками
+	// РџР°РЅРµР»СЊ СЃ РєРЅРѕРїРєР°РјРё
 	auto panelGeneral_panelButtons = std::make_shared<clan::View>();
 	panelGeneral_panelButtons->style()->set("flex-direction: row");
 	panelGeneral_panelButtons->style()->set("height: 32px");
 	panelGeneral->add_child(panelGeneral_panelButtons);
 
-	// Кнопки 
+	// РљРЅРѕРїРєРё 
 	//
 	pButtonNew = Theme::create_button();
 	pButtonNew->style()->set("width: 120px");
@@ -128,7 +128,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	pButtonRunPause->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownRunPause);
 	panelGeneral_panelButtons->add_child(pButtonRunPause);
 
-	// Чекбокс для автозапуска модели
+	// Р§РµРєР±РѕРєСЃ РґР»СЏ Р°РІС‚РѕР·Р°РїСѓСЃРєР° РјРѕРґРµР»Рё
 	pCBAutoRun = Theme::create_checkbox();
 	pCBAutoRun->style()->set("margin: 12px 12px 6px;");
 	pCBAutoRun->label()->set_text(pSettings->LocaleStr(cCBAutoRun));
@@ -136,7 +136,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	pCBAutoRun->func_state_changed() = clan::bind_member(this, &WindowsSettings::onCBAutoRunToggle);
 	panelGeneral->add_child(pCBAutoRun);
 
-	// Чекбокс автосохранения модели при выходе из программы
+	// Р§РµРєР±РѕРєСЃ Р°РІС‚РѕСЃРѕС…СЂР°РЅРµРЅРёСЏ РјРѕРґРµР»Рё РїСЂРё РІС‹С…РѕРґРµ РёР· РїСЂРѕРіСЂР°РјРјС‹
 	pCBAutoSave = Theme::create_checkbox();
 	pCBAutoSave->style()->set("margin: 0px 12px;");
 	pCBAutoSave->label()->set_text(pSettings->LocaleStr(cCBAutoSave));
@@ -144,7 +144,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	pCBAutoSave->func_state_changed() = clan::bind_member(this, &WindowsSettings::onCBAutoSaveToggle);
 	panelGeneral->add_child(pCBAutoSave);
 
-	// Чекбокс периодического (ежечасного) автосохранения модели.
+	// Р§РµРєР±РѕРєСЃ РїРµСЂРёРѕРґРёС‡РµСЃРєРѕРіРѕ (РµР¶РµС‡Р°СЃРЅРѕРіРѕ) Р°РІС‚РѕСЃРѕС…СЂР°РЅРµРЅРёСЏ РјРѕРґРµР»Рё.
 	pCBAutoSaveHourly = Theme::create_checkbox();
 	pCBAutoSaveHourly->style()->set("margin: 6px 12px;");
 	pCBAutoSaveHourly->label()->set_text(pSettings->LocaleStr(cCBAutoSaveHourly));
@@ -152,42 +152,42 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	pCBAutoSaveHourly->func_state_changed() = clan::bind_member(this, &WindowsSettings::onCBAutoSaveHourlyToggle);
 	panelGeneral->add_child(pCBAutoSaveHourly);
 
-	// Панель с информацией о модели
+	// РџР°РЅРµР»СЊ СЃ РёРЅС„РѕСЂРјР°С†РёРµР№ Рѕ РјРѕРґРµР»Рё
 	auto panelModelInfo = std::make_shared<clan::View>();
 	panelModelInfo->style()->set("flex-direction: column");
 	panelModelInfo->style()->set("flex: auto");
 	panelModelInfo->style()->set("border: 1px solid gray");
 	add_child(panelModelInfo);
 
-	// Дерево с галочками видимости элементов.
+	// Р”РµСЂРµРІРѕ СЃ РіР°Р»РѕС‡РєР°РјРё РІРёРґРёРјРѕСЃС‚Рё СЌР»РµРјРµРЅС‚РѕРІ.
 	pTreeView = std::make_shared<TreeView>();
 	//pTreeView->style()->set("flex: auto; border: 1px solid red");
 	panelModelInfo->add_child(pTreeView);
 
-	// Если имя предудыщей модели отсутствует, создаём новую.
+	// Р•СЃР»Рё РёРјСЏ РїСЂРµРґСѓРґС‹С‰РµР№ РјРѕРґРµР»Рё РѕС‚СЃСѓС‚СЃС‚РІСѓРµС‚, СЃРѕР·РґР°С‘Рј РЅРѕРІСѓСЋ.
 	auto lastModelFilename = pSettings->getProjectFilename();
 	if (lastModelFilename == "") {
 		onButtondownNew();
 	}
 	else {
-		// Попытаемся загрузить последнюю модель.
+		// РџРѕРїС‹С‚Р°РµРјСЃСЏ Р·Р°РіСЂСѓР·РёС‚СЊ РїРѕСЃР»РµРґРЅСЋСЋ РјРѕРґРµР»СЊ.
 		try {
-			// Преобразуем путь в абсолютный, если у нас относительный.
+			// РџСЂРµРѕР±СЂР°Р·СѓРµРј РїСѓС‚СЊ РІ Р°Р±СЃРѕР»СЋС‚РЅС‹Р№, РµСЃР»Рё Сѓ РЅР°СЃ РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅС‹Р№.
 			std::string absPath = clan::PathHelp::make_absolute(clan::System::get_exe_path(), lastModelFilename);
 			globalWorld.LoadModel(absPath);
 			set_modelFilename(lastModelFilename);
 
-			// Обновим дерево с галочками видимости элементов.
+			// РћР±РЅРѕРІРёРј РґРµСЂРµРІРѕ СЃ РіР°Р»РѕС‡РєР°РјРё РІРёРґРёРјРѕСЃС‚Рё СЌР»РµРјРµРЅС‚РѕРІ.
 			initElemVisibilityTree();
 		}
 		catch (const clan::Exception &e) {
-			// При ошибке загружаем чистую модель, а текст ошибки добавляем к названию модели в качестве пояснения.
+			// РџСЂРё РѕС€РёР±РєРµ Р·Р°РіСЂСѓР¶Р°РµРј С‡РёСЃС‚СѓСЋ РјРѕРґРµР»СЊ, Р° С‚РµРєСЃС‚ РѕС€РёР±РєРё РґРѕР±Р°РІР»СЏРµРј Рє РЅР°Р·РІР°РЅРёСЋ РјРѕРґРµР»Рё РІ РєР°С‡РµСЃС‚РІРµ РїРѕСЏСЃРЅРµРЅРёСЏ.
 			onButtondownNew();
 			pLabelModelName->set_text(pLabelModelName->text() + " (" + e.message + ")");
 		}
 	}
 
-	// Если установлена галочка автозапуска модели, запустим расчёт.
+	// Р•СЃР»Рё СѓСЃС‚Р°РЅРѕРІР»РµРЅР° РіР°Р»РѕС‡РєР° Р°РІС‚РѕР·Р°РїСѓСЃРєР° РјРѕРґРµР»Рё, Р·Р°РїСѓСЃС‚РёРј СЂР°СЃС‡С‘С‚.
 	if (pCBAutoRun->checked()) {
 		pButtonRunPause->set_pressed(true);
 		onButtondownRunPause();
@@ -196,47 +196,47 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 
 WindowsSettings::~WindowsSettings()
 {
-	// Если установлена галочка автосохранения, сделаем это.
+	// Р•СЃР»Рё СѓСЃС‚Р°РЅРѕРІР»РµРЅР° РіР°Р»РѕС‡РєР° Р°РІС‚РѕСЃРѕС…СЂР°РЅРµРЅРёСЏ, СЃРґРµР»Р°РµРј СЌС‚Рѕ.
 	if (pCBAutoSave->checked())
 		onButtondownSave();
 }
 
 
-// Обработчики событий
+// РћР±СЂР°Р±РѕС‚С‡РёРєРё СЃРѕР±С‹С‚РёР№
 void WindowsSettings::onButtondownNew()
 {
-	// Сбросим имя модели и загрузим в модель шаблон.
+	// РЎР±СЂРѕСЃРёРј РёРјСЏ РјРѕРґРµР»Рё Рё Р·Р°РіСЂСѓР·РёРј РІ РјРѕРґРµР»СЊ С€Р°Р±Р»РѕРЅ.
 	set_modelFilename("");
 	globalWorld.LoadModel(cProjectTemplate);
 
-	// Обновим дерево с галочками видимости элементов.
+	// РћР±РЅРѕРІРёРј РґРµСЂРµРІРѕ СЃ РіР°Р»РѕС‡РєР°РјРё РІРёРґРёРјРѕСЃС‚Рё СЌР»РµРјРµРЅС‚РѕРІ.
 	initElemVisibilityTree();
 }
 
 void WindowsSettings::onButtondownOpen()
 {
-	// Создаём и инициализируем диалог выбора имени файла.
+	// РЎРѕР·РґР°С‘Рј Рё РёРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј РґРёР°Р»РѕРі РІС‹Р±РѕСЂР° РёРјРµРЅРё С„Р°Р№Р»Р°.
 	//
 	auto dlg = std::make_shared<clan::OpenFileDialog>(this);
 	dlg->add_filter(cProjectXMLExtensionDesc, "*." + std::string(cProjectXMLExtension), true);
 	dlg->add_filter(cProjectAllExtensionDesc, "*", false);
 	if (dlg->show()) {
-		// Сохраним имя модели и загрузим её.
+		// РЎРѕС…СЂР°РЅРёРј РёРјСЏ РјРѕРґРµР»Рё Рё Р·Р°РіСЂСѓР·РёРј РµС‘.
 		set_modelFilename(dlg->filename());
 		globalWorld.LoadModel(dlg->filename());
 
-		// Обновим дерево с галочками видимости элементов.
+		// РћР±РЅРѕРІРёРј РґРµСЂРµРІРѕ СЃ РіР°Р»РѕС‡РєР°РјРё РІРёРґРёРјРѕСЃС‚Рё СЌР»РµРјРµРЅС‚РѕРІ.
 		initElemVisibilityTree();
 	}
 }
 
 void WindowsSettings::onButtondownSave()
 {
-	// Если модель не была ранее сохранена, вызовем "сохранить как".
+	// Р•СЃР»Рё РјРѕРґРµР»СЊ РЅРµ Р±С‹Р»Р° СЂР°РЅРµРµ СЃРѕС…СЂР°РЅРµРЅР°, РІС‹Р·РѕРІРµРј "СЃРѕС…СЂР°РЅРёС‚СЊ РєР°Рє".
 	if (modelFilename == "")
 		onButtondownSaveAs();
 	else {
-		// Преобразуем путь в абсолютный, если у нас относительный.
+		// РџСЂРµРѕР±СЂР°Р·СѓРµРј РїСѓС‚СЊ РІ Р°Р±СЃРѕР»СЋС‚РЅС‹Р№, РµСЃР»Рё Сѓ РЅР°СЃ РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅС‹Р№.
 		std::string absPath = clan::PathHelp::make_absolute(clan::System::get_exe_path(), modelFilename);
 		globalWorld.SaveModel(absPath);
 	}
@@ -244,7 +244,7 @@ void WindowsSettings::onButtondownSave()
 
 void WindowsSettings::onButtondownSaveAs()
 {
-	// Создаём и инициализируем диалог выбора имени файла.
+	// РЎРѕР·РґР°С‘Рј Рё РёРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј РґРёР°Р»РѕРі РІС‹Р±РѕСЂР° РёРјРµРЅРё С„Р°Р№Р»Р°.
 	//
 	auto dlg = std::make_shared<clan::SaveFileDialog>(this);
 	dlg->add_filter(cProjectXMLExtensionDesc, "*." + std::string(cProjectXMLExtension), true);
@@ -252,25 +252,25 @@ void WindowsSettings::onButtondownSaveAs()
 	
 	if (dlg->show()) {
 		
-		// Введённое или выбранное пользователем имя файла.
+		// Р’РІРµРґС‘РЅРЅРѕРµ РёР»Рё РІС‹Р±СЂР°РЅРЅРѕРµ РїРѕР»СЊР·РѕРІР°С‚РµР»РµРј РёРјСЏ С„Р°Р№Р»Р°.
 		std::string filename = dlg->filename();
 
-		// Добавим расширение, если его нет.
+		// Р”РѕР±Р°РІРёРј СЂР°СЃС€РёСЂРµРЅРёРµ, РµСЃР»Рё РµРіРѕ РЅРµС‚.
 		std::string & ext = clan::PathHelp::get_extension(filename);
 		if (ext != cProjectXMLExtension)
 			filename = filename + "." + cProjectXMLExtension;
 
-		// Если файл существует, необходимо спросить о перезаписи.
+		// Р•СЃР»Рё С„Р°Р№Р» СЃСѓС‰РµСЃС‚РІСѓРµС‚, РЅРµРѕР±С…РѕРґРёРјРѕ СЃРїСЂРѕСЃРёС‚СЊ Рѕ РїРµСЂРµР·Р°РїРёСЃРё.
 		if (clan::FileHelp::file_exists(filename)) {
-			// Надо переделать на платформонезависимое решение!
+			// РќР°РґРѕ РїРµСЂРµРґРµР»Р°С‚СЊ РЅР° РїР»Р°С‚С„РѕСЂРјРѕРЅРµР·Р°РІРёСЃРёРјРѕРµ СЂРµС€РµРЅРёРµ!
 			const clan::DisplayWindow &window = view_tree()->display_window();
-			auto text = std::string(clan::string_format(cMessageBoxTextFileRewrite, filename));
+			auto text = std::string(clan::string_format(pSettings->LocaleStr(cMessageBoxTextFileRewrite), filename));
 			if (MessageBox(window.get_handle().hwnd, text.c_str(), window.get_title().c_str(), MB_OKCANCEL) != IDOK)
-				// Пользователь отказался продолжать, выходим.
+				// РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РѕС‚РєР°Р·Р°Р»СЃСЏ РїСЂРѕРґРѕР»Р¶Р°С‚СЊ, РІС‹С…РѕРґРёРј.
 				return;
 		}
 
-		// Запоминаем новое имя проекта и перезаписываем XML-файл, сохраняем двоичный файл.
+		// Р—Р°РїРѕРјРёРЅР°РµРј РЅРѕРІРѕРµ РёРјСЏ РїСЂРѕРµРєС‚Р° Рё РїРµСЂРµР·Р°РїРёСЃС‹РІР°РµРј XML-С„Р°Р№Р», СЃРѕС…СЂР°РЅСЏРµРј РґРІРѕРёС‡РЅС‹Р№ С„Р°Р№Р».
 		clan::FileHelp::copy_file(cProjectTemplate, filename, true);
 		set_modelFilename(filename);
 		globalWorld.SaveModel(filename);
@@ -279,13 +279,13 @@ void WindowsSettings::onButtondownSaveAs()
 
 void WindowsSettings::onButtondownRunPause()
 {
-	// Надо остановить или наоборот, запустить модель.
+	// РќР°РґРѕ РѕСЃС‚Р°РЅРѕРІРёС‚СЊ РёР»Рё РЅР°РѕР±РѕСЂРѕС‚, Р·Р°РїСѓСЃС‚РёС‚СЊ РјРѕРґРµР»СЊ.
 	bool toStart = pButtonRunPause->pressed();
 
-	// Запускаем модель.
+	// Р—Р°РїСѓСЃРєР°РµРј РјРѕРґРµР»СЊ.
 	globalWorld.RunEvolution(toStart);
 
-	// Переключаем доступность кнопок - загрузить и создать можно только при остановленной модели.
+	// РџРµСЂРµРєР»СЋС‡Р°РµРј РґРѕСЃС‚СѓРїРЅРѕСЃС‚СЊ РєРЅРѕРїРѕРє - Р·Р°РіСЂСѓР·РёС‚СЊ Рё СЃРѕР·РґР°С‚СЊ РјРѕР¶РЅРѕ С‚РѕР»СЊРєРѕ РїСЂРё РѕСЃС‚Р°РЅРѕРІР»РµРЅРЅРѕР№ РјРѕРґРµР»Рё.
 	if (toStart) {
 		pButtonNew->set_disabled();
 		pButtonOpen->set_disabled();
@@ -300,19 +300,19 @@ void WindowsSettings::onButtondownRunPause()
 
 void WindowsSettings::onButtondownRestart()
 {
-	// Начать расчёт заново.
+	// РќР°С‡Р°С‚СЊ СЂР°СЃС‡С‘С‚ Р·Р°РЅРѕРІРѕ.
 
-	// Получим подтверждение пользователя. Надо переделать на платформонезависимое решение!
+	// РџРѕР»СѓС‡РёРј РїРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ. РќР°РґРѕ РїРµСЂРµРґРµР»Р°С‚СЊ РЅР° РїР»Р°С‚С„РѕСЂРјРѕРЅРµР·Р°РІРёСЃРёРјРѕРµ СЂРµС€РµРЅРёРµ!
 	const clan::DisplayWindow &window = view_tree()->display_window();
 	auto text = std::string(cMessageBoxTextRestartModel);
 	if (MessageBox(window.get_handle().hwnd, text.c_str(), window.get_title().c_str(), MB_OKCANCEL) != IDOK)
-		// Пользователь отказался продолжать, выходим.
+		// РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РѕС‚РєР°Р·Р°Р»СЃСЏ РїСЂРѕРґРѕР»Р¶Р°С‚СЊ, РІС‹С…РѕРґРёРј.
 		return;
 
-	// Преобразуем путь в абсолютный, если у нас относительный.
+	// РџСЂРµРѕР±СЂР°Р·СѓРµРј РїСѓС‚СЊ РІ Р°Р±СЃРѕР»СЋС‚РЅС‹Р№, РµСЃР»Рё Сѓ РЅР°СЃ РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅС‹Р№.
 	std::string absPath = clan::PathHelp::make_absolute(clan::System::get_exe_path(), modelFilename);
 
-	// Сбрасываем модель.
+	// РЎР±СЂР°СЃС‹РІР°РµРј РјРѕРґРµР»СЊ.
 	globalWorld.ResetModel(absPath, cProjectTemplate);
 }
 
@@ -332,67 +332,89 @@ void WindowsSettings::onCBAutoSaveHourlyToggle()
 }
 
 
-// Обработчик события, вызываемый после переключения галочки на элементе древовидного списка.
+// РћР±СЂР°Р±РѕС‚С‡РёРє СЃРѕР±С‹С‚РёСЏ, РІС‹Р·С‹РІР°РµРјС‹Р№ РїРѕСЃР»Рµ РїРµСЂРµРєР»СЋС‡РµРЅРёСЏ РіР°Р»РѕС‡РєРё РЅР° СЌР»РµРјРµРЅС‚Рµ РґСЂРµРІРѕРІРёРґРЅРѕРіРѕ СЃРїРёСЃРєР°.
 void WindowsSettings::onTreeCheckChanged(TreeItem &item)
 {
-	// Сообщим об изменении видимости элемента модели, если узел соответствует какому-либо элементу.
-	if (item.tag >=0)
+	// РЎРѕРѕР±С‰РёРј РѕР± РёР·РјРµРЅРµРЅРёРё РІРёРґРёРјРѕСЃС‚Рё СЌР»РµРјРµРЅС‚Р° РјРѕРґРµР»Рё, РµСЃР»Рё СѓР·РµР» СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓРµС‚ РєР°РєРѕРјСѓ-Р»РёР±Рѕ СЌР»РµРјРµРЅС‚Сѓ. Р•СЃР»Рё РїРµСЂРІС‹Рј СЃРёРјРІРѕР»РѕРј РёРґС‘С‚ РїСЂРѕР±РµР», С‚Рѕ СЌС‚Рѕ РЅРµР¶РёРІР°СЏ РїСЂРёСЂРѕРґР°.
+	if (item.caption.substr(0, 1) == " ")
 		globalWorld.setResVisibility(item.tag, item.checked);
+	// Р•С‰С‘ СЌС‚Рѕ РјРѕР¶РµС‚ Р±С‹С‚СЊ С‚РµС…РЅРёС‡РµСЃРєР°СЏ РЅР°РґРїРёСЃСЊ, РЅР°РїСЂРёРјРµСЂ "РќРµР¶РёРІР°СЏ РїСЂРёСЂРѕРґР°".
+	else if (item.tag != 0) {
+		// РЎС‡РёС‚Р°РµРј, С‡С‚Рѕ СЌС‚Рѕ СѓРєР°Р·Р°С‚РµР»СЊ РЅР° РІРёРґ РѕСЂРіР°РЅРёР·РјР°.
+		demi::Species *spec = reinterpret_cast<demi::Species *>(item.tag);
+		spec->set_visible(item.checked);
+	}
 }
 
 
-// Сохраняет новое имя модели и обновляет надпись на экране.
+// РЎРѕС…СЂР°РЅСЏРµС‚ РЅРѕРІРѕРµ РёРјСЏ РјРѕРґРµР»Рё Рё РѕР±РЅРѕРІР»СЏРµС‚ РЅР°РґРїРёСЃСЊ РЅР° СЌРєСЂР°РЅРµ.
 void WindowsSettings::set_modelFilename(const std::string &newName)
 {
-	// Преобразуем путь в абсолютный, если у нас относительный.
+	// РџСЂРµРѕР±СЂР°Р·СѓРµРј РїСѓС‚СЊ РІ Р°Р±СЃРѕР»СЋС‚РЅС‹Р№, РµСЃР»Рё Сѓ РЅР°СЃ РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅС‹Р№.
 	std::string absPath = clan::PathHelp::make_absolute(clan::System::get_exe_path(), newName);
 	
-	// Проверяем, если файл недоступен, сбрасываем имя.
+	// РџСЂРѕРІРµСЂСЏРµРј, РµСЃР»Рё С„Р°Р№Р» РЅРµРґРѕСЃС‚СѓРїРµРЅ, СЃР±СЂР°СЃС‹РІР°РµРј РёРјСЏ.
 	if (clan::FileHelp::file_exists(absPath))
-		// Сохраняем по-возможности относительный путь для облегчения копирования и переноса программы.
+		// РЎРѕС…СЂР°РЅСЏРµРј РїРѕ-РІРѕР·РјРѕР¶РЅРѕСЃС‚Рё РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅС‹Р№ РїСѓС‚СЊ РґР»СЏ РѕР±Р»РµРіС‡РµРЅРёСЏ РєРѕРїРёСЂРѕРІР°РЅРёСЏ Рё РїРµСЂРµРЅРѕСЃР° РїСЂРѕРіСЂР°РјРјС‹.
 		modelFilename = clan::PathHelp::make_relative(clan::System::get_exe_path(), absPath);
 	else
 		modelFilename = "";
 
-	// Информация для пользователя.
+	// РРЅС„РѕСЂРјР°С†РёСЏ РґР»СЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ.
 	pLabelModelName->set_text(pSettings->LocaleStr(cLabelModelName) + (modelFilename != "" ? modelFilename : pSettings->LocaleStr(cLabelModelAbsent)));
 
-	// Сохраняем в настройках как последний открытый проект.
+	// РЎРѕС…СЂР°РЅСЏРµРј РІ РЅР°СЃС‚СЂРѕР№РєР°С… РєР°Рє РїРѕСЃР»РµРґРЅРёР№ РѕС‚РєСЂС‹С‚С‹Р№ РїСЂРѕРµРєС‚.
 	pSettings->setProjectFilename(modelFilename);
 }
 
 void WindowsSettings::modelRenderNotify(float secondsElapsed)
 {
-	// Для получения уведомлений об отработке основного цикла (для возможного автосохранения модели).
+	// Р”Р»СЏ РїРѕР»СѓС‡РµРЅРёСЏ СѓРІРµРґРѕРјР»РµРЅРёР№ РѕР± РѕС‚СЂР°Р±РѕС‚РєРµ РѕСЃРЅРѕРІРЅРѕРіРѕ С†РёРєР»Р° (РґР»СЏ РІРѕР·РјРѕР¶РЅРѕРіРѕ Р°РІС‚РѕСЃРѕС…СЂР°РЅРµРЅРёСЏ РјРѕРґРµР»Рё).
 
-	// Если прошёл час и установлена галочка регулярного автосохранения модели, сделаем это.
+	// Р•СЃР»Рё РїСЂРѕС€С‘Р» С‡Р°СЃ Рё СѓСЃС‚Р°РЅРѕРІР»РµРЅР° РіР°Р»РѕС‡РєР° СЂРµРіСѓР»СЏСЂРЅРѕРіРѕ Р°РІС‚РѕСЃРѕС…СЂР°РЅРµРЅРёСЏ РјРѕРґРµР»Рё, СЃРґРµР»Р°РµРј СЌС‚Рѕ.
 	if (abs(secondsElapsed - this->secondsElapsed) > 3600.0f) {
 		this->secondsElapsed = secondsElapsed;
 
-		// Если стоит галочка, сохраним модель.
+		// Р•СЃР»Рё СЃС‚РѕРёС‚ РіР°Р»РѕС‡РєР°, СЃРѕС…СЂР°РЅРёРј РјРѕРґРµР»СЊ.
 		if (pCBAutoSaveHourly->checked())
 			onButtondownSave();
 	}
 }
 
 
-// Обновляет дерево с галочками видимости элементов.
+// РћР±РЅРѕРІР»СЏРµС‚ РґРµСЂРµРІРѕ СЃ РіР°Р»РѕС‡РєР°РјРё РІРёРґРёРјРѕСЃС‚Рё СЌР»РµРјРµРЅС‚РѕРІ.
 void WindowsSettings::initElemVisibilityTree()
 {
 	auto rootNode = std::make_shared<TreeItem>("", -1);
 	
-	// Первый узел - под химические элементы.
+	// РџРµСЂРІС‹Р№ СѓР·РµР» - РїРѕРґ С…РёРјРёС‡РµСЃРєРёРµ СЌР»РµРјРµРЅС‚С‹.
 	auto firstNode = std::make_shared<TreeItem>(pSettings->LocaleStr(cTreeInanimate), -1);
 
+	// Р”РѕР±Р°РІР»СЏРµРј РёС…, РїРµСЂРІС‹Рј СЃРёРјРІРѕР»РѕРј РїСЂРѕР±РµР» РґР»СЏ РјР°СЂРєРёСЂРѕРІРєРё, С‡С‚Рѕ СЌС‚Рѕ РЅРµР¶РёРІРѕР№ СЌР»РµРјРµРЅС‚.
 	for (int i = 0; i < globalWorld.getElemCount(); ++i)
-		firstNode->children.push_back(std::make_shared<TreeItem>(globalWorld.getResName(i), i, globalWorld.getResVisibility(i)));
+		firstNode->children.push_back(std::make_shared<TreeItem>(" " + globalWorld.getResName(i), i, globalWorld.getResVisibility(i)));
 
 	rootNode->children.push_back(firstNode);
-	rootNode->children.push_back(std::make_shared<TreeItem>(pSettings->LocaleStr(cTreeAnimate), -1, true));
 
-	// Устанавливаем обработчик событий на переключение галочек.
+	// РџСЂРѕС‚РѕРѕСЂРіР°РЅРёР·Рј (РІРёРґ).
+	auto luca = globalWorld.getSpecies();
+
+	// РљРѕСЂРЅРµРІРѕР№ СѓР·РµР» РїРѕРґ РѕСЂРіР°РЅРёР·РјС‹.
+	auto curNode = std::make_shared<TreeItem>(pSettings->LocaleStr(cTreeAnimate) + ": " + luca->name + " (" + luca->author + ")", int(luca.get()), luca->visible);
+	rootNode->children.push_back(curNode);
+
+	// Р”РѕР±Р°РІР»СЏРµРј РІРёРґС‹ РѕСЂРіР°РЅРёР·РјРѕРІ, СѓРґР°Р»СЏСЏ РїСЂРѕР±РµР»С‹ РІ РЅР°С‡Р°Р»Рµ РЅР° РІСЃСЏРєРёР№ СЃР»СѓС‡Р°Р№ (С‡С‚РѕР±С‹ РЅРµ СЃРїСѓС‚Р°С‚СЊ СЃ РЅРµР¶РёРІРѕР№ РїСЂРёСЂРѕРґРѕР№). Р’ РєР°С‡РµСЃС‚РІРµ tag - СѓРєР°Р·Р°С‚РµР»СЊ.
+
+	// РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј РѕР±СЂР°Р±РѕС‚С‡РёРє СЃРѕР±С‹С‚РёР№ РЅР° РїРµСЂРµРєР»СЋС‡РµРЅРёРµ РіР°Р»РѕС‡РµРє.
 	pTreeView->func_check_changed() = clan::bind_member(this, &WindowsSettings::onTreeCheckChanged);
 
-	// Добавляем дерево в список.
+	// Р”РѕР±Р°РІР»СЏРµРј РґРµСЂРµРІРѕ РІ СЃРїРёСЃРѕРє.
 	pTreeView->set_root_item(rootNode);
+}
+
+// trim from beginning of string (left)
+inline std::string& ltrim(std::string& s)
+{
+	s.erase(0, s.find_first_not_of(" "));
+	return s;
 }

@@ -270,6 +270,38 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 				if (++i >= elemCount)
 					break;
 			}
+
+			// Количество мёртых клеток, без организма.
+			int detrit = 0;
+
+			// Отрисовываем имеющиеся живые клетки.
+			for (auto &cell : d.cells) {
+
+				// Если кончилось место, прерываемся.
+				if (yLine > h)
+					break;
+
+				// Организм, которому принадлежит клетка.
+				demi::Organism *organism = cell->organism;
+				if (organism != nullptr) {
+					// Проверим, включено ли отображение для данного вида.
+					if (organism->ourSpecies->get_visible()) {
+						cellFont.draw_text(canvas, indent, yLine, organism->ourSpecies->name + '\t' + clan::StringHelp::float_to_text(0) + "%", color);
+
+						yLine += cCompactCellResLineHeight;
+					}
+				}
+				else
+					detrit++;
+
+			}
+
+			// Отрисовываем количество мертвых клеток, если есть место.
+			if (yLine < h && detrit > 0) {
+				cellFont.draw_text(canvas, indent, yLine, "Detrit\t"  + clan::StringHelp::int_to_text(detrit) + ".", color);
+
+				yLine += cCompactCellResLineHeight;
+			}
 		}
 	}
 
@@ -279,7 +311,7 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 }
 
 
-int max1(float a)
+inline int max1(float a)
 {
 	return int(a < 1 ? 1 : a);
 }

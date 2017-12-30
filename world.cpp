@@ -36,7 +36,7 @@ auto cResEnergySection = "Energy";
 auto cResEnergyType = "Geothermal";
 
 auto cResOrganismsSection = "Organisms";
-auto cResOrganismsType = "Organism";
+auto cResOrganismsLUCA = "Organisms/LUCA";
 
 auto cResAreaRect = "rect";	// Тег для прямоугольной области начального распределения ресурса/организмов.
 auto cResAreaPoint = "point";	// Тег для точки.
@@ -53,7 +53,7 @@ auto cWrongSize = "WorldWrongSize";
 auto cWrongBinVer = "WorldWrongBinaryFileVersion";
 auto cWrongBinElemCount = "WorldWrongBinaryFileElementsCount";
 auto cWrongBinElemName = "WorldWrongBinaryFileElementsName";
-auto cWrongBinDotMarker = "WorldWrongBinaryFileDotMarker";
+auto cWrongBinMarker = "WorldWrongBinaryFileMarker";
 auto cWrongBinCannotReadDots = "WorldWrongBinaryFileCannotReadDots";
 auto cWrongBinResmaxMarker = "WorldWrongBinaryFileResmaxMarker";
 auto cWrongBinCannotReadResmax = "WorldWrongBinaryFileCannotReadResmax";
@@ -88,10 +88,24 @@ void Dot::get_color(clan::Colorf &aValue) const
 {
 	// Возвращает цвет для точки на основе имеющихся ресурсов, передача по ссылке для оптимизации.
 	//
+
 	// Солнечный свет и энергия это альфа-канал.
-	aValue = clan::Colorf::black;
 	aValue.set_alpha(clan::max<float, float>(getSolarEnergy(), getGeothermalEnergy()));
 
+	// Сначала ищем среди живых организмов.
+	//
+	for (auto &cell : cells) {
+		demi::Organism *organism = cell->organism;
+		if (organism != nullptr) {
+			// Проверим, включено ли отображение для данного вида.
+			if (organism->ourSpecies->get_visible()) {
+				aValue = clan::Colorf::white;
+				return;
+			}
+		}
+	}
+
+	// Выводим цвет минералов.
 	// Если складываем вместе цвета разных элементов, возникают точки неожиданных цветов. 
 	// Выходом может быть отображать преимущественный цвет для всей точки, то есть самый яркий. Начнём
 	// с первого элемента и проверим остальные элементы.
@@ -113,7 +127,7 @@ void Dot::get_color(clan::Colorf &aValue) const
 			if (resBright < curResBright) {
 				resBright = curResBright;
 
-				// Встроенный оператор изменяет 4 компоненты, поэтому причваивание делаем вручную.
+				// Встроенный оператор изменяет 4 компоненты, поэтому присваивание делаем вручную.
 				clan::Colorf &col = globalWorld.arResColors[i];
 				aValue.x = col.x;
 				aValue.y = col.y;
@@ -255,11 +269,9 @@ clan::Pointf Solar::getPos(const DemiTime &timeModel)
 // =============================================================================
 // Земная поверхность, двумерный массив точек.
 // =============================================================================
-World::World()
-{
-	// Инициализируем генератор случайных чисел.
-	srand((unsigned)::time(NULL));
+World::World() : generator(random_device()), rnd_angle(0, 7), rnd_Coord(0, 12 - 1)
 
+{
 	// Создадим поток. Он не стартанёт до установки флага.
 	thread = std::thread(&World::workerThread, this);
 }
@@ -298,6 +310,23 @@ void World::MakeTick()
 
 	// Перемешивание ресурсов из-за диффузии.
 	Diffusion();
+
+	// Передаём управление живому организму.
+	//
+
+	// Количество организмов.
+	int cnt = 1;
+
+	// Инициализируем генератор случайных чисел под количество организмов.
+	std::uniform_int_distribution<> distribution(0, cnt-1); // Равномерное распределение [0, cnt-1]
+
+	for (int i = 0; i < cnt; i++) {
+		// Определяем случайным образом элемент.
+		int x = distribution(generator); // Случайное число.
+
+		// Передаём ему управление.
+		animal->makeTick();
+	}
 }
 
 
@@ -326,16 +355,21 @@ void World::Diffusion()
 	Dot *last = cur + int(worldSize.width * worldSize.height);	// Точка после последней точки массива.
 	Dot *dest;													// Конечная точка
 
+	// Направление движения
+	std::uniform_int_distribution<> rnd_angle(0, 7);
+	// Элемент
+	std::uniform_int_distribution<> rnd_Elem(0, elemCount-1);
+	// Приращение координаты
+	std::uniform_int_distribution<> rnd_Coord(0, 12-1);
+
 	while (true) {
 
-		// Случайное число.
-		int random = rand();
-		int rnd = random % 7;					// от 0 до 7, направление движения
-		int rndResA = random % elemCount;		// случайный элемент.
+		int rnd = rnd_angle(generator);			// от 0 до 7, направление движения
+		int rndResA = rnd_Elem(generator);		// случайный элемент.
 		int rndResB = rndResA + 2;				// плюс пропускаем ячейки под солнечную и геотермальную энергии.
 
-		// Определяем исходную координату отдельным случайным числом, иначе возникает корреляция между начальной точкой и направлением.
-		cur += rand() % 12;
+		// Определяем исходную координату отдельным случайным числом.
+		cur += rnd_Coord(generator);
 
 		// Если прсмотрели все точки, прерываемся.
 		if (cur >= last)
@@ -541,6 +575,16 @@ void World::LoadModel(const std::string &filename)
 		}
 	}
 
+	// Считываем протоорганизм. Всегда создаём один протоорганизм, считаем что образование живого мира из неживого не останавливается.
+	// Создаём вид протоорганизма по указанным координатам. Внимание - ниже он может быть переопределён из двоичного файла.
+	species = std::make_shared<demi::Species>();
+	prop = resDoc->get_resource(cResOrganismsLUCA).get_element();
+	species->name = "LUCA";
+	species->author = prop.get_attribute("author");
+	species->visible = prop.get_attribute_bool("visibility");
+	species->cells.push_back(std::make_shared<demi::CellAbdomen>());
+
+
 	// Считываем двоичный файл, если он есть.
 	if (clan::FileHelp::file_exists(filename + "b")) {
 
@@ -567,12 +611,20 @@ void World::LoadModel(const std::string &filename)
 				throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinElemName), arResNames[i], elemName));
 		}
 
-		// Маркер начала массива точек.
-		auto &strDotsMarker = binFile.read_string_nul();
-		if (strDotsMarker != "Dots:")
-			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinDotMarker), strDotsMarker));
+		// Маркер начала списка видов организмов.
+		auto &strSecMarker = binFile.read_string_nul();
+		if (strSecMarker != "Species:")
+			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinMarker), "Species:", strSecMarker));
 
-		// Считываем точки.
+		// Считываем виды организмов рекурсивно.
+		species = DoReadSpecies(binFile, nullptr);
+
+		// Маркер начала массива точек.
+		strSecMarker = binFile.read_string_nul();
+		if (strSecMarker != "Dots:")
+			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinMarker), "Dots:", strSecMarker));
+
+		// Считываем точки неживого мира. Клетки будут размещены при считывании организмов.
 		int dotsCount = int(worldSize.width * worldSize.height);
 		int dotSize = Dot::getSizeInMemory();
 		for (int i = 0; i < dotsCount; i++) {
@@ -593,6 +645,99 @@ void World::LoadModel(const std::string &filename)
 		// Закроем файл.
 		binFile.close();
 	}
+
+	// Создаём экземпляр протоорганизма и размещаем его в геотермальном источнике.
+	animal = std::make_shared<demi::Organism>(species);
+	animal->center.x = float(prop.get_attribute_int("x"));
+	animal->center.y = float(prop.get_attribute_int("y"));
+	insertOrganismIntoDots(animal);
+}
+
+// Рекурсивная функция для считывания видов организмов.
+std::shared_ptr<demi::Species> World::DoReadSpecies(clan::File &binFile, std::shared_ptr<demi::Species> ancestor)
+{
+	// Считываем текущий вид.
+
+	// Создаём вид и инициализиуем основные поля.
+	auto retVal = std::make_shared<demi::Species>();
+	retVal->ancestor = ancestor;
+	retVal->name = binFile.read_string_nul();
+	retVal->author = binFile.read_string_nul();
+	retVal->visible = binFile.read_int8() != 0;
+
+	// Создаём и считываем клетки.
+
+	// Количество клеток.
+	int64_t cnt = binFile.read_int64();
+	
+	// В цикле создаём все клетки.
+	for (int i = 0; i < cnt; i++) {
+
+		// Тип клетки.
+		int64_t cellType = binFile.read_int64();
+
+		// Создаём клетку нужного типа.
+		std::shared_ptr<demi::GenericCell> cell;
+		switch (cellType) {
+		case 0 :	// cellBrain мозг
+			break;
+		case 1:		// cellReceptor рецептор
+			break;
+		case 2:		// cellMuscle мышца
+			break;
+		case 3:		// cellAdipose жир
+			break;
+		case 4:		// cellAbdomen живот
+			cell = std::make_shared<demi::CellAbdomen>();
+			break;
+		case 5:		// cellMouth рот
+			break;
+		case 6:		// cellArmor броня
+			break;
+		}
+
+		// Добавляем клетку в вид организма.
+		retVal->cells.push_back(cell);
+	}
+
+
+	// Считываем дочерние виды.
+
+	// Количество дочерних видов.
+	cnt = binFile.read_int64();
+
+	// Считываем и сохраняем потомков рекурсивно.
+	for (int i = 0; i < cnt; i++)
+		retVal->descendants.push_back(DoReadSpecies(binFile, retVal));
+	
+	// Возвращаем считанный элемент.
+	return retVal;
+}
+
+// Рекурсивная функция для записи видов организмов.
+void World::DoWriteSpecies(clan::File &binFile, std::shared_ptr<demi::Species> aSpecies)
+{
+	// Записываем основные поля.
+	binFile.write_string_nul(aSpecies->name);
+	binFile.write_string_nul(aSpecies->author);
+	binFile.write_int8(aSpecies->get_visible());
+	binFile.write_int64(aSpecies->cells.size());
+
+	// Записываем клетки.
+	for (auto& cell : aSpecies->cells) {
+		// Тип клетки.
+		int64_t cellType = cell->getCellType();
+		binFile.write_int64(cellType);
+	}
+
+	// Записываем дочерние виды.
+
+	// Количество дочерних видов.
+	binFile.write_int64(aSpecies->descendants.size());
+
+	// Сами виды рекурсивно.
+	for (auto &spec : aSpecies->descendants)
+		DoWriteSpecies(binFile, spec);
 }
 
 
@@ -641,6 +786,10 @@ void World::SaveModel(const std::string &filename)
 		// Видимость элемента.
 		prop.set_attribute_bool(cElementsResVisibility, arResVisible[i]);
 	}
+
+	// Запишем видимость протоорганизма.
+	prop = pResDoc->get_resource(cResOrganismsLUCA).get_element();
+	prop.set_attribute_bool("visibility", species->visible);
 		
 	// Записываем изменения на диск.
 	pResDoc->save(filename);
@@ -660,6 +809,12 @@ void World::SaveModel(const std::string &filename)
 	// Запишем названия элементов.
 	for (int i = 0; i < elemCount; i++)
 		binFile.write_string_nul(arResNames[i]);
+
+	// Записываем маркер организмов.
+	binFile.write_string_nul("Species:");
+
+	// Записываем виды организмов рекурсивно.
+	DoWriteSpecies(binFile, species);
 
 	// Записываем маркер начала массива точек.
 	binFile.write_string_nul("Dots:");
@@ -777,3 +932,20 @@ void World::ResetModel(const std::string &modelFilename, const std::string &defa
 //
 //	return arDotsCopy;
 //}
+
+// Функции для перемещения организма по поверхности из точек.
+void World::removeOrganismFromDots(std::shared_ptr<demi::Organism> organism)
+{
+
+}
+
+void World::insertOrganismIntoDots(std::shared_ptr<demi::Organism> organism)
+{
+	// Пока помещаем только главную клетку, потом надо будет размещать и остальные.
+
+	// Определим систему координат.
+	LocalCoord geothermalCoord(arDots, organism->center);
+
+	// Поместим в центр главную клетку.
+	geothermalCoord.get_dot(0, 0).cells.push_front(organism->cells.front().get());
+}

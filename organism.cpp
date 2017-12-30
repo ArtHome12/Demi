@@ -8,14 +8,16 @@
 	Copyright (c) 2013 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
+#include "precomp.h"
 #include "Organism.h"
+#include "world.h"
 
 using namespace demi;
 
 //
 //  летка, базовый тип.
 //
-//GenericCell::~GenericCell(void) расскоментируем, как по€витс€ нужда.
+//GenericCell::~GenericCell(void) раскоментируем, как по€витс€ нужда.
 //{
 //}
 
@@ -24,11 +26,22 @@ using namespace demi;
 //
 // ќрганизм.
 //
-Organism::Organism(void)
+Organism::Organism(std::shared_ptr<Species> species) : ourSpecies(species), cells(species->cells)
+{
+	// ¬сем своим клеткам сообщим о себе.
+	for (auto &cell : cells)
+		cell->organism = this;
+}
+
+
+Organism::~Organism()
 {
 }
 
 
-Organism::~Organism(void)
+// ѕроцессорное врем€ организма дл€ формировани€ поведени€ - поедани€ пищи, атаки, разворота, перемещени€, размножени€.
+void Organism::makeTick()
 {
+
 }
+

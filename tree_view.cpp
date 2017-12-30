@@ -57,7 +57,7 @@ void TreeView::set_root_item(std::shared_ptr<TreeItem> item)
 	impl->rootItem = item;
 
 	// Удаляем старые чекбоксы из дерева
-	auto views = content_view()->children();
+	auto &views = content_view()->children();
 	while (!views.empty())
 		views.back()->remove_from_parent();
 

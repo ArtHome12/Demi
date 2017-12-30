@@ -4,9 +4,9 @@
 		<!--Ширина мира и пропорция для высоты, максимум 30 000. Для проекции Меркатора 24:11 или 0.4583-->
 		<item name="WorldSize" width="1000" heightRatio="0.4583"/>
 		<!--Последнее представление модели - координата левого верхнего угла, масштаб-->
-		<item name="Appearance" top="164" left="420" scale="0.007494"/>
+		<item name="Appearance" top="30" left="298" scale="0.00451"/>
 		<!--Время модели - год, день, секунда-->
-		<item name="Time" year="1" day="1" second="52540"/>
+		<item name="Time" year="1" day="1" second="5023"/>
 	</section>
 	<!--Геотермальные источники энергии-->
 	<section name="Energy">
@@ -46,7 +46,10 @@
 			<rect left="0" top="0" right="max" bottom="max" amount="32"/>
 		</Element>
 	</section>
-	<section name="Organisms"/>
+	<section name="Organisms">
+		<!--Протоорганизм, от которого произойдут все остальные, ему нужна геотермальная энергия-->
+		<item name="LUCA" author="DEMI" visibility="true" x="300" y="30"/>
+	</section>
 </resources>
 <!--Цвета C:\Development\Environment\ClanLib\Documentation\img\colors 
 
