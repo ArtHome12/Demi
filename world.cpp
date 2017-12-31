@@ -31,19 +31,28 @@ auto cResGlobalsTimeSecond = "second";
 
 auto cResElementsSection = "Elements";
 auto cResElementsType = "Element";
+auto cResElementsColor = "color";
+auto cResElementsVolatility = "volatility";
+auto cResElementsVisibility = "visibility";
 
 auto cResEnergySection = "Energy";
 auto cResEnergyType = "Geothermal";
+
+auto cResReactionsSection = "Reactions";
+auto cResReactionsType = "Reaction";
+auto cResReactionsGeoEnergy = "geothermalEnergy";
+auto cResReactionsSolarEnergy = "solarEnergy";
+auto cResReactionsLeftReagent = "LeftReagent";
+auto cResReactionsRightReagent = "RightReagent";
+auto cResReactionsReagentName = "name";
+auto cResReactionsAmount = "amount";
+
 
 auto cResOrganismsSection = "Organisms";
 auto cResOrganismsLUCA = "Organisms/LUCA";
 
 auto cResAreaRect = "rect";	// Тег для прямоугольной области начального распределения ресурса/организмов.
 auto cResAreaPoint = "point";	// Тег для точки.
-
-auto cElementsResColor = "color";
-auto cElementsResVolatility = "volatility";
-auto cElementsResVisibility = "visibility";
 
 auto cSolar = "Solar";			// Обозначение солнечной энергии.
 auto cEnergy = "Geothermal";	// Обозначение геотермальной энергии.
@@ -514,7 +523,6 @@ void World::LoadModel(const std::string &filename)
 	for (int i = 0; i < elemCount; ++i)
 		arResMax[i] = 1.0f;
 
-
 	// Считываем названия элементов.
 	for (int i = 0; i < elemCount; ++i) {
 
@@ -528,13 +536,13 @@ void World::LoadModel(const std::string &filename)
 		clan::DomElement &prop = res.get_element();
 
 		// Цвет для отображения.
-		arResColors[i] = clan::Colorf(prop.get_attribute(cElementsResColor));
+		arResColors[i] = clan::Colorf(prop.get_attribute(cResElementsColor));
 
 		// Летучесть, значение от 0 до 1.
-		arResVolatility[i] = prop.get_attribute_float(cElementsResVolatility);
+		arResVolatility[i] = prop.get_attribute_float(cResElementsVolatility);
 
 		// Видимость элемента.
-		arResVisible[i] = prop.get_attribute_bool(cElementsResVisibility, true);
+		arResVisible[i] = prop.get_attribute_bool(cResElementsVisibility, true);
 
 		// Области для заполнения ресурсом.
 
@@ -567,7 +575,7 @@ void World::LoadModel(const std::string &filename)
 		clan::DomNodeList nodes = prop.get_elements_by_tag_name(cResAreaPoint);
 		for (int j = nodes.get_length() - 1; j >= 0; --j) {
 
-			// Надйенный элемент с информацией о распределении ресурса.
+			// Найденный элемент с информацией о распределении ресурса.
 			clan::DomElement &pointItem = nodes.item(j).to_element();
 
 			// Заполняем точки.
@@ -575,15 +583,58 @@ void World::LoadModel(const std::string &filename)
 		}
 	}
 
+	// Считываем химические реакции.
+	// Названия реакций.
+	const std::vector<std::string>& reactionsNames = resDoc->get_resource_names_of_type(cResReactionsType, cResReactionsSection);
+	for (auto & reactionName : reactionsNames) {
+		// Создаём реакцию.
+		auto curReaction = std::make_shared<demi::ChemReaction>();
+
+		// Количество необходимой энергии.
+		clan::XMLResourceNode &res = resDoc->get_resource(reactionName);
+		clan::DomElement &prop = res.get_element();
+		curReaction->name = res.get_name();
+		curReaction->geoEnergy = prop.get_attribute_float(cResReactionsGeoEnergy);
+		curReaction->solarEnergy = prop.get_attribute_float(cResReactionsSolarEnergy);
+
+		// Реагенты слева.
+		clan::DomNodeList nodes = prop.get_elements_by_tag_name(cResReactionsLeftReagent);
+		for (int i = nodes.get_length() - 1; i >= 0; --i) {
+			clan::DomElement &node = nodes.item(i).to_element();
+			std::string reagentName = node.get_attribute(cResReactionsReagentName, "");
+
+			// По названию получаем индекс элемента и добавляем его в реакцию вместе с количеством.
+			auto pos = std::distance(names.begin(), find(names.begin(), names.end(), cResElementsSection + std::string("/") + reagentName));
+			demi::ReactionReagent reagent(pos, node.get_attribute_int(cResReactionsAmount));
+			curReaction->leftReagents.push_front(reagent);
+		}
+
+		// Реагенты справа.
+		nodes = prop.get_elements_by_tag_name(cResReactionsRightReagent);
+		for (int i = nodes.get_length() - 1; i >= 0; --i) {
+			clan::DomElement &node = nodes.item(i).to_element();
+			std::string reagentName = node.get_attribute(cResReactionsReagentName, "");
+
+			// По названию получаем индекс элемента и добавляем его в реакцию вместе с количеством.
+			auto pos = std::distance(names.begin(), find(names.begin(), names.end(), cResElementsSection + std::string("/") + reagentName));
+			demi::ReactionReagent reagent(pos, node.get_attribute_int(cResReactionsAmount));
+			curReaction->rightReagents.push_front(reagent);
+		}
+
+		// Сохраняем реакцию в списке реакций.
+		reactions.insert(std::pair<std::string, std::shared_ptr<demi::ChemReaction>>(curReaction->name, curReaction));
+	}
+
+
 	// Считываем протоорганизм. Всегда создаём один протоорганизм, считаем что образование живого мира из неживого не останавливается.
 	// Создаём вид протоорганизма по указанным координатам. Внимание - ниже он может быть переопределён из двоичного файла.
 	species = std::make_shared<demi::Species>();
 	prop = resDoc->get_resource(cResOrganismsLUCA).get_element();
-	species->name = "LUCA";
+	species->name = prop.get_attribute("name");
 	species->author = prop.get_attribute("author");
 	species->visible = prop.get_attribute_bool("visibility");
 	species->cells.push_back(std::make_shared<demi::CellAbdomen>());
-
+	species->reaction = reactions[prop.get_attribute("reaction")];
 
 	// Считываем двоичный файл, если он есть.
 	if (clan::FileHelp::file_exists(filename + "b")) {
@@ -665,6 +716,10 @@ std::shared_ptr<demi::Species> World::DoReadSpecies(clan::File &binFile, std::sh
 	retVal->author = binFile.read_string_nul();
 	retVal->visible = binFile.read_int8() != 0;
 
+	// Метаболитическая реакция.
+	std::string reactionName = binFile.read_string_nul();
+	retVal->reaction = reactions[reactionName];
+
 	// Создаём и считываем клетки.
 
 	// Количество клеток.
@@ -721,9 +776,10 @@ void World::DoWriteSpecies(clan::File &binFile, std::shared_ptr<demi::Species> a
 	binFile.write_string_nul(aSpecies->name);
 	binFile.write_string_nul(aSpecies->author);
 	binFile.write_int8(aSpecies->get_visible());
-	binFile.write_int64(aSpecies->cells.size());
+	binFile.write_string_nul(aSpecies->reaction->name);
 
 	// Записываем клетки.
+	binFile.write_int64(aSpecies->cells.size());
 	for (auto& cell : aSpecies->cells) {
 		// Тип клетки.
 		int64_t cellType = cell->getCellType();
@@ -784,7 +840,7 @@ void World::SaveModel(const std::string &filename)
 		prop = pResDoc->get_resource(cResElementsSection + std::string("/") + arResNames[i]).get_element();
 
 		// Видимость элемента.
-		prop.set_attribute_bool(cElementsResVisibility, arResVisible[i]);
+		prop.set_attribute_bool(cResElementsVisibility, arResVisible[i]);
 	}
 
 	// Запишем видимость протоорганизма.

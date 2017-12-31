@@ -1,70 +1,69 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <resources>
-
 	<section name="Globals">
-		<!-- Ширина мира и пропорция для высоты, максимум 30 000. Для проекции Меркатора 24:11 или 0.4583 -->
-		<item name="WorldSize" width="1000" heightRatio="0.4583" />
-
-		<!-- Последнее представление модели - координата левого верхнего угла, масштаб -->
-		<item name="Appearance" top="0" left="0" scale="1.0" />
-
-		<!-- Время модели - год, день, секунда -->
-		<item name="Time" year="1" day="1" second="0" />
+		<!--Ширина мира и пропорция для высоты, максимум 30 000. Для проекции Меркатора 24:11 или 0.4583-->
+		<item name="WorldSize" width="1000" heightRatio="0.4583"/>
+		<!--Последнее представление модели - координата левого верхнего угла, масштаб-->
+		<item name="Appearance" top="0" left="0" scale="0.520833"/>
+		<!--Время модели - год, день, секунда-->
+		<item name="Time" year="1" day="1" second="0"/>
 	</section>
-
-	<!-- Геотермальные источники энергии -->
+	<!--Геотермальные источники энергии-->
 	<section name="Energy">
-	        <Geothermal name="Point0">
+		<Geothermal name="Point0">
 			<point x="300" y="30"/>
 		</Geothermal>
-	        <Geothermal name="Point1">
+		<Geothermal name="Point1">
 			<point x="500" y="21"/>
 		</Geothermal>
-	        <Geothermal name="Point2">
+		<Geothermal name="Point2">
 			<point x="700" y="39"/>
 		</Geothermal>
 	</section>
-
+	<!--Минеральные элементы-->
 	<section name="Elements">
-
-		<!-- Вода - основа всего, и в качестве основы её летучесть меньше чем у твёрдых веществ -->
-	        <Element name="Water" color="cornflowerblue" volatility="0.01">
+		<!--Вода - основа всего, и в качестве основы её летучесть меньше чем у твёрдых веществ-->
+		<Element name="Water" color="cornflowerblue" volatility="0.01" visibility="true">
 			<rect left="0" top="0" right="max" bottom="max" amount="100000"/>
 		</Element>
-
-
-		<!-- Газы -->
-	        <Element name="Oxygen" color="green" volatility="0.12">
+		<!--Газы-->
+		<Element name="Oxygen" color="green" volatility="0.12" visibility="true">
 			<rect left="0" top="0" right="0" bottom="0" amount="0"/>
 		</Element>
-		<Element name="CarbonDioxide" color="yellow" volatility="0.12">
+		<Element name="CarbonDioxide" color="yellow" volatility="0.12" visibility="true">
 			<rect left="0" top="0" right="max" bottom="max" amount="22"/>
 		</Element>
-		<Element name="Hydrogen" color="darkgreen" volatility="0.12">
+		<Element name="Hydrogen" color="darkgreen" volatility="0.12" visibility="true">
 			<rect left="0" top="0" right="max" bottom="max" amount="16"/>
 		</Element>
-		<Element name="Methane" color="darkviolet" volatility="0.12">
+		<Element name="Methane" color="darkviolet" volatility="0.12" visibility="true">
 			<rect left="0" top="0" right="0" bottom="0" amount="0"/>
 		</Element>
-		<Element name="Hydrogen sulfide" color="aliceblue" volatility="0.12">
+		<Element name="Hydrogen sulfide" color="aliceblue" volatility="0.12" visibility="true">
 			<rect left="0" top="0" right="0" bottom="0" amount="0"/>
 		</Element>
-
-
-		<!-- Твёрдые вещества -->
-		<Element name="Sulphur" color="lightyellow" volatility="0.03">
+		<!--Твёрдые вещества-->
+		<Element name="Sulphur" color="lightyellow" volatility="0.03" visibility="true">
 			<rect left="0" top="0" right="max" bottom="max" amount="32"/>
 		</Element>
-
 	</section>
-
+	<!--Метаболические реакции-->
+	<section name="Reactions">
+		<!--Из углекислого газа и водорода CO2+4H2->CH4+2H2O - получаем метан и воду.-->
+		<Reaction name="CO2+4H2=CH4+2H2O" geothermalEnergy="1" solarEnergy="0">
+			<LeftReagent name="CarbonDioxide" amount="1"/>
+			<LeftReagent name="Hydrogen" amount="4"/>
+			<RightReagent name="Methane" amount="1"/>
+			<RightReagent name="Water" amount="2"/>
+		</Reaction>
+	</section>
+	<!--Живая природа-->
 	<section name="Organisms">
-		<!-- Протоорганизм, от которого произойдут все остальные, ему нужна геотермальная энергия -->
-		<item name="LUCA" author="DEMI" visibility="true" x="300" y="30" />
+		<!--Протоорганизм, от которого произойдут все остальные, ему нужна геотермальная энергия-->
+		<item name="LUCA" author="DEMI" visibility="true" x="300" y="30" reaction="CO2+4H2=CH4+2H2O"/>
 	</section>
 </resources>
-
-<!-- Цвета C:\Development\Environment\ClanLib\Documentation\img\colors 
+<!--Цвета C:\Development\Environment\ClanLib\Documentation\img\colors 
 
 	static Color aliceblue;			Hydrogen sulfide
 	static Color antiquewhite;
@@ -221,5 +220,4 @@
 	static Color gray60;
 	static Color gray70;
 	static Color gray80;
-	static Color gray90;
--->
+	static Color gray90;-->

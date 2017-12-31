@@ -112,6 +112,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="app.h" />
+    <ClInclude Include="reactions.h" />
     <ClInclude Include="tree_view.h" />
     <ClInclude Include="tree_view_impl.h" />
     <ClInclude Include="world.h" />

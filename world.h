@@ -10,9 +10,10 @@
 
 #pragma once
 
-#include <random>
-#include "settings_storage.h"
 #include "organism.h"
+#include "settings_storage.h"
+#include "reactions.h"
+
 
 // Продолжительность года в днях.
 const int cDaysInYear = 365;
@@ -247,6 +248,9 @@ private:
 
 	// Известные виды организмов. Древовидный список, в вершине - вид протоорганизма.
 	std::shared_ptr<demi::Species> species;
+
+	// Химические реакции, доступные для организмов.
+	std::map<std::string, std::shared_ptr<demi::ChemReaction>> reactions;
 
 	// Сами организмы. Для начала - один.
 	std::shared_ptr<demi::Organism> animal;

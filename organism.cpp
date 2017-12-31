@@ -9,7 +9,8 @@
 =============================================================================== */
 
 #include "precomp.h"
-#include "Organism.h"
+#include "reactions.h"
+#include "organism.h"
 #include "world.h"
 
 using namespace demi;
@@ -42,6 +43,6 @@ Organism::~Organism()
 // ѕроцессорное врем€ организма дл€ формировани€ поведени€ - поедани€ пищи, атаки, разворота, перемещени€, размножени€.
 void Organism::makeTick()
 {
-
+	// Ќеобходимо проверить наличие пищи 
 }
 
