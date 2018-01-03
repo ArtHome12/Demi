@@ -72,120 +72,6 @@ auto cWrongBinCannotReadResmax = "WorldWrongBinaryFileCannotReadResmax";
 World globalWorld;
 
 // =============================================================================
-// Точка на земной поверхности с координатами и списком ресурсов с указанием их количества.
-// =============================================================================
-Dot::Dot() 
-{
-	// Выделяем память под количества ресурсов плюс солнечная и геотермальная энергии.
-	int elemCount = globalWorld.getElemCount() + 2;
-	res = new float[elemCount];
-	memset(res, 0, sizeof(float) * elemCount);
-}
-
-Dot::~Dot()
-{
-	delete res;
-}
-
-int Dot::getSizeInMemory() 
-{
-	// Объём памяти в байтах под объект - массив количества ресурсов плюс солнечная и геотермальная энергии.
-	return (globalWorld.getElemCount() + 2) * sizeof(float);
-}
-
-void Dot::get_color(clan::Colorf &aValue) const
-{
-	// Возвращает цвет для точки на основе имеющихся ресурсов, передача по ссылке для оптимизации.
-	//
-
-	// Солнечный свет и энергия это альфа-канал.
-	aValue.set_alpha(clan::max<float, float>(getSolarEnergy(), getGeothermalEnergy()));
-
-	// Сначала ищем среди живых организмов.
-	//
-	for (auto &cell : cells) {
-		demi::Organism *organism = cell->organism;
-		if (organism != nullptr) {
-			// Проверим, включено ли отображение для данного вида.
-			if (organism->ourSpecies->get_visible()) {
-				aValue = clan::Colorf::white;
-				return;
-			}
-		}
-	}
-
-	// Выводим цвет минералов.
-	// Если складываем вместе цвета разных элементов, возникают точки неожиданных цветов. 
-	// Выходом может быть отображать преимущественный цвет для всей точки, то есть самый яркий. Начнём
-	// с первого элемента и проверим остальные элементы.
-	//
-
-	// Текущая яркость.
-	float resBright = 0.0f;
-
-	// Перебираем в цикле все и ищем наиболее яркий, то есть с наибольшей относительной концентрацией.
-	for (int i = 0; i < globalWorld.elemCount; i++) {
-
-		// Ищем только среди элементов, выранных для отображения.
-		if (globalWorld.arResVisible[i]) {
-
-			// Яркость (концентрация) текущего элемента.
-			const float curResBright = res[i + 2] / globalWorld.getResMaxValue(i);
-
-			// Если яркость выше, запоминаем цвет.
-			if (resBright < curResBright) {
-				resBright = curResBright;
-
-				// Встроенный оператор изменяет 4 компоненты, поэтому присваивание делаем вручную.
-				clan::Colorf &col = globalWorld.arResColors[i];
-				aValue.x = col.x;
-				aValue.y = col.y;
-				aValue.z = col.z;
-			}
-		}
-	}
-}
-
-// Количество указанного элемента в процентах.
-float Dot::getElemAmountPercent(int index) const 
-{ 
-	return res[index + 2] * 100 / globalWorld.getResMaxValue(index); 
-}
-
-
-// =============================================================================
-// Локальные координаты - центр всегда в точке 0, 0 и можно адресовать отрицательные координаты.
-// =============================================================================
-LocalCoord::LocalCoord(Dot *arDots, const clan::Pointf &coord) : dots(arDots),
-	center(coord),
-	worldWidth(globalWorld.get_worldSize().width),
-	worldHeight(globalWorld.get_worldSize().height) 
-{
-};
-
-Dot& LocalCoord::get_dot(float x, float y) const
-{
-	// По горизонтали координату переносим с одного края на другой.
-	x = roundf(x + center.x);
-	if (x < 0)
-		x += worldWidth;
-	else if (x >= worldWidth)
-		x -= worldWidth;
-
-	// По вертикали пока просто отрезаем.
-	y = roundf(y + center.y);
-	if (y < 0) 
-		y = 0;
-	else if (y >= worldHeight)
-		y = worldHeight - 1;
-
-	//_ASSERT(x < globalWorld.get_worldWidth());
-	//_ASSERT(y < globalWorld.get_worldHeight());
-
-	return dots[int(x + y * worldWidth)];
-}
-
-// =============================================================================
 // Формат мирового времени
 // =============================================================================
 void DemiTime::MakeTick()
@@ -224,7 +110,7 @@ void Solar::Shine(const DemiTime &timeModel)
 	// Сброс старой освещённости должен был быть сделан при перемешивании, но практически она затирается сама.
 
 	// Определим систему координат с положением солнца в центре.
-	LocalCoord coord(globalWorld.arDots, getPos(timeModel));
+	LocalCoord coord(getPos(timeModel));
 
 	// Двигаемся по всем точкам
 	//
@@ -441,7 +327,7 @@ void World::AddGeothermal(int i, const clan::Pointf &coord)
 	//
 
 	// Определим систему координат.
-	LocalCoord geothermalCoord(arDots, coord);
+	LocalCoord geothermalCoord(coord);
 
 	for (float xp = -cGeothermRadius; xp <= cGeothermRadius; xp++)
 		for (float yp = -cGeothermRadius; yp <= cGeothermRadius; yp++) {
@@ -606,7 +492,7 @@ void World::LoadModel(const std::string &filename)
 			// По названию получаем индекс элемента и добавляем его в реакцию вместе с количеством.
 			auto pos = std::distance(names.begin(), find(names.begin(), names.end(), cResElementsSection + std::string("/") + reagentName));
 			demi::ReactionReagent reagent(pos, node.get_attribute_int(cResReactionsAmount));
-			curReaction->leftReagents.push_front(reagent);
+			curReaction->leftReagents.push_back(reagent);
 		}
 
 		// Реагенты справа.
@@ -618,7 +504,7 @@ void World::LoadModel(const std::string &filename)
 			// По названию получаем индекс элемента и добавляем его в реакцию вместе с количеством.
 			auto pos = std::distance(names.begin(), find(names.begin(), names.end(), cResElementsSection + std::string("/") + reagentName));
 			demi::ReactionReagent reagent(pos, node.get_attribute_int(cResReactionsAmount));
-			curReaction->rightReagents.push_front(reagent);
+			curReaction->rightReagents.push_back(reagent);
 		}
 
 		// Сохраняем реакцию в списке реакций.
@@ -698,10 +584,7 @@ void World::LoadModel(const std::string &filename)
 	}
 
 	// Создаём экземпляр протоорганизма и размещаем его в геотермальном источнике.
-	animal = std::make_shared<demi::Organism>(species);
-	animal->center.x = float(prop.get_attribute_int("x"));
-	animal->center.y = float(prop.get_attribute_int("y"));
-	insertOrganismIntoDots(animal);
+	animal = std::make_shared<demi::Organism>(species, clan::Pointf(float(prop.get_attribute_int("x")), float(prop.get_attribute_int("y"))), 0);
 }
 
 // Рекурсивная функция для считывания видов организмов.
@@ -989,19 +872,3 @@ void World::ResetModel(const std::string &modelFilename, const std::string &defa
 //	return arDotsCopy;
 //}
 
-// Функции для перемещения организма по поверхности из точек.
-void World::removeOrganismFromDots(std::shared_ptr<demi::Organism> organism)
-{
-
-}
-
-void World::insertOrganismIntoDots(std::shared_ptr<demi::Organism> organism)
-{
-	// Пока помещаем только главную клетку, потом надо будет размещать и остальные.
-
-	// Определим систему координат.
-	LocalCoord geothermalCoord(arDots, organism->center);
-
-	// Поместим в центр главную клетку.
-	geothermalCoord.get_dot(0, 0).cells.push_front(organism->cells.front().get());
-}

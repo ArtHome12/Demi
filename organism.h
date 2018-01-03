@@ -10,6 +10,8 @@
 #pragma once
 
 #include "reactions.h"
+#include "local_coord.h"
+
 
 
 namespace demi {
@@ -108,18 +110,18 @@ class Organism
 	// Организм имеет списки клеток разных типов.
 
 public:
-	Organism(std::shared_ptr<Species> species);
+	Organism(std::shared_ptr<Species> species, const clan::Pointf &Acenter, int Aangle);
 	virtual ~Organism();
 
-	// Тип организма.
-	std::shared_ptr<Species> ourSpecies;
-
 	// Местоположение организма в мире (первой клетки живота) и ориентация (0 - север, 1 - северо-восток, 2 - восток и т.д. до 7 - северо-запад).
-	clan::Pointf center;
 	int angle;
+	LocalCoord center;
 
 	// Клетки организма.
 	std::vector<std::shared_ptr<GenericCell>> cells;
+
+	// Доступ к полям.
+	std::shared_ptr<Species> get_species() { return ourSpecies; }
 
 	// Процессорное время организма для формирования поведения - поедания пищи, атаки, разворота, перемещения, размножения.
 	void makeTick();
@@ -127,6 +129,16 @@ public:
 	// Формирование реакции на диффузию со стороны внешней среды, возвращает долю от 0 (не перемещается) до 1 (перемещение в заданную точку).
 
 	// Формирование реакции на атаку от другого организма.
+
+private:
+	// Вид организма.
+	std::shared_ptr<Species> ourSpecies;
+
+	// Текущие ячейки для хранения вещества перед реакцией.
+	std::vector<float> leftReagentAmounts;
+
+	// Текущая накопленная энергия.
+	float energy;
 };
 
 };

@@ -45,6 +45,9 @@
     <ClCompile Include="tree_view.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="local_coord.cpp">
+      <Filter>Header Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="precomp.h">
@@ -78,6 +81,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="reactions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="local_coord.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

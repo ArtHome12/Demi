@@ -4,9 +4,9 @@
 		<!--Ширина мира и пропорция для высоты, максимум 30 000. Для проекции Меркатора 24:11 или 0.4583-->
 		<item name="WorldSize" width="1000" heightRatio="0.4583"/>
 		<!--Последнее представление модели - координата левого верхнего угла, масштаб-->
-		<item name="Appearance" top="29" left="296" scale="0.007194"/>
+		<item name="Appearance" top="26" left="293" scale="0.007989"/>
 		<!--Время модели - год, день, секунда-->
-		<item name="Time" year="1" day="1" second="182"/>
+		<item name="Time" year="1" day="1" second="21248"/>
 	</section>
 	<!--Геотермальные источники энергии-->
 	<section name="Energy">
@@ -23,34 +23,34 @@
 	<!--Минеральные элементы-->
 	<section name="Elements">
 		<!--Вода - основа всего, и в качестве основы её летучесть меньше чем у твёрдых веществ-->
-		<Element name="Water" color="cornflowerblue" volatility="0.01" visibility="true">
+		<Element name="Water" color="cornflowerblue" volatility="0.01" visibility="false">
 			<rect left="0" top="0" right="max" bottom="max" amount="100000"/>
 		</Element>
 		<!--Газы-->
-		<Element name="Oxygen" color="green" volatility="0.12" visibility="true">
-			<rect left="0" top="0" right="0" bottom="0" amount="0"/>
+		<Element name="Oxygen" color="green" volatility="0.12" visibility="false">
+			<rect left="0" top="0" right="max" bottom="max" amount="0"/>
 		</Element>
 		<Element name="CarbonDioxide" color="yellow" volatility="0.12" visibility="true">
-			<rect left="0" top="0" right="max" bottom="max" amount="22"/>
+			<rect left="0" top="0" right="max" bottom="max" amount="20000"/>
 		</Element>
 		<Element name="Hydrogen" color="darkgreen" volatility="0.12" visibility="true">
-			<rect left="0" top="0" right="max" bottom="max" amount="16"/>
+			<rect left="0" top="0" right="max" bottom="max" amount="10"/>
 		</Element>
 		<Element name="Methane" color="darkviolet" volatility="0.12" visibility="true">
 			<rect left="0" top="0" right="0" bottom="0" amount="0"/>
 		</Element>
-		<Element name="Hydrogen sulfide" color="aliceblue" volatility="0.12" visibility="true">
+		<Element name="Hydrogen sulfide" color="aliceblue" volatility="0.12" visibility="false">
 			<rect left="0" top="0" right="0" bottom="0" amount="0"/>
 		</Element>
 		<!--Твёрдые вещества-->
-		<Element name="Sulphur" color="lightyellow" volatility="0.03" visibility="true">
-			<rect left="0" top="0" right="max" bottom="max" amount="32"/>
+		<Element name="Sulphur" color="lightyellow" volatility="0.03" visibility="false">
+			<rect left="0" top="0" right="max" bottom="max" amount="10"/>
 		</Element>
 	</section>
 	<!--Метаболические реакции-->
 	<section name="Reactions">
 		<!--Из углекислого газа и водорода CO2+4H2->CH4+2H2O - получаем метан и воду.-->
-		<Reaction name="CO2+4H2=CH4+2H2O" geothermalEnergy="1" solarEnergy="0">
+		<Reaction name="CO2+4H2=CH4+2H2O" geothermalEnergy="0.00001" solarEnergy="0">
 			<LeftReagent name="CarbonDioxide" amount="1"/>
 			<LeftReagent name="Hydrogen" amount="4"/>
 			<RightReagent name="Methane" amount="1"/>

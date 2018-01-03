@@ -28,13 +28,13 @@
 		</Element>
 		<!--Газы-->
 		<Element name="Oxygen" color="green" volatility="0.12" visibility="true">
-			<rect left="0" top="0" right="0" bottom="0" amount="0"/>
+			<rect left="0" top="0" right="max" bottom="max" amount="0"/>
 		</Element>
 		<Element name="CarbonDioxide" color="yellow" volatility="0.12" visibility="true">
-			<rect left="0" top="0" right="max" bottom="max" amount="22"/>
+			<rect left="0" top="0" right="max" bottom="max" amount="20000"/>
 		</Element>
 		<Element name="Hydrogen" color="darkgreen" volatility="0.12" visibility="true">
-			<rect left="0" top="0" right="max" bottom="max" amount="16"/>
+			<rect left="0" top="0" right="max" bottom="max" amount="10"/>
 		</Element>
 		<Element name="Methane" color="darkviolet" volatility="0.12" visibility="true">
 			<rect left="0" top="0" right="0" bottom="0" amount="0"/>
@@ -44,13 +44,13 @@
 		</Element>
 		<!--Твёрдые вещества-->
 		<Element name="Sulphur" color="lightyellow" volatility="0.03" visibility="true">
-			<rect left="0" top="0" right="max" bottom="max" amount="32"/>
+			<rect left="0" top="0" right="max" bottom="max" amount="10"/>
 		</Element>
 	</section>
 	<!--Метаболические реакции-->
 	<section name="Reactions">
 		<!--Из углекислого газа и водорода CO2+4H2->CH4+2H2O - получаем метан и воду.-->
-		<Reaction name="CO2+4H2=CH4+2H2O" geothermalEnergy="1" solarEnergy="0">
+		<Reaction name="CO2+4H2=CH4+2H2O" geothermalEnergy="0.00001" solarEnergy="0">
 			<LeftReagent name="CarbonDioxide" amount="1"/>
 			<LeftReagent name="Hydrogen" amount="4"/>
 			<RightReagent name="Methane" amount="1"/>

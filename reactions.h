@@ -28,7 +28,7 @@ public:
 	float geoEnergy, solarEnergy;
 
 	// Реагенты (индексы элементов неживой природы) с левой и с правой сторон.
-	std::forward_list<ReactionReagent> leftReagents, rightReagents;
+	std::vector<ReactionReagent> leftReagents, rightReagents;
 };
 
 };

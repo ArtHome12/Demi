@@ -143,7 +143,7 @@ void ModelRender::render_content(clan::Canvas &canvas)
 		bool showTextInCell = scale < cCompactCellDetailLevel;
 
 		// Определим систему координат.
-		LocalCoord coordSystem(globalWorld.getCopyDotsArray(), topLeftWorld);
+		LocalCoord coordSystem(topLeftWorld);
 
 		// Включена ли постоянная подсветка, для удобства.
 		bool illuminated = getIlluminatedWorld();
@@ -157,6 +157,10 @@ void ModelRender::render_content(clan::Canvas &canvas)
 
 			r.top = r.bottom;
 			r.bottom = std::min((yDotIndex + 1) / scale, windowSize.height);
+
+			// Если не осталось места, прерываемся.
+			if (r.get_height() < 1.0f)
+				break;
 
 			r.left = r.right = 0;
 			xDotIndex = 0;
@@ -177,12 +181,15 @@ void ModelRender::render_content(clan::Canvas &canvas)
 				r.left = r.right;
 				r.right = std::min((xDotIndex++ + 1) / scale, windowSize.width);
 
+				if (r.get_width() < 1.0f)
+					break;
+
 				// Отрисовываем клетку.
 				canvas.fill_rect(r, color);
 
 				// Отрисовываем её внутренности, если помещаются.
 				if (showTextInCell)
-					DrawCellCompact(canvas, d, r, int(topLeftWorld.x + xDotIndex - 1), int(topLeftWorld.y + yDotIndex), color);
+					DrawCellCompact(canvas, d, r, lround(topLeftWorld.x + xDotIndex - 1), lround(topLeftWorld.y + yDotIndex), color);
 			}
 
 			// Переходим к следующему ряду клеток.
@@ -222,12 +229,12 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 {
 	// Отрисовывает клетку в компактном виде - с координатой и ресурсами, которые поместятся.
 
+	// Проверка на минимальный размер.
+	if ((rect.get_width() < cCompactCellMinWidth) || (rect.get_height() < cCompactCellResLineHeight))
+		return;
+
 	// Высота, отведённая под отрисовку, за вычетом строки под координату внизу.
 	const float h = rect.bottom - cCompactCellResLineHeight;
-
-	// Проверка на минимальный размер.
-	if (rect.get_width() < cCompactCellMinWidth || h < 0)
-		return;
 
 	// Отступ слева для надписей.
 	const float indent = rect.left + 3;
@@ -285,8 +292,8 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 				demi::Organism *organism = cell->organism;
 				if (organism != nullptr) {
 					// Проверим, включено ли отображение для данного вида.
-					if (organism->ourSpecies->get_visible()) {
-						cellFont.draw_text(canvas, indent, yLine, organism->ourSpecies->name + '\t' + clan::StringHelp::float_to_text(0) + "%", color);
+					if (organism->get_species()->get_visible()) {
+						cellFont.draw_text(canvas, indent, yLine, organism->get_species()->name + '\t' + clan::StringHelp::float_to_text(0) + "%", color);
 
 						yLine += cCompactCellResLineHeight;
 					}
@@ -524,7 +531,7 @@ void ModelRender::workerThread()
 			float scale = globalWorld.getAppearanceScale();
 
 			// Определим систему координат.
-			LocalCoord coordSystem(globalWorld.getCopyDotsArray(), globalWorld.getAppearanceTopLeft());
+			LocalCoord coordSystem(globalWorld.getAppearanceTopLeft());
 
 			// Включена ли постоянная подсветка, для удобства.
 			bool illuminated = getIlluminatedWorld();
