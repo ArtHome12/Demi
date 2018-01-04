@@ -2,15 +2,15 @@
 <resources>
 	<section name="MainWindow">
 		<!--Main window position, size and state (6-maximized, 7-minimized, 10-normal)-->
-		<item name="Appearance" left="163" top="45" width="1278" height="998" state="6" is_fullscreen="false"/>
+		<item name="Appearance" left="219" top="84" width="1476" height="849" state="10" is_fullscreen="false"/>
 		<!--Top menu states-->
-		<item name="TopMenuState" SettingsWindowVisible="false" ModelIlluminated="true"/>
+		<item name="TopMenuState" SettingsWindowVisible="false" ModelIlluminated="false"/>
 		<!--Language-->
 		<item name="Locale" Language="rus"/>
 	</section>--&gt;
 	<section name="Project">
 		<!--Project filename, XML-part. Using a relative path for easy moving/copying the application, if possible.-->
-		<item name="ProjectName" filename="../Модель.demi"/>
+		<item name="ProjectName" filename=""/>
 		<!--Checkboxes on settings window-->
 		<item name="Checkboxes" autorun="false" autosave="true" autosave_hourly="true" top="0" state="7" width="1280" height="1024" left="0"/>
 	</section>--&gt;
