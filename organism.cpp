@@ -38,7 +38,9 @@ Organism::Organism(std::shared_ptr<Species> species, const clan::Pointf &Acenter
 		cell->organism = this;
 
 	// Разместим свои клетки в точках мира. Пока одна клетка.
-	center.get_dot(0, 0).cells.push_back(cells[0]);
+	Dot &dot = center.get_dot(0, 0);
+	dot.cells.push_back(cells[0]);
+	dot.organism = this;
 }
 
 
@@ -98,3 +100,19 @@ void Organism::makeTick()
 	}
 }
 
+// Безусловное перемещение организма в другую точку.
+void Organism::moveTo(const clan::Pointf &newCenter)
+{
+	// Удалим себя с прежнего местоположения.
+	Dot &dot = center.get_dot(0, 0);
+	auto iter = std::find(dot.cells.begin(), dot.cells.end(), cells[0]);
+	if (iter != dot.cells.end())
+		dot.cells.erase(iter);
+	dot.organism = nullptr;
+
+	// Разместим свои клетки в точках мира. Пока одна клетка.
+	center = LocalCoord(newCenter);
+	Dot &newDot = center.get_dot(0, 0);
+	newDot.cells.push_back(cells[0]);
+	newDot.organism = this;
+}

@@ -4,9 +4,9 @@
 		<!--Ширина мира и пропорция для высоты, максимум 30 000. Для проекции Меркатора 24:11 или 0.4583-->
 		<item name="WorldSize" width="1000" heightRatio="0.4583"/>
 		<!--Последнее представление модели - координата левого верхнего угла, масштаб-->
-		<item name="Appearance" top="0" left="163" scale="0"/>
+		<item name="Appearance" top="29" left="292" scale="0.007194"/>
 		<!--Время модели - год, день, секунда-->
-		<item name="Time" year="1" day="1" second="1071"/>
+		<item name="Time" year="1" day="1" second="2308"/>
 		<!--Протоорганизм, от которого происходят все остальные-->
 		<item name="LUCA" visibility="true" x="300" y="30" reaction="CO2+4H2=CH4+2H2O"/>
 	</section>

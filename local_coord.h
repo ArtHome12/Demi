@@ -13,6 +13,7 @@ Copyright (c) 2013-2018 by Artem Khomenko _mag12@yahoo.com.
 namespace demi
 {
 	class GenericCell;
+	class Organism;
 }
 
 //
@@ -52,6 +53,10 @@ public:
 
 	// Клетки организмов, размещённые в точке.
 	std::vector<std::shared_ptr<demi::GenericCell>> cells;
+
+	// Указатель на организм в точке или nullptr. У этого организма одна из клеток должна быть в текущей точке. Для оптимизации,
+	// чтобы не искать перебором среди клеток.
+	demi::Organism* organism = nullptr;
 };
 
 

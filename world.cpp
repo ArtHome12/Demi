@@ -314,6 +314,16 @@ void World::Diffusion()
 		//
 		if (arResMax[rndResA] < toDot.res[rndResB])
 			arResMax[rndResA] = toDot.res[rndResB];
+
+		// Если в исходной точке есть организм, а в конечной его нет, то попытаемся перенести и его.
+		if (fromDot.organism != nullptr && toDot.organism == nullptr && fromDot.organism->canMove()) {
+			// Координаты новой точки.
+			int index = dest - arDots;
+			float y = truncf(index / worldSize.width);
+			float x = index - y * worldSize.width;
+
+			fromDot.organism->moveTo(clan::Pointf(x, y));
+		}
 	}
 }
 

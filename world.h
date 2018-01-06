@@ -108,7 +108,6 @@ public:
 	void ResetModel(const std::string &modelFilename, const std::string &defaultFilename);
 
 	// Возвращает точки поверхности.
-	//Dot *getCopyDotsArray() { return arDotsCopy; }
 	Dot *getDotsArray() { return arDots; }
 	DemiTime getModelTime() { return timeBackup; }
 
