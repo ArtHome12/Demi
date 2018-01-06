@@ -38,7 +38,7 @@
 		<lang name="WindowsSettingsButtonNew" eng="New" rus="Новый"/>
 		<lang name="WindowsSettingsButtonOpen" eng="Open" rus="Открыть"/>
 		<lang name="WindowsSettingsButtonSave" eng="Save" rus="Сохранить"/>
-		<lang name="WindowsSettingsButtonSaveAs" eng="SaveAs" rus="СохранитьКак"/>
+		<lang name="WindowsSettingsButtonSaveAs" eng="SaveAs" rus="СоранитьКак"/>
 		<lang name="WindowsSettingsButtonRestart" eng="Restart" rus="Рестарт"/>
 		<lang name="WindowsSettingsButtonRun" eng="Run / Pause" rus="Старт / Пауза"/>
 		<lang name="WindowsSettingsCheckboxAutoRun" eng="Autostart last project on program load" rus="Автостарт последнего проекта при загрузке"/>

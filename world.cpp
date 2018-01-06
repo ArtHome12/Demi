@@ -24,6 +24,9 @@ auto cResGlobalsAppearanceTop = "top";
 auto cResGlobalsAppearanceLeft = "left";
 auto cResGlobalsAppearanceScale = "scale";
 
+auto cResGlobalsLUCA = "Globals/LUCA";
+auto cResGlobalsLUCAVisibility = "visibility";
+
 auto cResGlobalsTime = "Globals/Time";
 auto cResGlobalsTimeYear = "year";
 auto cResGlobalsTimeDay = "day";
@@ -49,7 +52,6 @@ auto cResReactionsAmount = "amount";
 
 
 auto cResOrganismsSection = "Organisms";
-auto cResOrganismsLUCA = "Organisms/LUCA";
 
 auto cResAreaRect = "rect";	// Тег для прямоугольной области начального распределения ресурса/организмов.
 auto cResAreaPoint = "point";	// Тег для точки.
@@ -371,6 +373,18 @@ void World::LoadModel(const std::string &filename)
 	lightRadius = round(0.9f * worldSize.height / 2);
 	tropicHeight = round(worldSize.height / 5);
 
+	// Считываем протоорганизм. Всегда создаём один протоорганизм, считаем что образование живого мира из неживого не останавливается.
+	// Создаём вид протоорганизма по указанным координатам. Внимание - ниже он может быть переопределён из двоичного файла.
+	prop = resDoc->get_resource(cResGlobalsLUCA).get_element();
+	species = std::make_shared<demi::Species>();
+	species->name = "LUCA";
+	species->author = "Demi";
+	species->visible = prop.get_attribute_bool(cResGlobalsLUCAVisibility);
+	species->cells.push_back(std::make_shared<demi::CellAbdomen>());
+	const clan::Pointf LUCAPos(float(prop.get_attribute_int("x")), float(prop.get_attribute_int("y")));
+	const std::string LUCAReactionName = prop.get_attribute("reaction");
+
+
 	// Инициализируем внешний вид проекта.
 	prop = resDoc->get_resource(cResGlobalsAppearance).get_element();
 	appearanceTopLeft.x = float(prop.get_attribute_int(cResGlobalsAppearanceLeft, int(appearanceTopLeft.x)));
@@ -511,16 +525,19 @@ void World::LoadModel(const std::string &filename)
 		reactions.insert(std::pair<std::string, std::shared_ptr<demi::ChemReaction>>(curReaction->name, curReaction));
 	}
 
+	// Доинициализируем протоорганизм ссылкой на реакцию.
+	species->reaction = reactions[LUCAReactionName];
+
 
 	// Считываем протоорганизм. Всегда создаём один протоорганизм, считаем что образование живого мира из неживого не останавливается.
 	// Создаём вид протоорганизма по указанным координатам. Внимание - ниже он может быть переопределён из двоичного файла.
-	species = std::make_shared<demi::Species>();
-	prop = resDoc->get_resource(cResOrganismsLUCA).get_element();
-	species->name = prop.get_attribute("name");
-	species->author = prop.get_attribute("author");
-	species->visible = prop.get_attribute_bool("visibility");
-	species->cells.push_back(std::make_shared<demi::CellAbdomen>());
-	species->reaction = reactions[prop.get_attribute("reaction")];
+	//species = std::make_shared<demi::Species>();
+	//prop = resDoc->get_resource(cResOrganismsLUCA).get_element();
+	//species->name = prop.get_attribute("name");
+	//species->author = prop.get_attribute("author");
+	//species->visible = prop.get_attribute_bool("visibility");
+	//species->cells.push_back(std::make_shared<demi::CellAbdomen>());
+	//species->reaction = reactions[prop.get_attribute("reaction")];
 
 	// Считываем двоичный файл, если он есть.
 	if (clan::FileHelp::file_exists(filename + "b")) {
@@ -584,7 +601,7 @@ void World::LoadModel(const std::string &filename)
 	}
 
 	// Создаём экземпляр протоорганизма и размещаем его в геотермальном источнике.
-	animal = std::make_shared<demi::Organism>(species, clan::Pointf(float(prop.get_attribute_int("x")), float(prop.get_attribute_int("y"))), 0);
+	animal = std::make_shared<demi::Organism>(species, LUCAPos, 0);
 }
 
 // Рекурсивная функция для считывания видов организмов.
@@ -710,6 +727,10 @@ void World::SaveModel(const std::string &filename)
 	prop.set_attribute_int(cResGlobalsAppearanceTop, int(appearanceTopLeft.y));
 	prop.set_attribute_float(cResGlobalsAppearanceScale, appearanceScale);
 
+	// Запишем видимость протоорганизма.
+	prop = pResDoc->get_resource(cResGlobalsLUCA).get_element();
+	prop.set_attribute_bool(cResGlobalsLUCAVisibility, species->visible);
+
 	// Записываем время.
 	prop = pResDoc->get_resource(cResGlobalsTime).get_element();
 	prop.set_attribute_int(cResGlobalsTimeYear, timeModel.year);
@@ -726,10 +747,6 @@ void World::SaveModel(const std::string &filename)
 		prop.set_attribute_bool(cResElementsVisibility, arResVisible[i]);
 	}
 
-	// Запишем видимость протоорганизма.
-	prop = pResDoc->get_resource(cResOrganismsLUCA).get_element();
-	prop.set_attribute_bool("visibility", species->visible);
-		
 	// Записываем изменения на диск.
 	pResDoc->save(filename);
 

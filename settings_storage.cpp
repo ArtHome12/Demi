@@ -224,3 +224,22 @@ void SettingsStorage::LoadLocaleStrings(const std::string &lang)
 		langMap[strKey] = strVal;
 	}
 }
+
+// ѕреобразует строку из UTF8 в CP1251 дл€ подсовывани€ OS Windows MessageBox.
+std::string SettingsStorage::UTF8_to_CP1251(std::string const & utf8)
+{
+	if (!utf8.empty())
+	{
+		int wchlen = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), utf8.size(), NULL, 0);
+		if (wchlen > 0 && wchlen != 0xFFFD)
+		{
+			std::vector<wchar_t> wbuf(wchlen);
+			MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), utf8.size(), &wbuf[0], wchlen);
+			std::vector<char> buf(wchlen);
+			WideCharToMultiByte(1251, 0, &wbuf[0], wchlen, &buf[0], wchlen, 0, 0);
+
+			return std::string(&buf[0], wchlen);
+		}
+	}
+	return std::string();
+}

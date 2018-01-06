@@ -12,6 +12,7 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 #include "windows_settings.h"
 #include "Theme/theme.h"
 #include "world.h"
+#include <clocale>
 
 // Расширение xml-файла и двоичного файла модели и их описания.
 auto cProjectXMLExtension = "demi";
@@ -242,6 +243,7 @@ void WindowsSettings::onButtondownSave()
 	}
 }
 
+
 void WindowsSettings::onButtondownSaveAs()
 {
 	// Создаём и инициализируем диалог выбора имени файла.
@@ -264,8 +266,8 @@ void WindowsSettings::onButtondownSaveAs()
 		if (clan::FileHelp::file_exists(filename)) {
 			// Надо переделать на платформонезависимое решение!
 			const clan::DisplayWindow &window = view_tree()->display_window();
-			auto text = std::string(clan::string_format(pSettings->LocaleStr(cMessageBoxTextFileRewrite), filename));
-			if (MessageBox(window.get_handle().hwnd, text.c_str(), window.get_title().c_str(), MB_OKCANCEL) != IDOK)
+			auto text = SettingsStorage::UTF8_to_CP1251(std::string(clan::string_format(pSettings->LocaleStr(cMessageBoxTextFileRewrite), filename)));
+			if (MessageBox(window.get_handle().hwnd, text.c_str(), SettingsStorage::UTF8_to_CP1251(window.get_title()).c_str(), MB_OKCANCEL) != IDOK)
 				// Пользователь отказался продолжать, выходим.
 				return;
 		}
@@ -298,14 +300,15 @@ void WindowsSettings::onButtondownRunPause()
 	}
 }
 
+
 void WindowsSettings::onButtondownRestart()
 {
 	// Начать расчёт заново.
 
 	// Получим подтверждение пользователя. Надо переделать на платформонезависимое решение!
 	const clan::DisplayWindow &window = view_tree()->display_window();
-	auto text = std::string(cMessageBoxTextRestartModel);
-	if (MessageBox(window.get_handle().hwnd, text.c_str(), window.get_title().c_str(), MB_OKCANCEL) != IDOK)
+	auto text = SettingsStorage::UTF8_to_CP1251(pSettings->LocaleStr(cMessageBoxTextRestartModel));
+	if (MessageBox(window.get_handle().hwnd, text.c_str(), SettingsStorage::UTF8_to_CP1251(window.get_title()).c_str(), MB_OKCANCEL) != IDOK)
 		// Пользователь отказался продолжать, выходим.
 		return;
 
@@ -315,6 +318,8 @@ void WindowsSettings::onButtondownRestart()
 	// Сбрасываем модель.
 	globalWorld.ResetModel(absPath, cProjectTemplate);
 }
+
+
 
 void WindowsSettings::onCBAutoRunToggle()
 {
