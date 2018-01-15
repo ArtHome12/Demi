@@ -209,9 +209,6 @@ App::~App()
 
 bool App::update()
 {
-	// Обновим счётчик времени.
-	game_time.update();
-
 	// Check for fullscreen switch.
 	if (fullscreen_requested != is_fullscreen)
 	{
@@ -258,6 +255,10 @@ bool App::update()
 
 	// Отрисовываем модель.
 	pModelRender->draw_without_layout();
+
+	// Обновим счётчик времени, если действительно обновилось отображение модели.
+	if (pModelRender->getIsFrameUpdated())
+		game_time.update();
 
 	// Уведомляем окно настроек об отрисовке (для проверки наступления момента автосохранения модели).
 	pWindowSettings->modelRenderNotify(game_time.get_current_time());

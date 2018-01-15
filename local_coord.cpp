@@ -21,11 +21,34 @@ Dot::Dot()
 	int elemCount = globalWorld.getElemCount() + 2;
 	res = new float[elemCount];
 	memset(res, 0, sizeof(float) * elemCount);
+	isCopy = false;
 }
+
+Dot::Dot(const Dot &obj)
+{
+	// Основная цель конструктора копирования - создать копию вектора, чтобы не падать при его изменении в другом потоке.
+	res = obj.res;
+	cells = obj.cells;
+	organism = obj.organism;
+	isCopy = true;
+}
+
+Dot& Dot::operator=(const Dot &obj)
+{
+	// Основная цель конструктора копирования - создать копию вектора, чтобы не падать при его изменении в другом потоке.
+	res = obj.res;
+	cells = obj.cells;
+	organism = obj.organism;
+	isCopy = true;
+	return *this;
+}
+
+
 
 Dot::~Dot()
 {
-	delete res;
+	if (!isCopy)
+		delete res;
 }
 
 int Dot::getSizeInMemory()
@@ -45,11 +68,15 @@ void Dot::get_color(clan::Colorf &aValue) const
 	// Сначала ищем среди живых организмов.
 	//
 	for (auto &cell : cells) {
-		demi::Organism *organism = cell->organism;
-		if (organism != nullptr) {
+		demi::Organism *cellOrganism = cell->organism;
+		if (cellOrganism != nullptr) {
 			// Проверим, включено ли отображение для данного вида.
-			if (organism->get_species()->get_visible()) {
+			if (cellOrganism->get_species()->get_visible()) {
 				aValue = clan::Colorf::white;
+
+				if (!cellOrganism->isAlive())
+					aValue = clan::Colorf::orangered; // для отладки
+
 				return;
 			}
 		}

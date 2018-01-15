@@ -24,18 +24,27 @@ using namespace demi;
 
 
 
+
 //
 // Организм.
 //
-Organism::Organism(std::shared_ptr<Species> species, const clan::Pointf &Acenter, int Aangle) : ourSpecies(species),
-	cells(species->cells), 
+float Organism::minActiveMetabolicRate = 0;
+float Organism::minInactiveMetabolicRate = 0;
+
+
+Organism::Organism(std::shared_ptr<Species> species, const clan::Pointf &Acenter, int Aangle, float Avitality, float AfissionBarrier) : ourSpecies(species),
+	cells(), 
 	leftReagentAmounts(ourSpecies->reaction->leftReagents.size()),
 	center(Acenter),
-	angle(Aangle)
+	angle(Aangle),
+	vitality(Avitality), fissionBarrier(AfissionBarrier)
 {
-	// Всем своим клеткам сообщим о себе.
-	for (auto &cell : cells)
-		cell->organism = this;
+	// Надо создать собственные клетки на основе клеток вида.
+	for (auto &sCell : species->cells) {
+		GenericCell * ownCell = sCell->getClone();
+		ownCell->organism = this;
+		cells.push_back(std::shared_ptr<GenericCell>(ownCell));
+	}
 
 	// Разместим свои клетки в точках мира. Пока одна клетка.
 	Dot &dot = center.get_dot(0, 0);
@@ -50,7 +59,7 @@ Organism::~Organism()
 
 
 // Процессорное время организма для формирования поведения - поедания пищи, атаки, разворота, перемещения, размножения.
-void Organism::makeTick()
+Organism* Organism::makeTickAndGetNewBorn()
 {
 	// Ссылка на точку, где находится клетка, для оптимизации.
 	Dot& dot = center.get_dot(0, 0);
@@ -94,11 +103,81 @@ void Organism::makeTick()
 		}
 
 		// Сохраним полученную энергию.
+		vitality += reaction.vitalityProductivity;
+
+		// Самое время делиться, если есть такая возможность.
+		clan::Pointf freePlace;
+		if (vitality >= fissionBarrier && findFreePlace(freePlace)) {
+			// Создаём новый экземпляр, передаём ему половину энергии, на порог деления делаем мутацию в пределах 1%.
+			vitality /= 2;
+			std::uniform_int_distribution<> rndAngle(0, 7);
+			int childAngle = rndAngle(globalWorld.getRandomGenerator());
+			std::uniform_real_distribution<float> rndFission(0.99f, 1.01f);
+			float childFissionBarrier = fissionBarrier * rndFission(globalWorld.getRandomGenerator());
+			return new Organism(get_species(), center.getGlobalPoint(freePlace), childAngle, vitality, childFissionBarrier);
+		}
 	}
 	else {
 		// Реакция не прошла, вычитаем энергию на метаболизм.
+		vitality -= minInactiveMetabolicRate;
+
+		// Если жизненная энергия стала отрицательной, значит организм умер.
+		// Объект сам себя уничтожить не может, он будет удалён из списка живых при первом к нему обращении.
 	}
+
+	return nullptr;
 }
+
+
+// Возвращает свободную клетку из окрестностей, если такая есть или 0, 0.
+bool Organism::findFreePlace(clan::Pointf &point)
+{
+	// Пребираем все направления, если не находим, возвращаем ложь.
+	for (int i = 0; i <= 7; i++) {
+		getPointAtDirection(i, point);
+
+		if (center.get_dot(point).organism == nullptr)
+			return true;
+	}
+	return false;
+}
+
+// Возвращает точку, лежащую относительно исходной в указанном направлении с учётом собственного направления.
+void Organism::getPointAtDirection(int direction, clan::Pointf & dest)
+{
+	// Добавим к заданному направлению собственное направление.
+	direction += angle;
+	if (direction > 7)
+		direction -= 7;
+
+	switch (direction) {
+	case 0:	// на восток.
+		dest.x = 1; dest.y = 0;
+		break;
+	case 1: // на юго-восток.
+		dest.x = 1; dest.y = 1;
+		break;
+	case 2:	// на юг.
+		dest.x = 0; dest.y = 1;
+		break;
+	case 3:	// на юго-запад.
+		dest.x = -1; dest.y = 1;
+		break;
+	case 4:	// на запад.
+		dest.x = -1; dest.y = 0;
+		break;
+	case 5:	// на северо-запад.
+		dest.x = -1; dest.y = -1;
+		break;
+	case 6:	// на север.
+		dest.x = 0; dest.y = -1;
+		break;
+	default:	// на северо-восток.
+		dest.x = 1; dest.y = -1;
+	}
+
+}
+
 
 // Безусловное перемещение организма в другую точку.
 void Organism::moveTo(const clan::Pointf &newCenter)

@@ -29,10 +29,17 @@ public:
 	// Местоположение клетки в системе координат организма.
 	int x, y;
 
-	//virtual ~BaseCell(void);
+	GenericCell() {}
+	GenericCell(int Ax, int Ay, Organism * Aorganism) : x(Ax), y(Ay), organism(Aorganism) {}
+
+
+	//virtual ~GenericCell(void);
 
 	// Возвращает тип клетки.
 	virtual CellTypes getCellType() abstract;
+
+	// Возвращает копию клетки.
+	virtual GenericCell *getClone() abstract;
 
 	// Надо хранить ссылку на организм.
 	Organism *organism = nullptr;
@@ -45,6 +52,9 @@ class CellAbdomen : public GenericCell
 {
 	// Возвращает тип клетки.
 	virtual CellTypes getCellType() { return cellAbdomen; }
+
+	// Возвращает копию клетки.
+	virtual GenericCell *getClone() { return new CellAbdomen(*this); }
 
 	// Делаем реакцию 
 };
@@ -80,6 +90,9 @@ public:
 	// Метаболитическая реакция организма.
 	std::shared_ptr<ChemReaction> reaction;
 
+	// Начальный порог размножения (будет меняться из-за изменчивости).
+	float fissionBarrier;
+
 	void set_visible(bool AVisible) { visible = AVisible; };
 	bool get_visible() { return visible; }
 
@@ -96,7 +109,7 @@ class Organism
 	// Организм имеет списки клеток разных типов.
 
 public:
-	Organism(std::shared_ptr<Species> species, const clan::Pointf &Acenter, int Aangle);
+	Organism(std::shared_ptr<Species> species, const clan::Pointf &Acenter, int Aangle, float Avitality, float AfissionBarrier);
 	virtual ~Organism();
 
 	// Местоположение организма в мире (первой клетки живота) и ориентация (0 - север, 1 - северо-восток, 2 - восток и т.д. до 7 - северо-запад).
@@ -109,8 +122,13 @@ public:
 	// Доступ к полям.
 	std::shared_ptr<Species> get_species() { return ourSpecies; }
 
+	// Минимальная энергия метаболизма для активной клетки и для пассивной.
+	static float minActiveMetabolicRate, minInactiveMetabolicRate;
+
+
 	// Процессорное время организма для формирования поведения - поедания пищи, атаки, разворота, перемещения, размножения.
-	void makeTick();
+	// Может вернуть указатель на новый родившийся организм.
+	Organism* makeTickAndGetNewBorn();
 
 	// Формирование реакции на диффузию со стороны внешней среды, возвращает истину, если можно переместиться.
 	bool canMove() { return true; }
@@ -120,6 +138,11 @@ public:
 	// Безусловное перемещение организма в другую точку.
 	void moveTo(const clan::Pointf &newCenter);
 
+	// Истина, если организм жив. Если нет, то его надо уничтожить.
+	bool isAlive() { return vitality > 0; }
+
+	float getVitality() { return vitality; }
+
 private:
 	// Вид организма.
 	std::shared_ptr<Species> ourSpecies;
@@ -128,7 +151,16 @@ private:
 	std::vector<float> leftReagentAmounts;
 
 	// Текущая накопленная энергия.
-	float energy;
+	float vitality;
+
+	// Порог размножения для организма (изначально совпадает со значением для вида, потом меняется из-за изменчивости).
+	float fissionBarrier;
+
+	// Возвращает свободную клетку из окрестностей, если такая есть и истину, иначе ложь.
+	bool findFreePlace(clan::Pointf &point);
+
+	// Возвращает точку, лежащую относительно исходной в указанном направлении с учётом собственного направления.
+	void getPointAtDirection(int direction, clan::Pointf & dest);
 };
 
 };

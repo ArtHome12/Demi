@@ -46,7 +46,9 @@ public:
 
 	// Конструктор, массив ресов обнуляем.
 	Dot();
+	Dot(const Dot &obj);
 	~Dot();
+	Dot& operator=(const Dot &obj);
 
 	// Возвращает цвет для точки на основе имеющихся ресурсов, передача по ссылке для оптимизации.
 	void get_color(clan::Colorf &aValue) const;
@@ -57,6 +59,10 @@ public:
 	// Указатель на организм в точке или nullptr. У этого организма одна из клеток должна быть в текущей точке. Для оптимизации,
 	// чтобы не искать перебором среди клеток.
 	demi::Organism* organism = nullptr;
+
+private:
+	// Установлено в истину для точек после конструктора копирования. Копии не освобождают память из-под res.
+	bool isCopy;
 };
 
 
@@ -67,7 +73,12 @@ class LocalCoord {
 public:
 	LocalCoord(const clan::Pointf &coord);
 
+	// Возвращает точку в локальных координаах.
 	Dot& get_dot(float x, float y) const;
+	Dot& get_dot(const clan::Pointf &coord) const { return get_dot(coord.x, coord.y); }
+
+	// Возвращает адрес точки в глобальных координатах.
+	clan::Pointf getGlobalPoint(const clan::Pointf &localPoint) { return center + localPoint; }
 
 private:
 	// Массив с точками поверхности.

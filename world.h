@@ -127,6 +127,8 @@ public:
 	void setAppearanceScale(float newScale) { appearanceScale = newScale; }
 	std::shared_ptr<demi::Species> getSpecies() { return species; }
 
+	std::mt19937 &getRandomGenerator() { return generator; }
+
 	// Инициализация настроек.
 	void setSettingsStorage(SettingsStorage* pSettingsStorage) { pSettings = pSettingsStorage; }
 
@@ -192,7 +194,7 @@ private:
 	std::map<std::string, std::shared_ptr<demi::ChemReaction>> reactions;
 
 	// Сами организмы. Для начала - один.
-	std::shared_ptr<demi::Organism> animal;
+	std::vector<demi::Organism*> animals;
 
 	std::random_device random_device; // Источник энтропии.
 	std::mt19937 generator; // Генератор случайных чисел.

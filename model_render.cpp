@@ -72,6 +72,9 @@ void ModelRender::render_content(clan::Canvas &canvas)
 {
 	// Отрисовывает модель в указанном месте.
 
+	// См. декларацию.
+	isFrameUpdated = false;
+
 	// Получим размеры для отображения.
 	const clan::Sizef windowSize = geometry().content_size();
 
@@ -122,6 +125,7 @@ void ModelRender::render_content(clan::Canvas &canvas)
 			// Запустим поток.
 			threadRunFlag = true;
 			threadEvent.notify_all();
+			isFrameUpdated = true;
 		}
 
 		// Отрисовываем картинку на канве.
@@ -150,6 +154,7 @@ void ModelRender::render_content(clan::Canvas &canvas)
 
 		// Цвет точки, для оптимизации объявление вынесено сюда.
 		clan::Colorf color;
+		Dot d;
 
 		// В цикле двигаемся, пока не выйдем за границу окна.
 		//
@@ -168,7 +173,8 @@ void ModelRender::render_content(clan::Canvas &canvas)
 			while (r.left < windowSize.width) {
 
 				// Точка мира. 
-				const Dot &d = coordSystem.get_dot(xDotIndex, yDotIndex);
+				// Обязательно получаем именно копию точки, а не ссылку - иначе вылетим при изменении клеток в расчётном потоке.
+				d = coordSystem.get_dot(xDotIndex, yDotIndex);
 
 				// Получим цвет точки.
 				d.get_color(color);
@@ -200,6 +206,7 @@ void ModelRender::render_content(clan::Canvas &canvas)
 		DrawGrid(canvas, windowSize);
 
 		// Рисование клеток завершено.
+		isFrameUpdated = true;
 	}
 
 }
@@ -293,7 +300,7 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 				if (organism != nullptr) {
 					// Проверим, включено ли отображение для данного вида.
 					if (organism->get_species()->get_visible()) {
-						cellFont.draw_text(canvas, indent, yLine, organism->get_species()->name + '\t' + clan::StringHelp::float_to_text(0) + "%", color);
+						cellFont.draw_text(canvas, indent, yLine, organism->get_species()->name + '\t' + clan::StringHelp::float_to_text(organism->getVitality()) + "", color);
 
 						yLine += cCompactCellResLineHeight;
 					}
@@ -512,6 +519,10 @@ void ModelRender::setIlluminatedWorld(bool newValue)
 void ModelRender::workerThread()
 {
 	// Рабочая функция потока, вычисляющего пиксельбуфер.
+
+	// Для оптимизации вынесено сюда.
+	Dot d;
+
 	try
 	{
 		while (true)
@@ -544,22 +555,47 @@ void ModelRender::workerThread()
 			// Указатель на точки буфера.
 			unsigned char *pixels = (unsigned char *)pPixelBufToWrite->get_data();
 
+			// Количество байт под одну строку в буфере.
+			const int lineSize = int(width * 4);
+
 			// Цвет точки, для оптимизации объявление вынесено сюда.
 			clan::Colorf color;
 
-			for (float ypos = 0; ypos < height; ypos++)
+			// Индекс текущей точки.
+			float xIndex, oldXIndex = -1, yIndex, oldYIndex = -1;
+
+			for (int ypos = 0; ypos < height; ++ypos)
 			{
-				for (float xpos = 0; xpos < width; xpos++)
-				{
-					// Точка мира. Доступ через индекс потому, что в физической матрице точки могут быть расположены иначе, хотя это повод для оптимизации.
-					const Dot &d = coordSystem.get_dot(xpos * scale, ypos * scale);
+				// Индекс точки мира.
+				yIndex = roundf(ypos * scale);
 
-					d.get_color(color);
+				// Если индекс не поменялся, можно просто скопировать предыдущую строку, иначе вычисляем заново.
+				if (oldYIndex == yIndex) {
+					memcpy(pixels, pixels - lineSize, lineSize);
+					pixels+=lineSize;
+				}
+				else {
+					oldXIndex = -1;
+					oldYIndex = yIndex;
 
-					*(pixels++) = (unsigned char)(color.get_red() * 255);
-					*(pixels++) = (unsigned char)(color.get_green() * 255);
-					*(pixels++) = (unsigned char)(color.get_blue() * 255);
-					*(pixels++) = illuminated ? 255 : (unsigned char)(color.get_alpha() * 255);
+					for (int xpos = 0; xpos < width; ++xpos)
+					{
+						// Точка мира. Доступ через индекс потому, что в физической матрице точки могут быть расположены иначе, хотя это повод для оптимизации.
+						xIndex = roundf(xpos * scale);
+
+						// Если одна координата не меняется, не делаем медленные вычисления.
+						// Обязательно получаем именно копию точки, а не ссылку - иначе вылетим при изменении клеток в расчётном потоке.
+						if (xIndex != oldXIndex) {
+							d = coordSystem.get_dot(xIndex, yIndex);
+							d.get_color(color);
+							oldXIndex = xIndex;
+						}
+
+						*(pixels++) = (unsigned char)(color.get_red() * 255);
+						*(pixels++) = (unsigned char)(color.get_green() * 255);
+						*(pixels++) = (unsigned char)(color.get_blue() * 255);
+						*(pixels++) = illuminated ? 255 : (unsigned char)(color.get_alpha() * 255);
+					}
 				}
 			}
 

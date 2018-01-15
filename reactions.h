@@ -27,6 +27,9 @@ public:
 	// Количество необходимой геотермальной и солнечной энергии.
 	float geoEnergy, solarEnergy;
 
+	// Выхлоп жизненной энергии для организма от данной реакции.
+	float vitalityProductivity;
+
 	// Реагенты (индексы элементов неживой природы) с левой и с правой сторон.
 	std::vector<ReactionReagent> leftReagents, rightReagents;
 };

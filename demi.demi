@@ -4,11 +4,11 @@
 		<!--Ширина мира и пропорция для высоты, максимум 30 000. Для проекции Меркатора 24:11 или 0.4583-->
 		<item name="WorldSize" width="1000" heightRatio="0.4583"/>
 		<!--Последнее представление модели - координата левого верхнего угла, масштаб-->
-		<item name="Appearance" top="29" left="292" scale="0.007194"/>
+		<item name="Appearance" top="0" left="0" scale="0.520833"/>
 		<!--Время модели - год, день, секунда-->
-		<item name="Time" year="1" day="1" second="2308"/>
+		<item name="Time" year="1" day="1" second="67443"/>
 		<!--Протоорганизм, от которого происходят все остальные-->
-		<item name="LUCA" visibility="true" x="300" y="30" reaction="CO2+4H2=CH4+2H2O"/>
+		<item name="LUCA" visibility="false" x="300" y="30" reaction="CO2+4H2=CH4+2H2O" main="if (_vitality &gt;= fissionBarrier) _fission()" fissionBarrier="30" minActiveMetabolicRate="1" minInactiveMetabolicRate="0.1"/>
 	</section>
 	<!--Геотермальные источники энергии-->
 	<section name="Energy">
@@ -38,7 +38,7 @@
 		<Element name="Hydrogen" color="darkgreen" volatility="0.12" visibility="false">
 			<rect left="0" top="0" right="max" bottom="max" amount="10"/>
 		</Element>
-		<Element name="Methane" color="darkviolet" volatility="0.12" visibility="true">
+		<Element name="Methane" color="darkviolet" volatility="0.12" visibility="false">
 			<rect left="0" top="0" right="0" bottom="0" amount="0"/>
 		</Element>
 		<Element name="Hydrogen sulfide" color="aliceblue" volatility="0.12" visibility="false">
@@ -52,13 +52,13 @@
 	<!--Метаболические реакции-->
 	<section name="Reactions">
 		<!--Из углекислого газа и водорода CO2+4H2->CH4+2H2O - получаем метан и воду.-->
-		<Reaction name="CO2+4H2=CH4+2H2O" geothermalEnergy="0.0001" solarEnergy="0">
+		<Reaction name="CO2+4H2=CH4+2H2O" geothermalEnergy="0.0001" solarEnergy="0" vitalityProductivity="5">
 			<LeftReagent name="CarbonDioxide" amount="1"/>
 			<LeftReagent name="Hydrogen" amount="4"/>
 			<RightReagent name="Methane" amount="1"/>
 			<RightReagent name="Water" amount="2"/>
 		</Reaction>
-		<Reaction name="CH4+2H2O=CO2+4H2" geothermalEnergy="0" solarEnergy="0">
+		<Reaction name="CH4+2H2O=CO2+4H2" geothermalEnergy="0" solarEnergy="0" vitalityProductivity="3">
 			<LeftReagent name="Methane" amount="1"/>
 			<LeftReagent name="Water" amount="2"/>
 			<RightReagent name="CarbonDioxide" amount="1"/>

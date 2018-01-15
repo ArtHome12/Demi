@@ -20,6 +20,8 @@ public:
 	const bool getIlluminatedWorld() { return pSettings->getTopMenuIsModelIlluminated(); }
 	void setIlluminatedWorld(bool newValue);
 
+	const bool getIsFrameUpdated() { return isFrameUpdated; }
+
 protected:
 	/// Renders the content of a view
 	void render_content(clan::Canvas &canvas) override;
@@ -51,6 +53,10 @@ private:
 	// Подписи для солнечной и геотермальной энергий.
 	std::string solarTitle;
 	std::string geothermalTitle;
+
+	// Флаг, предназначенный для корректного отображения fps в App::update() в случае, если картинка не обновилась, а выдаём старый буфер.
+	// Обновляется в render_content().
+	bool isFrameUpdated = false;
 
 	void on_mouse_down(clan::PointerEvent &e);
 	void on_mouse_up(const clan::PointerEvent &e);

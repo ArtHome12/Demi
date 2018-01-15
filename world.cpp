@@ -26,6 +26,9 @@ auto cResGlobalsAppearanceScale = "scale";
 
 auto cResGlobalsLUCA = "Globals/LUCA";
 auto cResGlobalsLUCAVisibility = "visibility";
+auto cResGlobalsLUCAFissionBarier = "fissionBarrier";
+auto cResGlobalsLUCAminActiveMetabolicRate = "minActiveMetabolicRate";
+auto cResGlobalsLUCAminInactiveMetabolicRate = "minInactiveMetabolicRate";
 
 auto cResGlobalsTime = "Globals/Time";
 auto cResGlobalsTimeYear = "year";
@@ -45,6 +48,7 @@ auto cResReactionsSection = "Reactions";
 auto cResReactionsType = "Reaction";
 auto cResReactionsGeoEnergy = "geothermalEnergy";
 auto cResReactionsSolarEnergy = "solarEnergy";
+auto cResReactionsVitalityProductivity = "vitalityProductivity";
 auto cResReactionsLeftReagent = "LeftReagent";
 auto cResReactionsRightReagent = "RightReagent";
 auto cResReactionsReagentName = "name";
@@ -117,8 +121,8 @@ void Solar::Shine(const DemiTime &timeModel)
 	// Двигаемся по всем точкам
 	//
 	float lightRadius = globalWorld.getLightRadius();
-	for (float x = -lightRadius; x <= lightRadius; x++)
-		for (float y = -lightRadius; y <= lightRadius; y++) {
+	for (float x = -lightRadius; x <= lightRadius; ++x)
+		for (float y = -lightRadius; y <= lightRadius; ++y) {
 
 			// Фактическое расстояние до центра координат.
 			float r = sqrt(x*x + y*y);
@@ -208,21 +212,33 @@ void World::MakeTick()
 	// Перемешивание ресурсов из-за диффузии.
 	Diffusion();
 
-	// Передаём управление живому организму.
+	// Передаём управление живым организмам.
 	//
 
-	// Количество организмов.
-	int cnt = 1;
+	// Надо оценить эффективность данного способа, мож через случайное число будет быстрее.
+	std::shuffle(animals.begin(), animals.end(), generator);
 
-	// Инициализируем генератор случайных чисел под количество организмов.
-	std::uniform_int_distribution<> distribution(0, cnt-1); // Равномерное распределение [0, cnt-1]
+	// Используем традиционый цикл, так как иначе итераторы портятся после изменения вектора.
+	int cnt = animals.size();
+	for (int i = 0; i < cnt; ++i) {
 
-	for (int i = 0; i < cnt; i++) {
-		// Определяем случайным образом элемент.
-		int x = distribution(generator); // Случайное число.
+		demi::Organism &animal = *animals[i];
 
-		// Передаём ему управление.
-		animal->makeTick();
+		// Проверим, если организм мертв, его надо удалить из списка.
+		if (!animal.isAlive()) {
+			// Меняем его с последним и удаляем последний.
+			animals[i] = animals.back();
+			animals.pop_back();
+			--cnt;
+			continue;
+		}
+
+		// Передаём ему управление. Если обратно получили не 0, надо сохранить новый организм в списке.
+		demi::Organism * newBorn = animal.makeTickAndGetNewBorn();
+		if (newBorn != nullptr) {
+			animals.push_back(newBorn);
+			++cnt;
+		}
 	}
 }
 
@@ -274,26 +290,29 @@ void World::Diffusion()
 
 		// Определяем конечную координату - в одну из сторон от исходной.
 		switch (rnd) {
-		case 1 :
-			dest = cur + 1;					// на восток.
+		case 0:	// на восток.
+			dest = cur + 1;
 			break;
-		case 2 :
-			dest = cur + 1 + int(worldSize.width);	// на юго-восток.
+		case 1: // на юго-восток.
+			dest = cur + 1 + int(worldSize.width);
 			break;
-		case 3 :
-			dest = cur + int(worldSize.width);		// на юг.
+		case 2:	// на юг.
+			dest = cur + int(worldSize.width);
 			break;
-		case 4 :
-			dest = cur - 1 + int(worldSize.width);	// на юго-запад.
+		case 3:	// на юго-запад.
+			dest = cur - 1 + int(worldSize.width);
 			break;
-		case 5 :
-			dest = cur - 1;					// на запад.
+		case 4:	// на запад.
+			dest = cur - 1;
 			break;
-		case 6 :
-			dest = cur - 1 - int(worldSize.width);	// на северо-запад.
+		case 5:	// на северо-запад.
+			dest = cur - 1 - int(worldSize.width);
 			break;
-		default:
-			dest = cur - int(worldSize.width);		// на север.
+		case 6:	// на север.
+			dest = cur - int(worldSize.width);
+			break;
+		default:	// на северо-восток.
+			dest = cur + 1 - int(worldSize.width);
 		}
 		
 		// Откорректируем в случае выхода за пределы, иначе всё вещество скопится у нижнего края из-за дрейфа
@@ -341,8 +360,8 @@ void World::AddGeothermal(int i, const clan::Pointf &coord)
 	// Определим систему координат.
 	LocalCoord geothermalCoord(coord);
 
-	for (float xp = -cGeothermRadius; xp <= cGeothermRadius; xp++)
-		for (float yp = -cGeothermRadius; yp <= cGeothermRadius; yp++) {
+	for (float xp = -cGeothermRadius; xp <= cGeothermRadius; ++xp)
+		for (float yp = -cGeothermRadius; yp <= cGeothermRadius; ++yp) {
 
 			// Фактическое расстояние до центра координат.
 			float r = sqrt(xp*xp + yp*yp);
@@ -391,8 +410,11 @@ void World::LoadModel(const std::string &filename)
 	species->author = "Demi";
 	species->visible = prop.get_attribute_bool(cResGlobalsLUCAVisibility);
 	species->cells.push_back(std::make_shared<demi::CellAbdomen>());
+	species->fissionBarrier = prop.get_attribute_float(cResGlobalsLUCAFissionBarier);
 	const clan::Pointf LUCAPos(float(prop.get_attribute_int("x")), float(prop.get_attribute_int("y")));
 	const std::string LUCAReactionName = prop.get_attribute("reaction");
+	demi::Organism::minActiveMetabolicRate = prop.get_attribute_float(cResGlobalsLUCAminActiveMetabolicRate);
+	demi::Organism::minInactiveMetabolicRate = prop.get_attribute_float(cResGlobalsLUCAminInactiveMetabolicRate);
 
 
 	// Инициализируем внешний вид проекта.
@@ -495,17 +517,19 @@ void World::LoadModel(const std::string &filename)
 
 	// Считываем химические реакции.
 	// Названия реакций.
+	reactions.clear();
 	const std::vector<std::string>& reactionsNames = resDoc->get_resource_names_of_type(cResReactionsType, cResReactionsSection);
 	for (auto & reactionName : reactionsNames) {
 		// Создаём реакцию.
 		auto curReaction = std::make_shared<demi::ChemReaction>();
 
-		// Количество необходимой энергии.
+		// Количество необходимой энергии и выхлоп жизненной энергии.
 		clan::XMLResourceNode &res = resDoc->get_resource(reactionName);
 		clan::DomElement &prop = res.get_element();
 		curReaction->name = res.get_name();
 		curReaction->geoEnergy = prop.get_attribute_float(cResReactionsGeoEnergy);
 		curReaction->solarEnergy = prop.get_attribute_float(cResReactionsSolarEnergy);
+		curReaction->vitalityProductivity = prop.get_attribute_float(cResReactionsVitalityProductivity);
 
 		// Реагенты слева.
 		clan::DomNodeList nodes = prop.get_elements_by_tag_name(cResReactionsLeftReagent);
@@ -539,16 +563,6 @@ void World::LoadModel(const std::string &filename)
 	species->reaction = reactions[LUCAReactionName];
 
 
-	// Считываем протоорганизм. Всегда создаём один протоорганизм, считаем что образование живого мира из неживого не останавливается.
-	// Создаём вид протоорганизма по указанным координатам. Внимание - ниже он может быть переопределён из двоичного файла.
-	//species = std::make_shared<demi::Species>();
-	//prop = resDoc->get_resource(cResOrganismsLUCA).get_element();
-	//species->name = prop.get_attribute("name");
-	//species->author = prop.get_attribute("author");
-	//species->visible = prop.get_attribute_bool("visibility");
-	//species->cells.push_back(std::make_shared<demi::CellAbdomen>());
-	//species->reaction = reactions[prop.get_attribute("reaction")];
-
 	// Считываем двоичный файл, если он есть.
 	if (clan::FileHelp::file_exists(filename + "b")) {
 
@@ -569,7 +583,7 @@ void World::LoadModel(const std::string &filename)
 			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinElemCount), strElemCountAwait, strElemCount));
 
 		// Названия элементов.
-		for (int i = 0; i < elemCount; i++) {
+		for (int i = 0; i < elemCount; ++i) {
 			auto &elemName = binFile.read_string_nul();
 			if (elemName != arResNames[i])
 				throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinElemName), arResNames[i], elemName));
@@ -591,7 +605,7 @@ void World::LoadModel(const std::string &filename)
 		// Считываем точки неживого мира. Клетки будут размещены при считывании организмов.
 		int dotsCount = int(worldSize.width * worldSize.height);
 		int dotSize = Dot::getSizeInMemory();
-		for (int i = 0; i < dotsCount; i++) {
+		for (int i = 0; i < dotsCount; ++i) {
 			if (binFile.read(arDots[i].res, dotSize) != dotSize)
 				throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinCannotReadDots), i));
 		}
@@ -611,7 +625,8 @@ void World::LoadModel(const std::string &filename)
 	}
 
 	// Создаём экземпляр протоорганизма и размещаем его в геотермальном источнике.
-	animal = std::make_shared<demi::Organism>(species, LUCAPos, 0);
+	animals.clear();
+	animals.push_back(new demi::Organism(species, LUCAPos, 0, species->fissionBarrier, species->fissionBarrier));
 }
 
 // Рекурсивная функция для считывания видов организмов.
@@ -636,7 +651,7 @@ std::shared_ptr<demi::Species> World::DoReadSpecies(clan::File &binFile, std::sh
 	int64_t cnt = binFile.read_int64();
 	
 	// В цикле создаём все клетки.
-	for (int i = 0; i < cnt; i++) {
+	for (int i = 0; i < cnt; ++i) {
 
 		// Тип клетки.
 		int64_t cellType = binFile.read_int64();
@@ -672,7 +687,7 @@ std::shared_ptr<demi::Species> World::DoReadSpecies(clan::File &binFile, std::sh
 	cnt = binFile.read_int64();
 
 	// Считываем и сохраняем потомков рекурсивно.
-	for (int i = 0; i < cnt; i++)
+	for (int i = 0; i < cnt; ++i)
 		retVal->descendants.push_back(DoReadSpecies(binFile, retVal));
 	
 	// Возвращаем считанный элемент.
@@ -773,7 +788,7 @@ void World::SaveModel(const std::string &filename)
 	binFile.write_string_nul("ElementsCount:" + clan::StringHelp::int_to_text(elemCount));
 
 	// Запишем названия элементов.
-	for (int i = 0; i < elemCount; i++)
+	for (int i = 0; i < elemCount; ++i)
 		binFile.write_string_nul(arResNames[i]);
 
 	// Записываем маркер организмов.
@@ -788,7 +803,7 @@ void World::SaveModel(const std::string &filename)
 	// Записываем точки. Сразу все не получается, так как массив не плоский.
 	int dotsCount = int(worldSize.width * worldSize.height);
 	int dotSize = Dot::getSizeInMemory();
-	for (int i = 0; i < dotsCount; i++)
+	for (int i = 0; i < dotsCount; ++i)
 		binFile.write(arDots[i].res, dotSize);
 
 	// Записываем маркер начала массива максимумов.
