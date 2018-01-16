@@ -246,7 +246,7 @@ bool App::update()
 		lastIlluminatedWorld = illuminatedWorld;
 	} 
 
-	// Отрисуем содержимое окна с моделью.
+	// Выведем время модели.
 	DemiTime modelTime = globalWorld.getModelTime();
 	if (lastModelTime != modelTime) {
 		lastModelTime = modelTime;

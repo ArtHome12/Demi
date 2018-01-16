@@ -63,11 +63,8 @@ private:
 	void on_mouse_move(const clan::PointerEvent &e);
 	void on_mouse_dblclk(const clan::PointerEvent &e);
 
-	// Уменьшает масштаб - приближает поверхность.
-	void Approach(const clan::Pointf &pos, float scaleStep);
-
 	// Увеличивает масштаб - отдаляет поверхность.
-	void ToDistance(const clan::Pointf &pos, float scaleStep);
+	void DoScaleStep(const clan::Pointf &pos, float scaleStep, clan::Pointf &newTopLeft);
 
 	// Отрисовывает сетку.
 	void DrawGrid(clan::Canvas &canvas, const clan::Sizef &windowSize);

@@ -12,6 +12,8 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 #include "world.h"
 #include "settings_storage.h"
 #include "model_render.h"
+#include <chrono>
+#include <thread>
 
 // Масштаб, при котором происходит переключение отображения по точкам на отображение клеток.
 const float cPixelDetailLevel = 0.1f;
@@ -354,7 +356,7 @@ void ModelRender::on_mouse_down(clan::PointerEvent &e)
 		else if (e.ctrl_down() || e.cmd_down())
 			topLeftWorld.y -= max1(yWorldInc * scale);
 		else
-			Approach(e.pos(this), cScaleInc);
+			DoScaleStep(e.pos(this), 1/cScaleInc, topLeftWorld);
 
 		// Сохраним изменения.
 		globalWorld.setAppearanceTopLeft(topLeftWorld);
@@ -369,7 +371,7 @@ void ModelRender::on_mouse_down(clan::PointerEvent &e)
 		else if (e.ctrl_down() || e.cmd_down())
 			topLeftWorld.y += max1(yWorldInc * scale);
 		else
-			ToDistance(e.pos(this), cScaleInc);
+			DoScaleStep(e.pos(this), cScaleInc, topLeftWorld);
 		globalWorld.setAppearanceTopLeft(topLeftWorld);
 		CorrectScale();
 		break;
@@ -432,62 +434,36 @@ void ModelRender::on_mouse_dblclk(const clan::PointerEvent &e)
 
 		// Запускаем анимацию.
 		//
+		clan::Pointf topLeftWorld = globalWorld.getAppearanceTopLeft();
 		for (int i = 0; i <= 12; ++i) {
-			Approach(e.pos(this), scaleStep);
-			//render_content();
+			DoScaleStep(e.pos(this), 1/scaleStep, topLeftWorld);
+			globalWorld.setAppearanceTopLeft(topLeftWorld);
+			
+			// Делаем анимацию.
+			draw_without_layout();
+			view_tree()->display_window().flip();
+			std::this_thread::sleep_for(std::chrono::milliseconds(30));
 		}
 
 		break;
 	}
 }
 
-void ModelRender::Approach(const clan::Pointf &pos, float scaleStep)
-{
-	// Уменьшает масштаб - приближает поверхность.
-	//
-	// Область, над которой произошло увеличение, должна остаться под курсором. Для этого
-	// необходимо компенсировать нежелательную прокрутку, то есть определить координату поверхности
-	// под курсором до изменения масштаба, изменить масштаб, определить новую координату поверхности
-	// и на эту дельту сделать прокрутку.
-	//
 
-	// Мировые координаты левого верхнего угла окна и масштаб.
-	clan::Pointf topLeftWorld = globalWorld.getAppearanceTopLeft();
+void ModelRender::DoScaleStep(const clan::Pointf &pos, float scaleStep, clan::Pointf &newTopLeft)
+{
+	// Изменяет масштаб на 1 шаг - отдаляет или приближает поверхность.
+
+	// Масштаб.
 	float scale = globalWorld.getAppearanceScale();
 
-	// Координаты мира под курсором до масштабирования (без учёта прокрутки topLeftWorld.x для оптимизации).
-	float wx1 = pos.x * scale;
-	float wy1 = pos.y * scale;
-
-	// Уменьшаем масштаб или увеличиваем (приближаем) поверхность.
-	scale /= scaleStep;
-
-	// Координаты мира под курсором после масштабирования.
-	//
-	float wx2 = pos.x * scale;
-	float wy2 = pos.y * scale;
-
-	topLeftWorld.x += int(wx1 - wx2);
-	topLeftWorld.y += int(wy1 - wy2);
-
-	// Сохраним изменения.
-	globalWorld.setAppearanceTopLeft(topLeftWorld);
-	globalWorld.setAppearanceScale(scale);
-}
-
-
-void ModelRender::ToDistance(const clan::Pointf &pos, float scaleStep)
-{
-	// Увеличивает масштаб - отдаляет поверхность.
-
-	// Мировые координаты левого верхнего угла окна и масштаб.
-	clan::Pointf topLeftWorld = globalWorld.getAppearanceTopLeft();
-	float scale = globalWorld.getAppearanceScale();
-
-	// Меняем масштаб, отодвигая поверхность.
+	// Меняем масштаб.
 	scale *= scaleStep;
 
-	//const clan::Rect &viewRect = geometry().content_box();
+	// Если масштаб на приближение, то область, над которой произошло увеличение, должна остаться под курсором. Для этого
+	// необходимо компенсировать нежелательную прокрутку, то есть определить координату поверхности
+	// под курсором до изменения масштаба, изменить масштаб, определить новую координату поверхности
+	// и на эту дельту сделать прокрутку. При отдалении должна отдаляться точка под курсором.
 	const clan::Sizef viewSize = geometry().content_size() * scale;
 	const clan::Sizef worldSize = globalWorld.get_worldSize();
 
@@ -497,12 +473,12 @@ void ModelRender::ToDistance(const clan::Pointf &pos, float scaleStep)
 		float wy1 = pos.y * scale / scaleStep;
 		float wx2 = pos.x * scale;
 		float wy2 = pos.y * scale;
-		topLeftWorld.x += int(wx1 - wx2);
-		topLeftWorld.y += int(wy1 - wy2);
+		// Сохраним изменения.
+		newTopLeft.x += int(wx1 - wx2);
+		newTopLeft.y += int(wy1 - wy2);
 	}
 
 	// Сохраним изменения.
-	globalWorld.setAppearanceTopLeft(topLeftWorld);
 	globalWorld.setAppearanceScale(scale);
 }
 
