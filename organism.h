@@ -87,6 +87,9 @@ public:
 	// Видимость вида.
 	bool visible;
 
+	// Цвет для живого и мёртвого организмов.
+	clan::Colorf aliveColor, deadColor;
+
 	// Метаболитическая реакция организма.
 	std::shared_ptr<ChemReaction> reaction;
 

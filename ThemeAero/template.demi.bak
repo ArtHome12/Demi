@@ -8,7 +8,9 @@
 		<!--Время модели - год, день, секунда-->
 		<item name="Time" year="1" day="1" second="0"/>
 		<!--Протоорганизм, от которого происходят все остальные-->
-		<item name="LUCA" visibility="true" x="300" y="30" reaction="CO2+4H2=CH4+2H2O" main="if (_vitality >= fissionBarrier) _fission()" fissionBarrier="30" />
+		<item name="LUCA" visibility="true" x="300" y="30" reaction="CO2+4H2=CH4+2H2O" main="if (_vitality >= fissionBarrier) _fission()" fissionBarrier="30" 
+			minActiveMetabolicRate="1" minInactiveMetabolicRate="0.1" aliveColor="white" deadColor="brown" 
+		/>
 	</section>
 	<!--Геотермальные источники энергии-->
 	<section name="Energy">

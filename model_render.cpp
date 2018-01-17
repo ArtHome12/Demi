@@ -445,6 +445,10 @@ void ModelRender::on_mouse_dblclk(const clan::PointerEvent &e)
 			std::this_thread::sleep_for(std::chrono::milliseconds(30));
 		}
 
+		// Если это было максимальное отдаление, встанем на исходную позицию, потому что какая-то ерунда получается.
+		if (scaleStep < 1)
+			globalWorld.setAppearanceTopLeft(clan::Pointf());
+
 		break;
 	}
 }

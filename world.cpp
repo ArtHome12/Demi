@@ -27,6 +27,8 @@ auto cResGlobalsAppearanceScale = "scale";
 auto cResGlobalsLUCA = "Globals/LUCA";
 auto cResGlobalsLUCAVisibility = "visibility";
 auto cResGlobalsLUCAFissionBarier = "fissionBarrier";
+auto cResGlobalsLUCAAliveColor = "aliveColor";
+auto cResGlobalsLUCADeadColor = "deadColor";
 auto cResGlobalsLUCAminActiveMetabolicRate = "minActiveMetabolicRate";
 auto cResGlobalsLUCAminInactiveMetabolicRate = "minInactiveMetabolicRate";
 
@@ -411,6 +413,9 @@ void World::LoadModel(const std::string &filename)
 	species->visible = prop.get_attribute_bool(cResGlobalsLUCAVisibility);
 	species->cells.push_back(std::make_shared<demi::CellAbdomen>());
 	species->fissionBarrier = prop.get_attribute_float(cResGlobalsLUCAFissionBarier);
+	species->aliveColor = clan::Colorf(prop.get_attribute(cResGlobalsLUCAAliveColor));
+	species->deadColor = clan::Colorf(prop.get_attribute(cResGlobalsLUCADeadColor));
+
 	const clan::Pointf LUCAPos(float(prop.get_attribute_int("x")), float(prop.get_attribute_int("y")));
 	const std::string LUCAReactionName = prop.get_attribute("reaction");
 	demi::Organism::minActiveMetabolicRate = prop.get_attribute_float(cResGlobalsLUCAminActiveMetabolicRate);

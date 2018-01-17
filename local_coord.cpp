@@ -71,11 +71,9 @@ void Dot::get_color(clan::Colorf &aValue) const
 		demi::Organism *cellOrganism = cell->organism;
 		if (cellOrganism != nullptr) {
 			// Проверим, включено ли отображение для данного вида.
-			if (cellOrganism->get_species()->get_visible()) {
-				aValue = clan::Colorf::white;
-
-				if (!cellOrganism->isAlive())
-					aValue = clan::Colorf::orangered; // для отладки
+			auto spc = cellOrganism->get_species();
+			if (spc->get_visible()) {
+				aValue = cellOrganism->isAlive() ? spc->aliveColor : spc->deadColor;
 
 				return;
 			}
