@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <set>
 #include "organism.h"
 #include "settings_storage.h"
 #include "reactions.h"
@@ -98,14 +99,14 @@ public:
 	~World();
 
 	// Считывает модель из xml-файла и сохраняет.
-	void LoadModel(const std::string &filename);
-	void SaveModel(const std::string &filename);
+	void loadModel(const std::string &filename);
+	void saveModel(const std::string &filename);
 
 	// Приостанавливает или продолжает расчёт модели
-	void RunEvolution(bool is_active);
+	void runEvolution(bool is_active);
 
 	// Начинает расчёт заново.
-	void ResetModel(const std::string &modelFilename, const std::string &defaultFilename);
+	void resetModel(const std::string &modelFilename, const std::string &defaultFilename);
 
 	// Возвращает точки поверхности.
 	Dot *getDotsArray() { return arDots; }
@@ -132,6 +133,9 @@ public:
 	// Инициализация настроек.
 	void setSettingsStorage(SettingsStorage* pSettingsStorage) { pSettings = pSettingsStorage; }
 
+	// Возвращает координаты точки по указанному индексу.
+	clan::Pointf getXYFromIndex(int index);
+
 private:
 
 	// Текущий момент времени в расчётной модели и в сохранённой для отрисовки на экране копии.
@@ -152,7 +156,6 @@ private:
 
 	// Поверхность земли и копия для отображения на экране.
 	Dot *arDots;
-	Dot *arDotsCopy;
 
 	// Свойства, используемые для отображения модели - координата левого верхнего угла, масштаб.
 	clan::Pointf appearanceTopLeft;
@@ -193,7 +196,7 @@ private:
 	// Химические реакции, доступные для организмов.
 	std::map<std::string, std::shared_ptr<demi::ChemReaction>> reactions;
 
-	// Сами организмы. Для начала - один.
+	// Сами организмы.
 	std::vector<demi::Organism*> animals;
 
 	std::random_device random_device; // Источник энтропии.
@@ -207,16 +210,16 @@ private:
 
 
 	// Обновить состояние.
-	void MakeTick();
+	void makeTick();
 
 	// Диффузия ресурсов.
-	void Diffusion();
+	void diffusion();
 
 	// Задаёт распределение ресурсов по указанной прямоугольной области в указанном количестве.
-	void FillRectResource(int resId, float amount, const clan::Rectf &rect);
+	void fillRectResource(int resId, float amount, const clan::Rectf &rect);
 
 	// Задаёт местоположение источников геотермальной энергии.
-	void AddGeothermal(int i, const clan::Pointf &coord);
+	void addGeothermal(int i, const clan::Pointf &coord);
 
 	// Рабочий поток
 	std::thread thread;
@@ -232,11 +235,14 @@ private:
 	void workerThread();
 
 	// Рекурсивная функция для считывания видов организмов.
-	std::shared_ptr<demi::Species> DoReadSpecies(clan::File &binFile, std::shared_ptr<demi::Species> ancestor);
+	std::shared_ptr<demi::Species> doReadSpecies(clan::File &binFile, std::shared_ptr<demi::Species> ancestor);
 
-	// Рекурсивная функция для записи видов организмов.
-	void DoWriteSpecies(clan::File &binFile, std::shared_ptr<demi::Species> aSpecies);
+	// Рекурсивная функция для записи видов организмов, параллельно создаёт словарь названий видов.
+	void doWriteSpecies(clan::File &binFile, std::shared_ptr<demi::Species> aSpecies, std::set<std::string> &dict);
 
+	// Вынесено из SaveModel() для удобства. Запись одного организма.
+	void doWriteOrganism(clan::File &binFile, std::set<std::string> &dict, demi::Organism* organism);
+	demi::Organism* doReadOrganism(clan::File &binFile, std::set<std::string> &dict, const clan::Pointf &center);
 };
 
 

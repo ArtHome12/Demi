@@ -22,6 +22,19 @@ using namespace demi;
 //{
 //}
 
+//
+// Вид организма
+//
+// Возвращает полное название вида в формате автор/вид\автор/вид.../ Корневой общий для всех вид не включается.
+std::string Species::getFullName()
+{
+	// Если мы в корневом виде, то выходим.
+	auto spAncestor = ancestor.lock();
+	if (!spAncestor) return "";
+
+	// Если предок есть, то вернём предка и свои данные. 
+	return spAncestor->getFullName() + getAuthorAndNamePair();
+}
 
 
 

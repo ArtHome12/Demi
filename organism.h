@@ -51,10 +51,10 @@ public:
 class CellAbdomen : public GenericCell
 {
 	// Возвращает тип клетки.
-	virtual CellTypes getCellType() { return cellAbdomen; }
+	virtual CellTypes getCellType() override { return cellAbdomen; }
 
 	// Возвращает копию клетки.
-	virtual GenericCell *getClone() { return new CellAbdomen(*this); }
+	virtual GenericCell *getClone() override { return new CellAbdomen(*this); }
 
 	// Делаем реакцию 
 };
@@ -99,6 +99,10 @@ public:
 	void set_visible(bool AVisible) { visible = AVisible; };
 	bool get_visible() { return visible; }
 
+	// Возвращает полное название вида в формате автор/вид\автор/вид... Корневой общий для всех вид не включается.
+	std::string getAuthorAndNamePair() { return author + "\\" + name + "/"; }
+	std::string getFullName();
+
 	// Программа организма должна храниться в клетках. Вопрос - насколько она целостная? Одна клетка программу сделать не может,
 	// есть смысл только в совокупности клеток. Сколько точек запуска программы?
 };
@@ -109,8 +113,6 @@ public:
 //
 class Organism
 {
-	// Организм имеет списки клеток разных типов.
-
 public:
 	Organism(std::shared_ptr<Species> species, const clan::Pointf &Acenter, int Aangle, float Avitality, float AfissionBarrier);
 	virtual ~Organism();
@@ -145,14 +147,17 @@ public:
 	bool isAlive() { return vitality > 0; }
 
 	float getVitality() { return vitality; }
+	float getFissionBarrier() { return fissionBarrier; }
 
 private:
 	// Вид организма.
 	std::shared_ptr<Species> ourSpecies;
 
+public:
 	// Текущие ячейки для хранения вещества перед реакцией.
 	std::vector<float> leftReagentAmounts;
 
+private:
 	// Текущая накопленная энергия.
 	float vitality;
 

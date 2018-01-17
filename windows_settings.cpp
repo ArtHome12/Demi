@@ -175,7 +175,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 		try {
 			// Преобразуем путь в абсолютный, если у нас относительный.
 			std::string absPath = clan::PathHelp::make_absolute(clan::System::get_exe_path(), lastModelFilename);
-			globalWorld.LoadModel(absPath);
+			globalWorld.loadModel(absPath);
 			set_modelFilename(lastModelFilename);
 
 			// Обновим дерево с галочками видимости элементов.
@@ -208,7 +208,7 @@ void WindowsSettings::onButtondownNew()
 {
 	// Сбросим имя модели и загрузим в модель шаблон.
 	set_modelFilename("");
-	globalWorld.LoadModel(cProjectTemplate);
+	globalWorld.loadModel(cProjectTemplate);
 
 	// Обновим дерево с галочками видимости элементов.
 	initElemVisibilityTree();
@@ -224,7 +224,7 @@ void WindowsSettings::onButtondownOpen()
 	if (dlg->show()) {
 		// Сохраним имя модели и загрузим её.
 		set_modelFilename(dlg->filename());
-		globalWorld.LoadModel(dlg->filename());
+		globalWorld.loadModel(dlg->filename());
 
 		// Обновим дерево с галочками видимости элементов.
 		initElemVisibilityTree();
@@ -239,7 +239,7 @@ void WindowsSettings::onButtondownSave()
 	else {
 		// Преобразуем путь в абсолютный, если у нас относительный.
 		std::string absPath = clan::PathHelp::make_absolute(clan::System::get_exe_path(), modelFilename);
-		globalWorld.SaveModel(absPath);
+		globalWorld.saveModel(absPath);
 	}
 }
 
@@ -275,7 +275,7 @@ void WindowsSettings::onButtondownSaveAs()
 		// Запоминаем новое имя проекта и перезаписываем XML-файл, сохраняем двоичный файл.
 		clan::FileHelp::copy_file(cProjectTemplate, filename, true);
 		set_modelFilename(filename);
-		globalWorld.SaveModel(filename);
+		globalWorld.saveModel(filename);
 	}
 }
 
@@ -285,7 +285,7 @@ void WindowsSettings::onButtondownRunPause()
 	bool toStart = pButtonRunPause->pressed();
 
 	// Запускаем модель.
-	globalWorld.RunEvolution(toStart);
+	globalWorld.runEvolution(toStart);
 
 	// Переключаем доступность кнопок - загрузить и создать можно только при остановленной модели.
 	if (toStart) {
@@ -316,7 +316,7 @@ void WindowsSettings::onButtondownRestart()
 	std::string absPath = clan::PathHelp::make_absolute(clan::System::get_exe_path(), modelFilename);
 
 	// Сбрасываем модель.
-	globalWorld.ResetModel(absPath, cProjectTemplate);
+	globalWorld.resetModel(absPath, cProjectTemplate);
 }
 
 

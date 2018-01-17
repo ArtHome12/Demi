@@ -78,6 +78,7 @@ public:
 	Dot& get_dot(const clan::Pointf &coord) const { return get_dot(coord.x, coord.y); }
 
 	// ¬озвращает адрес точки в глобальных координатах.
+	clan::Pointf getGlobalPoint() { return center; }
 	clan::Pointf getGlobalPoint(const clan::Pointf &localPoint) { return center + localPoint; }
 
 private:

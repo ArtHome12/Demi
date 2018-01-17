@@ -191,7 +191,6 @@ World::~World()
 	thread.join();
 
 	delete[] arDots;
-	delete[] arDotsCopy;
 	delete[] arResColors;
 	delete[] arResMax;
 	delete[] arResNames;
@@ -201,7 +200,7 @@ World::~World()
 }
 
 
-void World::MakeTick()
+void World::makeTick()
 {
 	// Обновить состояние.
 	//
@@ -212,7 +211,7 @@ void World::MakeTick()
 	solar.Shine(timeModel);
 
 	// Перемешивание ресурсов из-за диффузии.
-	Diffusion();
+	diffusion();
 
 	// Передаём управление живым организмам.
 	//
@@ -246,7 +245,7 @@ void World::MakeTick()
 
 
 
-void World::FillRectResource(int resId, float amount, const clan::Rectf &rect)
+void World::fillRectResource(int resId, float amount, const clan::Rectf &rect)
 {
 	// Задаёт распределение ресурсов по указанной прямоугольной области в указанном количестве.
 	//
@@ -261,7 +260,7 @@ void World::FillRectResource(int resId, float amount, const clan::Rectf &rect)
 }
 
 
-void World::Diffusion()
+void World::diffusion()
 {
 	// Диффузия ресурсов.
 
@@ -337,19 +336,22 @@ void World::Diffusion()
 			arResMax[rndResA] = toDot.res[rndResB];
 
 		// Если в исходной точке есть организм, а в конечной его нет, то попытаемся перенести и его.
-		if (fromDot.organism != nullptr && toDot.organism == nullptr && fromDot.organism->canMove()) {
+		if (fromDot.organism != nullptr && toDot.organism == nullptr && fromDot.organism->canMove()) 
 			// Координаты новой точки.
-			int index = dest - arDots;
-			float y = truncf(index / worldSize.width);
-			float x = index - y * worldSize.width;
-
-			fromDot.organism->moveTo(clan::Pointf(x, y));
-		}
+			fromDot.organism->moveTo(getXYFromIndex(dest - arDots));
 	}
 }
 
+// Возвращает координаты точки по указанному индексу.
+clan::Pointf World::getXYFromIndex(int index)
+{
+	float y = truncf(index / worldSize.width);
+	float x = index - y * worldSize.width;
+	return clan::Pointf(x, y);
+}
 
-void World::AddGeothermal(int i, const clan::Pointf &coord)
+
+void World::addGeothermal(int i, const clan::Pointf &coord)
 {
 	// Задаёт местоположение источников геотермальной энергии.
 	//
@@ -375,7 +377,7 @@ void World::AddGeothermal(int i, const clan::Pointf &coord)
 }
 
 
-void World::LoadModel(const std::string &filename)
+void World::loadModel(const std::string &filename)
 {
 	// Считывает модель из xml-файла
 
@@ -502,7 +504,7 @@ void World::LoadModel(const std::string &filename)
 			clan::Rectf rect(float(rectItem.get_attribute_int("left")), float(rectItem.get_attribute_int("top")), r, b);
 
 			// Заполняем точки.
-			FillRectResource(i, rectItem.get_attribute_float("amount"), rect);
+			fillRectResource(i, rectItem.get_attribute_float("amount"), rect);
 		}
 	}
 
@@ -516,7 +518,7 @@ void World::LoadModel(const std::string &filename)
 			clan::DomElement &pointItem = nodes.item(j).to_element();
 
 			// Заполняем точки.
-			AddGeothermal(i, clan::Pointf(float(pointItem.get_attribute_int("x")), float(pointItem.get_attribute_int("y"))));
+			addGeothermal(i, clan::Pointf(float(pointItem.get_attribute_int("x")), float(pointItem.get_attribute_int("y"))));
 		}
 	}
 
@@ -600,7 +602,16 @@ void World::LoadModel(const std::string &filename)
 			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinMarker), "Species:", strSecMarker));
 
 		// Считываем виды организмов рекурсивно.
-		species = DoReadSpecies(binFile, nullptr);
+		species = doReadSpecies(binFile, nullptr);
+
+		// Маркер начала словаря видов организмов и сам словарь.
+		std::set<std::string> speciesNamesDict;
+		strSecMarker = binFile.read_string_nul();
+		if (strSecMarker != "SpecDictionary:")
+			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinMarker), "SpecDictionary:", strSecMarker));
+		unsigned int dictCnt = binFile.read_uint32();
+		for (unsigned int i = 0; i < dictCnt; ++i)
+			speciesNamesDict.insert(binFile.read_string_nul());
 
 		// Маркер начала массива точек.
 		strSecMarker = binFile.read_string_nul();
@@ -611,8 +622,16 @@ void World::LoadModel(const std::string &filename)
 		int dotsCount = int(worldSize.width * worldSize.height);
 		int dotSize = Dot::getSizeInMemory();
 		for (int i = 0; i < dotsCount; ++i) {
-			if (binFile.read(arDots[i].res, dotSize) != dotSize)
+
+			// Текущая точка.
+			Dot &dot = arDots[i];
+
+			// Количества элементов в точке.
+			if (binFile.read(dot.res, dotSize) != dotSize)
 				throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinCannotReadDots), i));
+
+			// Организм в точке.
+			dot.organism = doReadOrganism(binFile, speciesNamesDict, getXYFromIndex(i));
 		}
 
 		// Маркер начала массива концентраций.
@@ -635,7 +654,7 @@ void World::LoadModel(const std::string &filename)
 }
 
 // Рекурсивная функция для считывания видов организмов.
-std::shared_ptr<demi::Species> World::DoReadSpecies(clan::File &binFile, std::shared_ptr<demi::Species> ancestor)
+std::shared_ptr<demi::Species> World::doReadSpecies(clan::File &binFile, std::shared_ptr<demi::Species> ancestor)
 {
 	// Считываем текущий вид.
 
@@ -645,6 +664,11 @@ std::shared_ptr<demi::Species> World::DoReadSpecies(clan::File &binFile, std::sh
 	retVal->name = binFile.read_string_nul();
 	retVal->author = binFile.read_string_nul();
 	retVal->visible = binFile.read_int8() != 0;
+	float r = binFile.read_float(), g = binFile.read_float(), b = binFile.read_float();
+	retVal->aliveColor = clan::Colorf(r, g, b);
+	r = binFile.read_float(); g = binFile.read_float(); b = binFile.read_float();
+	retVal->deadColor = clan::Colorf(r, g, b);
+
 
 	// Метаболитическая реакция.
 	std::string reactionName = binFile.read_string_nul();
@@ -693,20 +717,32 @@ std::shared_ptr<demi::Species> World::DoReadSpecies(clan::File &binFile, std::sh
 
 	// Считываем и сохраняем потомков рекурсивно.
 	for (int i = 0; i < cnt; ++i)
-		retVal->descendants.push_back(DoReadSpecies(binFile, retVal));
+		retVal->descendants.push_back(doReadSpecies(binFile, retVal));
 	
 	// Возвращаем считанный элемент.
 	return retVal;
 }
 
-// Рекурсивная функция для записи видов организмов.
-void World::DoWriteSpecies(clan::File &binFile, std::shared_ptr<demi::Species> aSpecies)
+// Рекурсивная функция для записи видов организмов, параллельно создаёт словарь названий видов.
+void World::doWriteSpecies(clan::File &binFile, std::shared_ptr<demi::Species> aSpecies, std::set<std::string> &dict)
 {
 	// Записываем основные поля.
 	binFile.write_string_nul(aSpecies->name);
 	binFile.write_string_nul(aSpecies->author);
 	binFile.write_int8(aSpecies->get_visible());
+
+	// Цвета отображения.
+	binFile.write_float(aSpecies->aliveColor.get_red());
+	binFile.write_float(aSpecies->aliveColor.get_green());
+	binFile.write_float(aSpecies->aliveColor.get_blue());
+	binFile.write_float(aSpecies->deadColor.get_red());
+	binFile.write_float(aSpecies->deadColor.get_green());
+	binFile.write_float(aSpecies->deadColor.get_blue());
+
 	binFile.write_string_nul(aSpecies->reaction->name);
+
+	// Сохраняем название в словаре.
+	dict.insert(aSpecies->getAuthorAndNamePair());
 
 	// Записываем клетки.
 	binFile.write_int64(aSpecies->cells.size());
@@ -723,11 +759,11 @@ void World::DoWriteSpecies(clan::File &binFile, std::shared_ptr<demi::Species> a
 
 	// Сами виды рекурсивно.
 	for (auto &spec : aSpecies->descendants)
-		DoWriteSpecies(binFile, spec);
+		doWriteSpecies(binFile, spec, dict);
 }
 
 
-void World::SaveModel(const std::string &filename)
+void World::saveModel(const std::string &filename)
 {
 	// Сохраняет модель
 
@@ -799,17 +835,32 @@ void World::SaveModel(const std::string &filename)
 	// Записываем маркер организмов.
 	binFile.write_string_nul("Species:");
 
-	// Записываем виды организмов рекурсивно.
-	DoWriteSpecies(binFile, species);
+	// Записываем виды организмов рекурсивно, параллельно создадим словарь названий видов.
+	std::set<std::string> speciesNamesDict;
+	doWriteSpecies(binFile, species, speciesNamesDict);
+
+	// Записываем маркер начала словаря видов организмов и сам словарь.
+	binFile.write_string_nul("SpecDictionary:");
+	binFile.write_uint32(speciesNamesDict.size());
+	for each (auto & item in speciesNamesDict)
+		binFile.write_string_nul(item);
 
 	// Записываем маркер начала массива точек.
 	binFile.write_string_nul("Dots:");
 
-	// Записываем точки. Сразу все не получается, так как массив не плоский.
+	// Записываем точки.
 	int dotsCount = int(worldSize.width * worldSize.height);
 	int dotSize = Dot::getSizeInMemory();
-	for (int i = 0; i < dotsCount; ++i)
-		binFile.write(arDots[i].res, dotSize);
+	for (int i = 0; i < dotsCount; ++i) {
+		// Текущая точка.
+		const Dot &dot = arDots[i];
+
+		// Количества элементов в точке.
+		binFile.write(dot.res, dotSize);
+
+		// Организм в точке.
+		doWriteOrganism(binFile, speciesNamesDict, dot.organism);
+	}
 
 	// Записываем маркер начала массива максимумов.
 	binFile.write_string_nul("ResMax:");
@@ -847,7 +898,7 @@ void World::workerThread()
 			lock.unlock();
 
 			// Выполняем расчёт модели.
-			MakeTick();
+			makeTick();
 
 			// Блокируем основной поток для сохранения результата.
 			lock.lock();
@@ -868,7 +919,7 @@ void World::workerThread()
 	}
 }
 
-void World::RunEvolution(bool is_active)
+void World::runEvolution(bool is_active)
 {
 	// Приостанавливает или продолжает расчёт модели
 	std::unique_lock<std::mutex> lock(threadMutex);
@@ -877,7 +928,7 @@ void World::RunEvolution(bool is_active)
 }
 
 // Начинает расчёт заново.
-void World::ResetModel(const std::string &modelFilename, const std::string &defaultFilename)
+void World::resetModel(const std::string &modelFilename, const std::string &defaultFilename)
 {
 	// Удаляем двоичный файл.
 	if (clan::FileHelp::file_exists(modelFilename + "b"))
@@ -885,37 +936,75 @@ void World::ResetModel(const std::string &modelFilename, const std::string &defa
 
 	// Попытаемся загрузить модель.
 	try {
-		globalWorld.LoadModel(modelFilename);
+		globalWorld.loadModel(modelFilename);
 		timeModel = DemiTime();
 		timeBackup = timeModel;
 	}
 	catch (...) {
 		// При ошибке загружаем чистую модель.
-		globalWorld.LoadModel(defaultFilename);
+		globalWorld.loadModel(defaultFilename);
 	}
 }
 
-//Dot * World::getCopyDotsArray()
-//{
-//	// Приостанавливает расчёт модели, копирует мир в копию и снова запускает расчёт модели.
-//	//
-//
-//	// Если расчётный поток запущен, надо подождать до получения результата.
-//	if (thread_run_flag) {
-//		// Останавливаемся до установки флага результата, блокируя при необходимости расчётный поток.
-//		std::unique_lock<std::mutex> lock(thread_mutex);
-//		threadWorkerToMainEvent.wait(lock, [&]() { return thread_complete_flag; });
-//
-//		// Возвращаем результат.
-//		return arDotsCopy;
-//
-//		// Разблокируем расчётный поток при выходе из блока {}.
-//	}
-//	else {
-//		// Если расчётный поток не работает, можно сразу копировать результат.
-//		return arDotsCopy;
-//	}
-//
-//	return arDotsCopy;
-//}
+// Вынесено из SaveModel() для удобства. Запись одного организма.
+void World::doWriteOrganism(clan::File &binFile, std::set<std::string> &dict, demi::Organism* organism)
+{
+	// Если организма нет, в качестве ключа вида запишем -1.
+	if (organism == nullptr) {
+		binFile.write_int16(-1);
+		return;
+	}
 
+	// Находим имя организма в словаре и записываем его индекс.
+	auto it = dict.find(organism->get_species()->getAuthorAndNamePair());
+	INT16 index = std::distance(dict.begin(), it);
+	binFile.write_int16(index);
+
+	// Угол, жизненная энергия, порог деления.
+	binFile.write_uint8(uint8_t(organism->angle));
+	binFile.write_float(organism->getVitality());
+	binFile.write_float(organism->getFissionBarrier());
+
+	// Содержимое ячеек реакции.
+	int cnt = organism->leftReagentAmounts.size();
+	binFile.write(organism->leftReagentAmounts.data(), sizeof(float) * cnt);
+}
+
+demi::Organism* World::doReadOrganism(clan::File &binFile, std::set<std::string> &dict, const clan::Pointf &center)
+{
+	int dictKey = binFile.read_int16();
+
+	// Если в качестве ключа -1, значит организма в точке нет.
+	if (dictKey == -1)
+		return nullptr;
+
+	// Название вида в полной форме вытащим по индексу из словаря.
+	auto it = dict.begin();
+	std::advance(it, dictKey);
+	std::string fullSpeciesName = *it;
+
+	// По названию вида найдём ссылку на вид.
+	// Надо cделать поиск по дереву.
+	std::shared_ptr<demi::Species> Aspecies;
+	if (fullSpeciesName == species->getAuthorAndNamePair())
+		Aspecies = species;
+	else
+		return nullptr;
+
+	int angle = binFile.read_uint8();
+	float vitality = binFile.read_float();
+	float fissionBarrier = binFile.read_float();
+
+	// Создаём организм.
+	demi::Organism* retVal = new demi::Organism(Aspecies, center, angle, vitality, fissionBarrier);
+
+	// Содержимое ячеек реакции.
+	int cnt = retVal->leftReagentAmounts.size();
+	binFile.read(retVal->leftReagentAmounts.data(), sizeof(float) * cnt);
+
+	// Если жизненная энергия положительна, поместим организм в список живых.
+	if (retVal->getFissionBarrier() > 0)
+		animals.push_back(retVal);
+
+	return retVal;
+}
