@@ -37,6 +37,13 @@ std::string Species::getFullName()
 }
 
 
+// Возвращает вид по указанному полному названию. Должна вызываться для корневого вида.
+Species *Species::getSpeciesByFullName(std::string fullName)
+{
+	return this;
+}
+
+
 
 //
 // Организм.

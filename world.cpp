@@ -978,22 +978,18 @@ demi::Organism* World::doReadOrganism(clan::File &binFile, std::set<std::string>
 	if (dictKey == -1)
 		return nullptr;
 
+	// Прочитаем оставшиеся поля.
+	int angle = binFile.read_uint8();
+	float vitality = binFile.read_float();
+	float fissionBarrier = binFile.read_float();
+
 	// Название вида в полной форме вытащим по индексу из словаря.
 	auto it = dict.begin();
 	std::advance(it, dictKey);
 	std::string fullSpeciesName = *it;
 
 	// По названию вида найдём ссылку на вид.
-	// Надо cделать поиск по дереву.
-	std::shared_ptr<demi::Species> Aspecies;
-	if (fullSpeciesName == species->getAuthorAndNamePair())
-		Aspecies = species;
-	else
-		return nullptr;
-
-	int angle = binFile.read_uint8();
-	float vitality = binFile.read_float();
-	float fissionBarrier = binFile.read_float();
+	std::shared_ptr<demi::Species> Aspecies = std::shared_ptr<demi::Species>(species->getSpeciesByFullName(fullSpeciesName));
 
 	// Создаём организм.
 	demi::Organism* retVal = new demi::Organism(Aspecies, center, angle, vitality, fissionBarrier);

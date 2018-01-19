@@ -63,7 +63,7 @@ void Dot::get_color(clan::Colorf &aValue) const
 	//
 
 	// Солнечный свет и энергия это альфа-канал.
-	aValue.set_alpha(clan::max<float, float>(getSolarEnergy(), getGeothermalEnergy()));
+	float alpha = clan::max<float, float>(getSolarEnergy(), getGeothermalEnergy());
 
 	// Сначала ищем среди живых организмов.
 	//
@@ -74,7 +74,7 @@ void Dot::get_color(clan::Colorf &aValue) const
 			auto spc = cellOrganism->get_species();
 			if (spc->get_visible()) {
 				aValue = cellOrganism->isAlive() ? spc->aliveColor : spc->deadColor;
-
+				aValue.set_alpha(alpha);
 				return;
 			}
 		}
@@ -84,6 +84,7 @@ void Dot::get_color(clan::Colorf &aValue) const
 	aValue.set_red(0.0f);
 	aValue.set_green(0.0f);
 	aValue.set_blue(0.0f);
+	aValue.set_alpha(alpha);
 
 
 	// Выводим цвет минералов.
