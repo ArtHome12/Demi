@@ -109,7 +109,7 @@ Organism* Organism::makeTickAndGetNewBorn()
 
 		// Пополняем количество в клетке и вычитаем в точке.
 		*itAmounts = amount + topIt;
-		itAmounts++;
+		++itAmounts;
 		dot.setElementAmount(reagent.elementIndex, maxAvailable - topIt);
 	}
 
@@ -121,6 +121,11 @@ Organism* Organism::makeTickAndGetNewBorn()
 			float dotAmount = dot.getElemAmount(reagent.elementIndex) + reagent.amount;
 			dot.setElementAmount(reagent.elementIndex, dotAmount);
 		}
+
+		// Очистим входной отсек.
+		for (auto &reagent : reaction.leftReagents) 
+			dot.setElementAmount(reagent.elementIndex, 0);
+
 
 		// Сохраним полученную энергию.
 		vitality += reaction.vitalityProductivity;

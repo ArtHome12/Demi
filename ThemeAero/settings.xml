@@ -12,7 +12,7 @@
 		<!--Project filename, XML-part. Using a relative path for easy moving/copying the application, if possible.-->
 		<item name="ProjectName" filename="../demi.demi"/>
 		<!--Checkboxes on settings window-->
-		<item name="Checkboxes" autorun="false" autosave="false" autosave_hourly="false" top="0" state="7" width="1280" height="1024" left="0"/>
+		<item name="Checkboxes" autorun="false" autosave="true" autosave_hourly="true" top="0" state="7" width="1280" height="1024" left="0"/>
 	</section>--&gt;
 	<section name="Language">
 		<!--User message in module: app-->

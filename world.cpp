@@ -241,6 +241,11 @@ void World::makeTick()
 			++cnt;
 		}
 	}
+
+	// Создаём экземпляр протоорганизма, если есть место.
+	Dot& protoDot = LocalCoord(LUCAPos).get_dot(0, 0);
+	if (protoDot.organism == nullptr)
+		animals.push_back(new demi::Organism(species, LUCAPos, 0, species->fissionBarrier, species->fissionBarrier));
 }
 
 
@@ -418,7 +423,7 @@ void World::loadModel(const std::string &filename)
 	species->aliveColor = clan::Colorf(prop.get_attribute(cResGlobalsLUCAAliveColor));
 	species->deadColor = clan::Colorf(prop.get_attribute(cResGlobalsLUCADeadColor));
 
-	const clan::Pointf LUCAPos(float(prop.get_attribute_int("x")), float(prop.get_attribute_int("y")));
+	LUCAPos = clan::Pointf(float(prop.get_attribute_int("x")), float(prop.get_attribute_int("y")));
 	const std::string LUCAReactionName = prop.get_attribute("reaction");
 	demi::Organism::minActiveMetabolicRate = prop.get_attribute_float(cResGlobalsLUCAminActiveMetabolicRate);
 	demi::Organism::minInactiveMetabolicRate = prop.get_attribute_float(cResGlobalsLUCAminInactiveMetabolicRate);
@@ -569,6 +574,8 @@ void World::loadModel(const std::string &filename)
 	// Доинициализируем протоорганизм ссылкой на реакцию.
 	species->reaction = reactions[LUCAReactionName];
 
+	// Перед двоичным файлом удалим прежние организмы, если они были.
+	animals.clear();
 
 	// Считываем двоичный файл, если он есть.
 	if (clan::FileHelp::file_exists(filename + "b")) {
@@ -648,9 +655,7 @@ void World::loadModel(const std::string &filename)
 		binFile.close();
 	}
 
-	// Создаём экземпляр протоорганизма и размещаем его в геотермальном источнике.
-	animals.clear();
-	animals.push_back(new demi::Organism(species, LUCAPos, 0, species->fissionBarrier, species->fissionBarrier));
+	// Создаём экземпляр протоорганизма и размещаем его в геотермальном источнике, если такого ещё нет. В MakeTick().
 }
 
 // Рекурсивная функция для считывания видов организмов.
@@ -999,7 +1004,7 @@ demi::Organism* World::doReadOrganism(clan::File &binFile, std::set<std::string>
 	binFile.read(retVal->leftReagentAmounts.data(), sizeof(float) * cnt);
 
 	// Если жизненная энергия положительна, поместим организм в список живых.
-	if (retVal->getFissionBarrier() > 0)
+	if (retVal->isAlive())
 		animals.push_back(retVal);
 
 	return retVal;
