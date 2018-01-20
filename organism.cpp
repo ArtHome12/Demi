@@ -123,9 +123,8 @@ Organism* Organism::makeTickAndGetNewBorn()
 		}
 
 		// Очистим входной отсек.
-		for (auto &reagent : reaction.leftReagents) 
-			dot.setElementAmount(reagent.elementIndex, 0);
-
+		for (auto & amountItem : leftReagentAmounts)
+			amountItem = 0;
 
 		// Сохраним полученную энергию.
 		vitality += reaction.vitalityProductivity;
