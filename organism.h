@@ -115,7 +115,7 @@ class Organism
 {
 public:
 	Organism(std::shared_ptr<Species> species, const clan::Pointf &Acenter, int Aangle, float Avitality, float AfissionBarrier);
-	virtual ~Organism();
+	~Organism();
 
 	// ћестоположение организма в мире (первой клетки живота) и ориентаци€ (0 - север, 1 - северо-восток, 2 - восток и т.д. до 7 - северо-запад).
 	int angle;
@@ -130,6 +130,8 @@ public:
 	// ћинимальна€ энерги€ метаболизма дл€ активной клетки и дл€ пассивной.
 	static float minActiveMetabolicRate, minInactiveMetabolicRate;
 
+	// ∆изненна€ энерги€, ниже которой организм разрушаетс€.
+	static float desintegrationVitalityBarrier;
 
 	// ѕроцессорное врем€ организма дл€ формировани€ поведени€ - поедани€ пищи, атаки, разворота, перемещени€, размножени€.
 	// ћожет вернуть указатель на новый родившийс€ организм.
@@ -143,11 +145,17 @@ public:
 	// Ѕезусловное перемещение организма в другую точку.
 	void moveTo(const clan::Pointf &newCenter);
 
-	// »стина, если организм жив. ≈сли нет, то его надо уничтожить.
+	// »стина, если организм жив. ≈сли нет, то его надо исключить из списка живых.
 	bool isAlive() { return vitality > 0; }
+
+	// »стина, если организм уже разложилс€ и его надо уничтожить.
+	bool needDesintegration() { return vitality < desintegrationVitalityBarrier; }
 
 	float getVitality() { return vitality; }
 	float getFissionBarrier() { return fissionBarrier; }
+
+	// ¬ычитает жизненную энергию на неактивное состо€ние.
+	void processInactiveVitality() { vitality -= minActiveMetabolicRate; }
 
 private:
 	// ¬ид организма.

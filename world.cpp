@@ -31,6 +31,7 @@ auto cResGlobalsLUCAAliveColor = "aliveColor";
 auto cResGlobalsLUCADeadColor = "deadColor";
 auto cResGlobalsLUCAminActiveMetabolicRate = "minActiveMetabolicRate";
 auto cResGlobalsLUCAminInactiveMetabolicRate = "minInactiveMetabolicRate";
+auto cResGlobalsLUCADesintegrationVitalityBarrier = "desintegrationVitalityBarrier";
 
 auto cResGlobalsTime = "Globals/Time";
 auto cResGlobalsTimeYear = "year";
@@ -141,11 +142,11 @@ clan::Pointf Solar::getPos(const DemiTime &timeModel)
 	// ¬озвращает позицию дл€ солнца в зависимости от времени.
 
 	// –азмеры мира.
-	const clan::Sizef worldSize = globalWorld.get_worldSize();
+	const clan::Sizef &worldSize = globalWorld.get_worldSize();
 
 	// ѕозици€ по горизонтали зависит от времени суток.
 	// —олнце двигаетс€ с востока на запад пропорционально прошедшей доле суток.
-	clan::Pointf result(worldSize.width * (1.0f - float(timeModel.sec - 1) / (cTicksInDay - 1)), 0.0f);
+	clan::Pointf result(worldSize.width * (1.0f - float(timeModel.sec) / (cTicksInDay - 1.0f)), 0.0f);
 
 	// ѕозици€ по вертикали зависит от дн€ года.
 	// —олнце полгода двигаетс€ от одной границы тропиков до другой и полгода в обратном направлении, 
@@ -215,7 +216,7 @@ void World::makeTick()
 
 	// ѕередаЄм управление живым организмам.
 	//
-
+	
 	// Ќадо оценить эффективность данного способа, мож через случайное число будет быстрее.
 	std::shuffle(animals.begin(), animals.end(), generator);
 
@@ -284,8 +285,8 @@ void World::diffusion()
 	while (true) {
 
 		int rnd = rnd_angle(generator);			// от 0 до 7, направление движени€
-		int rndResA = rnd_Elem(generator);		// случайный элемент.
-		int rndResB = rndResA + 2;				// плюс пропускаем €чейки под солнечную и геотермальную энергии.
+		const int rndResA = rnd_Elem(generator);		// случайный элемент.
+		const int rndResB = rndResA + 2;				// плюс пропускаем €чейки под солнечную и геотермальную энергии.
 
 		// ќпредел€ем исходную координату отдельным случайным числом.
 		cur += rnd_Coord(generator);
@@ -340,10 +341,25 @@ void World::diffusion()
 		if (arResMax[rndResA] < toDot.res[rndResB])
 			arResMax[rndResA] = toDot.res[rndResB];
 
-		// ≈сли в исходной точке есть организм, а в конечной его нет, то попытаемс€ перенести и его.
-		if (fromDot.organism != nullptr && toDot.organism == nullptr && fromDot.organism->canMove()) 
-			//  оординаты новой точки.
-			fromDot.organism->moveTo(getXYFromIndex(dest - arDots));
+		// ќбработка организма.
+		demi::Organism* curOrganism = fromDot.organism;
+		if (curOrganism == nullptr)
+			continue;
+
+		// ≈сли в исходной точке есть организм и его надо удалить, сделаем это.
+		if (curOrganism->needDesintegration()) {
+			// »з текущей точки организм удалит сам себ€ в деструкторе.
+			delete curOrganism;
+		}
+		else {
+			// ≈сли в конечной точке нет организма, то попытаемс€ перенести исходный.
+			if (toDot.organism == nullptr && curOrganism->canMove())
+				//  оординаты новой точки.
+				curOrganism->moveTo(getXYFromIndex(dest - arDots));
+
+			// ”меньшаем жизненную энергию, потраченную на перенос.
+			curOrganism->processInactiveVitality();
+		}
 	}
 }
 
@@ -427,6 +443,8 @@ void World::loadModel(const std::string &filename)
 	const std::string LUCAReactionName = prop.get_attribute("reaction");
 	demi::Organism::minActiveMetabolicRate = prop.get_attribute_float(cResGlobalsLUCAminActiveMetabolicRate);
 	demi::Organism::minInactiveMetabolicRate = prop.get_attribute_float(cResGlobalsLUCAminInactiveMetabolicRate);
+	demi::Organism::desintegrationVitalityBarrier = prop.get_attribute_float(cResGlobalsLUCADesintegrationVitalityBarrier);
+	
 
 
 	// »нициализируем внешний вид проекта.

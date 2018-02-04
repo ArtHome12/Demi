@@ -50,7 +50,7 @@ Species *Species::getSpeciesByFullName(std::string fullName)
 //
 float Organism::minActiveMetabolicRate = 0;
 float Organism::minInactiveMetabolicRate = 0;
-
+float Organism::desintegrationVitalityBarrier = 0;
 
 Organism::Organism(std::shared_ptr<Species> species, const clan::Pointf &Acenter, int Aangle, float Avitality, float AfissionBarrier) : ourSpecies(species),
 	cells(), 
@@ -75,6 +75,11 @@ Organism::Organism(std::shared_ptr<Species> species, const clan::Pointf &Acenter
 
 Organism::~Organism()
 {
+	// ”дал€ем собственные клетки из точек.
+	Dot &dot = center.get_dot(0, 0);
+	// ѕока у нас в каждой точке только одна клетка.
+	dot.cells.pop_back();
+	dot.organism = nullptr;
 }
 
 
