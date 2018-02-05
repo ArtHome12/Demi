@@ -47,7 +47,7 @@ auto cTreeAnimate = "WindowsSettingsTreeAnimateSubTree";
 WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsStorage> pSettingsStorage) : pSettings(pSettingsStorage)
 {
 	style()->set("background: lightgray");
-	style()->set("flex: auto");
+	style()->set("height: 300px");
 	style()->set("flex-direction: column");
 	style()->set("border-top: 3px solid bisque");
 
@@ -55,7 +55,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	//
 	auto panelGeneral = std::make_shared<clan::View>();
 	panelGeneral->style()->set("flex-direction: column");
-	panelGeneral->style()->set("flex: auto");
+	panelGeneral->style()->set("height: 140px");
 	panelGeneral->style()->set("border: 1px solid gray");
 	add_child(panelGeneral);
 
@@ -156,8 +156,8 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	// Панель с информацией о модели
 	auto panelModelInfo = std::make_shared<clan::View>();
 	panelModelInfo->style()->set("flex-direction: column");
-	panelModelInfo->style()->set("flex: auto");
-	panelModelInfo->style()->set("border: 1px solid gray");
+	panelModelInfo->style()->set("height: 160px");
+	//panelModelInfo->style()->set("border: 1px solid gray");
 	add_child(panelModelInfo);
 
 	// Дерево с галочками видимости элементов.
