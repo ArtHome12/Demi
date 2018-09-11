@@ -77,7 +77,23 @@ Organism::~Organism()
 {
 	// ”дал€ем собственные клетки из точек.
 	Dot &dot = center.get_dot(0, 0);
-	// ѕока у нас в каждой точке только одна клетка.
+
+	// ¬озвращаем накопленные минеральные вещества в мир.
+	//
+	std::vector<float>::iterator itAmounts = leftReagentAmounts.begin();
+	const demi::ChemReaction &reaction = *ourSpecies->reaction;
+	for (auto &reagent : reaction.leftReagents) {
+
+		// “екущее имеющеес€ значение, которое надо вернуть.
+		float amount = *itAmounts++;
+
+		// ѕолучаем доступное в точке количество соответствующего минерала.
+		float amountInDot = dot.getElemAmount(reagent.elementIndex);
+
+		dot.setElementAmount(reagent.elementIndex, amountInDot + amount);
+	}
+
+	// ѕока у нас в каждой точке только одна клетка, а надо удал€ть адресно.
 	dot.cells.pop_back();
 	dot.organism = nullptr;
 }
