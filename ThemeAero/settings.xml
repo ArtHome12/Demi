@@ -4,7 +4,7 @@
 		<!--Main window position, size and state (6-maximized, 7-minimized, 10-normal)-->
 		<item name="Appearance" left="219" top="84" width="1476" height="849" state="6" is_fullscreen="false"/>
 		<!--Top menu states-->
-		<item name="TopMenuState" SettingsWindowVisible="true" ModelIlluminated="false"/>
+		<item name="TopMenuState" SettingsWindowVisible="true" ModelIlluminated="true"/>
 		<!--Language-->
 		<item name="Locale" Language="rus"/>
 	</section>--&gt;
@@ -34,7 +34,7 @@
 		<lang name="ModelRenderGeothermal" eng="Geothermal " rus="Геотерм "/>
 		<!--User message in module: windows_settings-->
 		<lang name="WindowsSettingsFileExistDlg" eng="File %1 exists. Rewrite it?" rus="Файл %1 существует. Перезаписать его?"/>
-		<lang name="WindowsSettingsRestartModel" eng="Start simulation of the world anew?" rus="Начать расчёт модели заново?"/>
+		<lang name="WindowsSettingsRestartModel" eng="Start simulation of the world anew? Attention - file .demib if exists, will be deleted." rus="Начать расчёт модели заново? Внимание - файл .demib будет удалён, если он существует."/>
 		<lang name="WindowsSettingsButtonNew" eng="New" rus="Новый"/>
 		<lang name="WindowsSettingsButtonOpen" eng="Open" rus="Открыть"/>
 		<lang name="WindowsSettingsButtonSave" eng="Save" rus="Сохранить"/>

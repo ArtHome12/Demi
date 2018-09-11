@@ -65,6 +65,13 @@ void TreeView::set_root_item(std::shared_ptr<TreeItem> item)
 	impl->addTreeNodeChildren(0, item);
 }
 
+/// Получить корневой элемент дерева.
+std::shared_ptr<TreeItem> TreeView::get_root_item() 
+{ 
+	return impl->rootItem; 
+}
+
+
 //void ListBoxView::set_items(const std::vector<std::shared_ptr<View>> &items)
 //{
 //	impl->selected_item = -1;

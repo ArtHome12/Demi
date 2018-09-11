@@ -75,7 +75,10 @@ private:
 	// Сохраняет новое имя модели и обновляет надпись на экране.
 	void set_modelFilename(const std::string &newName);
 
-	// Обновляет дерево с галочками видимости элементов.
+	// Обновляет дерево с галочками видимости элементов на основании значений в модели.
 	void initElemVisibilityTree();
+
+	// Есть особенности по сравнению с обычной загрузкой.
+	void initElemVisibilityTreeAfterRestart();
 };
 

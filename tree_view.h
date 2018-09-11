@@ -54,6 +54,8 @@ public:
 	/// Передать иерархию элементов дереву. Корневой элемент невидим, отображение начинается с его детей.
 	void set_root_item(std::shared_ptr<TreeItem> item);
 
+	/// Получить корневой элемент дерева.
+	std::shared_ptr<TreeItem> get_root_item();
 
 	/// Обработчик изменения отметки - установки и снятия галочки.
 	std::function<void(TreeItem &item)> &func_check_changed();

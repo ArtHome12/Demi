@@ -317,8 +317,10 @@ void WindowsSettings::onButtondownRestart()
 
 	// Сбрасываем модель.
 	globalWorld.resetModel(absPath, cProjectTemplate);
-}
 
+	// Для новой модели применяем текущие настройки видимости.
+	initElemVisibilityTreeAfterRestart();
+}
 
 
 void WindowsSettings::onCBAutoRunToggle()
@@ -390,10 +392,10 @@ void WindowsSettings::modelRenderNotify(float secondsElapsed)
 // Обновляет дерево с галочками видимости элементов.
 void WindowsSettings::initElemVisibilityTree()
 {
-	auto rootNode = std::make_shared<TreeItem>("", -1);
+	auto rootNode = std::make_shared<TreeItem>("", 0);	// В tag хранится либо индекс химэлемента, если первый символ имени - пробел, либо указатель на организм. 0 - заглушка.
 	
 	// Первый узел - под химические элементы.
-	auto firstNode = std::make_shared<TreeItem>(pSettings->LocaleStr(cTreeInanimate), -1);
+	auto firstNode = std::make_shared<TreeItem>(pSettings->LocaleStr(cTreeInanimate), 0);
 
 	// Добавляем их, первым символом пробел для маркировки, что это неживой элемент.
 	for (int i = 0; i < globalWorld.getElemCount(); ++i)
@@ -416,6 +418,34 @@ void WindowsSettings::initElemVisibilityTree()
 	// Добавляем дерево в список.
 	pTreeView->set_root_item(rootNode);
 }
+
+// Есть особенности по сравнению с обычной загрузкой.
+void WindowsSettings::initElemVisibilityTreeAfterRestart()
+{
+	// Корневой узел.
+	std::shared_ptr<TreeItem> rootNode = pTreeView->get_root_item();
+
+	// Для неживой природы просто обновим значения.
+	auto inanimalNode = rootNode->children.at(0);
+	for (auto &child : inanimalNode->children) 
+		globalWorld.setResVisibility(child->tag, child->checked);
+
+	// Для организмов надо обновить указатели в поле tag.
+	// Пока недоделано - всего один организм.
+
+	// Протоорганизм (вид).
+	auto luca = globalWorld.getSpecies();
+
+	auto firstAnimalNode = rootNode->children.at(1);
+	firstAnimalNode->tag = int(luca.get());
+
+	// Обновим видимость самого организма на основе значения чекбокса.
+	luca->set_visible(firstAnimalNode->checked);
+}
+
+
+
+
 
 // trim from beginning of string (left)
 inline std::string& ltrim(std::string& s)
