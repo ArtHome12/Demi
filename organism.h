@@ -101,10 +101,10 @@ public:
 
 	// Возвращает полное название вида в формате автор/вид\автор/вид... Корневой общий для всех вид не включается.
 	std::string getAuthorAndNamePair() { return author + "\\" + name + "/"; }
-	std::string getFullName();
+	//std::string getFullName();
 
 	// Возвращает вид по указанному полному названию. Должна вызываться для корневого вида.
-	Species *getSpeciesByFullName(std::string fullName);
+	std::shared_ptr<Species> getSpeciesByFullName(std::string fullName);
 };
 
 

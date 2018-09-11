@@ -65,19 +65,25 @@ void Dot::get_color(clan::Colorf &aValue) const
 	// Солнечный свет и энергия это альфа-канал.
 	float alpha = clan::max<float, float>(getSolarEnergy(), getGeothermalEnergy());
 
-	// Сначала ищем среди живых организмов.
+	// Сначала ищем среди живых организмов. Так как есть вероятность, что расчётный поток изменит их состояние, игнорируем возможные ошибки доступа.
 	//
-	for (auto &cell : cells) {
-		demi::Organism *cellOrganism = cell->organism;
-		if (cellOrganism != nullptr) {
-			// Проверим, включено ли отображение для данного вида.
-			auto spc = cellOrganism->get_species();
-			if (spc->get_visible()) {
-				aValue = cellOrganism->isAlive() ? spc->aliveColor : spc->deadColor;
-				aValue.set_alpha(alpha);
-				return;
+	try {
+		for (auto &cell : cells) {
+			demi::Organism *cellOrganism = cell->organism;
+			if (cellOrganism != nullptr) {
+				// Проверим, включено ли отображение для данного вида.
+				auto spc = cellOrganism->get_species();
+				if (spc->get_visible()) {
+					aValue = cellOrganism->isAlive() ? spc->aliveColor : spc->deadColor;
+					aValue.set_alpha(alpha);
+					return;
+				}
 			}
 		}
+	}
+	catch (...)
+	{
+		// Ошибки могли возникнуть только при доступе на чтение, игнорируем их.
 	}
 
 	// Очистим старое значение цвета (самый быстрый способ).

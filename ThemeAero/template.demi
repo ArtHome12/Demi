@@ -28,17 +28,17 @@
 	<section name="Elements">
 		<!--Вода - основа всего, и в качестве основы её летучесть меньше чем у твёрдых веществ-->
 		<Element name="Water" color="cornflowerblue" volatility="0.01" visibility="true">
-			<rect left="0" top="0" right="max" bottom="max" amount="100000"/>
+			<rect left="0" top="0" right="max" bottom="max" amount="10000000"/>
 		</Element>
 		<!--Газы-->
 		<Element name="Oxygen" color="green" volatility="0.12" visibility="true">
 			<rect left="0" top="0" right="max" bottom="max" amount="0"/>
 		</Element>
 		<Element name="CarbonDioxide" color="yellow" volatility="0.12" visibility="true">
-			<rect left="0" top="0" right="max" bottom="max" amount="20000"/>
+			<rect left="0" top="0" right="max" bottom="max" amount="2000000"/>
 		</Element>
 		<Element name="Hydrogen" color="darkgreen" volatility="0.12" visibility="true">
-			<rect left="0" top="0" right="max" bottom="max" amount="1000"/>
+			<rect left="0" top="0" right="max" bottom="max" amount="100000"/>
 		</Element>
 		<Element name="Methane" color="darkviolet" volatility="0.12" visibility="true">
 			<rect left="0" top="0" right="0" bottom="0" amount="0"/>

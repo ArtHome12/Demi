@@ -4,7 +4,7 @@
 		<!--Main window position, size and state (6-maximized, 7-minimized, 10-normal)-->
 		<item name="Appearance" left="219" top="84" width="1476" height="849" state="6" is_fullscreen="false"/>
 		<!--Top menu states-->
-		<item name="TopMenuState" SettingsWindowVisible="true" ModelIlluminated="false"/>
+		<item name="TopMenuState" SettingsWindowVisible="true" ModelIlluminated="true"/>
 		<!--Language-->
 		<item name="Locale" Language="rus"/>
 	</section>--&gt;

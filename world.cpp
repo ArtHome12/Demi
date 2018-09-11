@@ -682,7 +682,7 @@ std::shared_ptr<demi::Species> World::doReadSpecies(clan::File &binFile, std::sh
 	// Считываем текущий вид.
 
 	// Создаём вид и инициализиуем основные поля.
-	auto retVal = std::make_shared<demi::Species>();
+	std::shared_ptr<demi::Species> retVal = std::make_shared<demi::Species>();
 	retVal->ancestor = ancestor;
 	retVal->name = binFile.read_string_nul();
 	retVal->author = binFile.read_string_nul();
@@ -1011,8 +1011,9 @@ demi::Organism* World::doReadOrganism(clan::File &binFile, std::set<std::string>
 	std::advance(it, dictKey);
 	std::string fullSpeciesName = *it;
 
-	// По названию вида найдём ссылку на вид.
-	std::shared_ptr<demi::Species> Aspecies = std::shared_ptr<demi::Species>(species->getSpeciesByFullName(fullSpeciesName));
+	// По названию вида найдём ссылку на вид. Если это протоорганизм, то подставим правильный корневой shared_ptr, так как у контейнера
+	// species есть шареды только для его потомков.
+	std::shared_ptr<demi::Species> Aspecies = fullSpeciesName == species->getAuthorAndNamePair() ? species : species->getSpeciesByFullName(fullSpeciesName);
 
 	// Создаём организм.
 	demi::Organism* retVal = new demi::Organism(Aspecies, center, angle, vitality, fissionBarrier);
