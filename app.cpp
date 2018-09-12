@@ -215,46 +215,52 @@ bool App::update()
 		is_fullscreen = fullscreen_requested;
 		pWindow->display_window().toggle_fullscreen();
 	}
-	
-	// Выведем скорость обновления экрана, но только если она изменилась, так как операция медленная.
-	int fps = int(game_time.get_updates_per_second());
-	if (lastFPS != fps) {
-		lastFPS = fps;
-		std::string fpsStr = clan::StringHelp::int_to_text(fps) + " fps";
-		pLabelFPS->set_text(fpsStr, true);
-	}
 
-	// Выведем координаты левого верхнего угла мира.
-	const clan::Pointf &topLeftWorld = globalWorld.getAppearanceTopLeft();
-	if (lastTopLeftWorld != topLeftWorld) {
-		lastTopLeftWorld = topLeftWorld;
-		pButtonTopLeftModelCoordinate->label()->set_text("X:Y "
-			+ clan::StringHelp::int_to_text(int(topLeftWorld.x)) + ":"
-			+ clan::StringHelp::int_to_text(int(topLeftWorld.y)), true);
-	}
+	// Если окно свёрнуто, ничего не делаем.
+	if (!pWindow->display_window().is_minimized()) {
 
-	// Выведем масштаб координат мира.
-	float scaleWorld = globalWorld.getAppearanceScale();
-	if (lastScaleWorld != scaleWorld) {
-		lastScaleWorld = scaleWorld;
-		pButtonScaleModel->label()->set_text(scaleLabelTemplate + clan::StringHelp::float_to_text(scaleWorld, 3, false), true);
-	}
+		// Выведем скорость обновления экрана, но только если она изменилась, так как операция медленная.
+		int fps = int(game_time.get_updates_per_second());
+		if (lastFPS != fps) {
+			lastFPS = fps;
+			std::string fpsStr = clan::StringHelp::int_to_text(fps) + " fps";
+			pLabelFPS->set_text(fpsStr, true);
+		}
 
-	// Проверим, не изменилась ли освещённость.
-	bool illuminatedWorld = pModelRender->getIlluminatedWorld();
-	if (lastIlluminatedWorld != illuminatedWorld) {
-		lastIlluminatedWorld = illuminatedWorld;
-	} 
+		// Выведем координаты левого верхнего угла мира.
+		const clan::Pointf &topLeftWorld = globalWorld.getAppearanceTopLeft();
+		if (lastTopLeftWorld != topLeftWorld) {
+			lastTopLeftWorld = topLeftWorld;
+			pButtonTopLeftModelCoordinate->label()->set_text("X:Y "
+				+ clan::StringHelp::int_to_text(int(topLeftWorld.x)) + ":"
+				+ clan::StringHelp::int_to_text(int(topLeftWorld.y)), true);
+		}
 
-	// Выведем время модели.
-	DemiTime modelTime = globalWorld.getModelTime();
-	if (lastModelTime != modelTime) {
-		lastModelTime = modelTime;
-		pLabelModelTime->set_text(modelTime.getDateStr(), true);
-	}
+		// Выведем масштаб координат мира.
+		float scaleWorld = globalWorld.getAppearanceScale();
+		if (lastScaleWorld != scaleWorld) {
+			lastScaleWorld = scaleWorld;
+			pButtonScaleModel->label()->set_text(scaleLabelTemplate + clan::StringHelp::float_to_text(scaleWorld, 3, false), true);
+		}
 
-	// Отрисовываем модель.
-	pModelRender->draw_without_layout();
+		// Проверим, не изменилась ли освещённость.
+		bool illuminatedWorld = pModelRender->getIlluminatedWorld();
+		if (lastIlluminatedWorld != illuminatedWorld) {
+			lastIlluminatedWorld = illuminatedWorld;
+		}
+
+		// Выведем время модели.
+		DemiTime modelTime = globalWorld.getModelTime();
+		if (lastModelTime != modelTime) {
+			lastModelTime = modelTime;
+			pLabelModelTime->set_text(modelTime.getDateStr(), true);
+		}
+
+		// Отрисовываем модель.
+		pModelRender->draw_without_layout();
+	} else
+		// Если окно свёрнуто, отдохнём.
+		clan::System::sleep(100);
 
 	// Обновим счётчик времени, если действительно обновилось отображение модели.
 	if (pModelRender->getIsFrameUpdated())
