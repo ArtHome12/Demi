@@ -20,7 +20,7 @@ public:
 	WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsStorage> pSettingsStorage);
 	~WindowsSettings();
 
-	// Для получения уведомлений об отработке основного цикла (для возможного автосохранения модели).
+	// Для получения уведомлений об отработке основного цикла (для возможного автосохранения модели, обновления количеств).
 	void modelRenderNotify(float secondsElapsed);
 
 private:
@@ -52,6 +52,9 @@ private:
 	// Дерево с галочками видимости элементов.
 	std::shared_ptr<TreeView> pTreeView;
 
+	// Панель под количества элементов.
+	std::shared_ptr<View> panelElemAmounts;
+
 	// Настройки.
 	std::shared_ptr<SettingsStorage> pSettings;
 
@@ -80,5 +83,8 @@ private:
 
 	// Есть особенности по сравнению с обычной загрузкой.
 	void initElemVisibilityTreeAfterRestart();
+
+	// Создаёт надпись.
+	std::shared_ptr<clan::LabelView> createLabelForAmount(std::string text);
 };
 

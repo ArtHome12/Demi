@@ -15,6 +15,7 @@
 #include "settings_storage.h"
 #include "reactions.h"
 #include "local_coord.h"
+#include "amounts.h"
 
 
 // Продолжительность года в днях.
@@ -135,6 +136,9 @@ public:
 
 	// Возвращает координаты точки по указанному индексу.
 	clan::Pointf getXYFromIndex(int index);
+
+	// Объект для подсчёта количества элементов. Испортить состояние объекта невозможно, поэтому выносим его в паблик для удобства.
+	Amounts amounts;
 
 private:
 

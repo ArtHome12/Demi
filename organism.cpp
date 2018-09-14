@@ -91,6 +91,9 @@ Organism::~Organism()
 		float amountInDot = dot.getElemAmount(reagent.elementIndex);
 
 		dot.setElementAmount(reagent.elementIndex, amountInDot + amount);
+
+		// Откорректируем сумму в общем количестве.
+		globalWorld.amounts.incAmount(reagent.elementIndex, amount);
 	}
 
 	// Пока у нас в каждой точке только одна клетка, а надо удалять адресно.
@@ -141,11 +144,19 @@ Organism* Organism::makeTickAndGetNewBorn()
 		for (auto &reagent : reaction.rightReagents) {
 			float dotAmount = dot.getElemAmount(reagent.elementIndex) + reagent.amount;
 			dot.setElementAmount(reagent.elementIndex, dotAmount);
+
+			// Не забудем обновить и общее количество.
+			globalWorld.amounts.incAmount(reagent.elementIndex, reagent.amount);
 		}
 
 		// Очистим входной отсек.
-		for (auto & amountItem : leftReagentAmounts)
+		for (auto & amountItem : leftReagentAmounts) 
 			amountItem = 0;
+
+		// Исходные реагенты исключим из общего количества.
+		for (auto &reagent : reaction.leftReagents) 
+			globalWorld.amounts.decAmount(reagent.elementIndex, reagent.amount);
+
 
 		// Сохраним полученную энергию.
 		vitality += reaction.vitalityProductivity;

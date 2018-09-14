@@ -4,7 +4,7 @@
 		<!--Main window position, size and state (6-maximized, 7-minimized, 10-normal)-->
 		<item name="Appearance" left="219" top="84" width="1476" height="849" state="6" is_fullscreen="false"/>
 		<!--Top menu states-->
-		<item name="TopMenuState" SettingsWindowVisible="true" ModelIlluminated="false"/>
+		<item name="TopMenuState" SettingsWindowVisible="true" ModelIlluminated="true"/>
 		<!--Language-->
 		<item name="Locale" Language="rus"/>
 	</section>--&gt;
@@ -48,5 +48,6 @@
 		<lang name="WindowsSettingsProjectNameAbsent" eng="not selected or not available" rus="не выбран или недоступен"/>
 		<lang name="WindowsSettingsTreeInanimateSubTree" eng="Inanimate world" rus="Неживой мир"/>
 		<lang name="WindowsSettingsTreeAnimateSubTree" eng="First Organism" rus="Живой мир"/>
+		<lang name="WindowsSettingsAmountsLabel" eng="Amounts, pcs:" rus="Количество, шт.:"/>
 	</section>--&gt;
 </resources>

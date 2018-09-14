@@ -40,43 +40,34 @@ auto cLabelModelAbsent = "WindowsSettingsProjectNameAbsent";
 // Для дерева
 auto cTreeInanimate = "WindowsSettingsTreeInanimateSubTree";
 auto cTreeAnimate = "WindowsSettingsTreeAnimateSubTree";
-
+auto cWindowsSettingsAmountsLabel = "WindowsSettingsAmountsLabel";
 
 
 
 WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsStorage> pSettingsStorage) : pSettings(pSettingsStorage)
 {
-	style()->set("background: lightgray");
-	style()->set("height: 300px");
-	style()->set("flex-direction: column");
-	style()->set("border-top: 3px solid bisque");
+	style()->set("background: lightgray; height: 300px; flex-direction: column; border: 3px solid bisque");
 
-	// Панель с общими настройками/инструментами
+	// Панель с общими настройками/инструментами (кнопки новый, сохранить и т.д., а также 3 чекбокса под ними.
 	//
 	auto panelGeneral = std::make_shared<clan::View>();
-	panelGeneral->style()->set("flex-direction: column");
-	panelGeneral->style()->set("height: 140px");
-	panelGeneral->style()->set("border: 1px solid gray");
+	panelGeneral->style()->set("flex-direction: column; height: 140px; border: 1px solid gray");
 	add_child(panelGeneral);
 
 	// Название модели
 	pLabelModelName = std::make_shared<clan::LabelView>();
-	pLabelModelName->style()->set("flex: none;");
-	pLabelModelName->style()->set("margin: 5px;");
-	pLabelModelName->style()->set("font: 12px 'tahoma';");
+	pLabelModelName->style()->set("flex: none; margin: 5px; font: 12px 'tahoma'");
 	panelGeneral->add_child(pLabelModelName);
 
 	// Панель с кнопками
 	auto panelGeneral_panelButtons = std::make_shared<clan::View>();
-	panelGeneral_panelButtons->style()->set("flex-direction: row");
-	panelGeneral_panelButtons->style()->set("height: 32px");
+	panelGeneral_panelButtons->style()->set("flex-direction: row; height: 32px");
 	panelGeneral->add_child(panelGeneral_panelButtons);
 
 	// Кнопки 
 	//
 	pButtonNew = Theme::create_button();
-	pButtonNew->style()->set("width: 120px");
-	pButtonNew->style()->set("margin-left: 5px");
+	pButtonNew->style()->set("width: 120px; margin-left: 5px");
 	pButtonNew->image_view()->set_image(clan::Image(canvas, "New.png", pSettings->fileResDoc.get_file_system()));
 	pButtonNew->image_view()->style()->set("padding-left: 3px");
 	pButtonNew->label()->set_text(pSettings->LocaleStr(cButtonLabelNew));
@@ -84,8 +75,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	panelGeneral_panelButtons->add_child(pButtonNew);
 
 	pButtonOpen = Theme::create_button();
-	pButtonOpen->style()->set("width: 120px");
-	pButtonOpen->style()->set("margin-left: 12px");
+	pButtonOpen->style()->set("width: 120px; margin-left: 12px");
 	pButtonOpen->image_view()->set_image(clan::Image(canvas, "Open.png", pSettings->fileResDoc.get_file_system()));
 	pButtonOpen->image_view()->style()->set("padding-left: 3px");
 	pButtonOpen->label()->set_text(pSettings->LocaleStr(cButtonLabelOpen));
@@ -93,8 +83,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	panelGeneral_panelButtons->add_child(pButtonOpen);
 
 	auto bSave = Theme::create_button();
-	bSave->style()->set("width: 120px");
-	bSave->style()->set("margin-left: 12px");
+	bSave->style()->set("width: 120px; margin-left: 12px");
 	bSave->image_view()->set_image(clan::Image(canvas, "Save.png", pSettings->fileResDoc.get_file_system()));
 	bSave->image_view()->style()->set("padding-left: 3px");
 	bSave->label()->set_text(pSettings->LocaleStr(cButtonLabelSave));
@@ -102,8 +91,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	panelGeneral_panelButtons->add_child(bSave);
 
 	auto bSaveAs = Theme::create_button();
-	bSaveAs->style()->set("width: 120px");
-	bSaveAs->style()->set("margin-left: 12px");
+	bSaveAs->style()->set("width: 120px; margin-left: 12px");
 	bSaveAs->image_view()->set_image(clan::Image(canvas, "SaveAs.png", pSettings->fileResDoc.get_file_system()));
 	bSaveAs->image_view()->style()->set("padding-left: 3px");
 	bSaveAs->label()->set_text(pSettings->LocaleStr(cButtonLabelSaveAs));
@@ -111,8 +99,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	panelGeneral_panelButtons->add_child(bSaveAs);
 
 	pButtonRestart = Theme::create_button();
-	pButtonRestart->style()->set("width: 120px");
-	pButtonRestart->style()->set("margin-left: 12px");
+	pButtonRestart->style()->set("width: 120px; margin-left: 12px");
 	pButtonRestart->image_view()->set_image(clan::Image(canvas, "Restart.png", pSettings->fileResDoc.get_file_system()));
 	pButtonRestart->image_view()->style()->set("padding-left: 3px");
 	pButtonRestart->label()->set_text(pSettings->LocaleStr(cButtonLabelRestart));
@@ -120,8 +107,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	panelGeneral_panelButtons->add_child(pButtonRestart);
 
 	pButtonRunPause = Theme::create_button();
-	pButtonRunPause->style()->set("width: 150px");
-	pButtonRunPause->style()->set("margin-left: 12px");
+	pButtonRunPause->style()->set("width: 150px; margin-left: 12px");
 	pButtonRunPause->set_sticky(true);
 	pButtonRunPause->image_view()->set_image(clan::Image(canvas, "StartStop.png", pSettings->fileResDoc.get_file_system()));
 	pButtonRunPause->image_view()->style()->set("padding-left: 3px");
@@ -153,19 +139,23 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	pCBAutoSaveHourly->func_state_changed() = clan::bind_member(this, &WindowsSettings::onCBAutoSaveHourlyToggle);
 	panelGeneral->add_child(pCBAutoSaveHourly);
 
-	// Панель с информацией о модели
+	// Панель с информацией о модели (чекбоксы видимости элементов, а также панель с количеством элементов).
 	auto panelModelInfo = std::make_shared<clan::View>();
-	panelModelInfo->style()->set("flex-direction: column");
-	panelModelInfo->style()->set("height: 160px");
-	//panelModelInfo->style()->set("border: 1px solid gray");
+	panelModelInfo->style()->set("flex-direction: row; height: 160px");
+	//panelModelInfo->style()->set("border: 1px solid red");
 	add_child(panelModelInfo);
 
 	// Дерево с галочками видимости элементов.
 	pTreeView = std::make_shared<TreeView>();
-	//pTreeView->style()->set("flex: auto; border: 1px solid red");
 	panelModelInfo->add_child(pTreeView);
 
-	// Если имя предудыщей модели отсутствует, создаём новую.
+	// Подпанель с количеством элементов правее дерева.
+	panelElemAmounts = std::make_shared<clan::View>();
+	panelElemAmounts->style()->set("flex-direction: column; background-color: lightgray; width: 210px");
+	// panelElemAmounts->style()->set("border: 1px solid red");
+	panelModelInfo->add_child(panelElemAmounts);
+
+	// Если имя предыдущей модели отсутствует, создаём новую.
 	auto lastModelFilename = pSettings->getProjectFilename();
 	if (lastModelFilename == "") {
 		onButtondownNew();
@@ -243,7 +233,6 @@ void WindowsSettings::onButtondownSave()
 	}
 }
 
-
 void WindowsSettings::onButtondownSaveAs()
 {
 	// Создаём и инициализируем диалог выбора имени файла.
@@ -300,7 +289,6 @@ void WindowsSettings::onButtondownRunPause()
 	}
 }
 
-
 void WindowsSettings::onButtondownRestart()
 {
 	// Начать расчёт заново.
@@ -321,7 +309,6 @@ void WindowsSettings::onButtondownRestart()
 	// Для новой модели применяем текущие настройки видимости.
 	initElemVisibilityTreeAfterRestart();
 }
-
 
 void WindowsSettings::onCBAutoRunToggle()
 {
@@ -374,9 +361,31 @@ void WindowsSettings::set_modelFilename(const std::string &newName)
 	pSettings->setProjectFilename(modelFilename);
 }
 
+// Для получения уведомлений об отработке основного цикла (для возможного автосохранения модели, обновления количеств).
 void WindowsSettings::modelRenderNotify(float secondsElapsed)
 {
-	// Для получения уведомлений об отработке основного цикла (для возможного автосохранения модели).
+	// Обновим надписи с количествами элементов согласно информации из специального объекта.
+	// Пользуемся тем, что знаем порядок - первым идёт надпись напротив "неживая природа", далее первый элемент и т.д.
+	// Так как set_text с использованием force_no_layout не проверяет, свёрнуто ли окно, сделаем это предварительно.
+	if (!hidden()) {
+		const size_t cnt = globalWorld.getElemCount();
+		auto child = ++panelElemAmounts->children().begin();
+		for (size_t i = 0; i < cnt; i++) {
+
+			// Преобразуем указатель на базовый тип View на дочерний LabelView.
+			std::shared_ptr<clan::LabelView> label = std::dynamic_pointer_cast<clan::LabelView>(*child++);
+
+			// Впишем количество, округлив до целого.
+			unsigned long long amount = (unsigned long long)round(globalWorld.amounts.getResAmounts(i));
+
+			// Добавим пробелы для разеделения разрядов.
+			std::string str = std::to_string(amount);
+			for (int i = str.length(); i > 0; i -= 3)
+				str.insert(i, " ");
+
+			label->set_text(str, true);
+		}
+	}
 
 	// Если прошёл час и установлена галочка регулярного автосохранения модели, сделаем это.
 	if (abs(secondsElapsed - this->secondsElapsed) > 3600.0f) {
@@ -392,14 +401,26 @@ void WindowsSettings::modelRenderNotify(float secondsElapsed)
 // Обновляет дерево с галочками видимости элементов.
 void WindowsSettings::initElemVisibilityTree()
 {
+	// Удалим старые метки под количество элементов, если они были. Обращаемся по индексу, иначе итератор портится.
+	for (int i = panelElemAmounts->children().size(); i>0; --i) 
+		panelElemAmounts->children().at(i-1)->remove_from_parent();
+
 	auto rootNode = std::make_shared<TreeItem>("", 0);	// В tag хранится либо индекс химэлемента, если первый символ имени - пробел, либо указатель на организм. 0 - заглушка.
 	
 	// Первый узел - под химические элементы.
 	auto firstNode = std::make_shared<TreeItem>(pSettings->LocaleStr(cTreeInanimate), 0);
 
-	// Добавляем их, первым символом пробел для маркировки, что это неживой элемент.
-	for (int i = 0; i < globalWorld.getElemCount(); ++i)
+	// Добавляем сразу и метку в панель количества.
+	panelElemAmounts->add_child(createLabelForAmount(pSettings->LocaleStr(cWindowsSettingsAmountsLabel)));
+
+	// Добавляем химэлементы, первым символом пробел для маркировки, что это неживой элемент.
+	for (int i = 0; i < globalWorld.getElemCount(); ++i) {
+		// Чекбокс с названием элемента.
 		firstNode->children.push_back(std::make_shared<TreeItem>(" " + globalWorld.getResName(i), i, globalWorld.getResVisibility(i)));
+
+		// Метка под количество.
+		panelElemAmounts->add_child(createLabelForAmount("0"));
+	}
 
 	rootNode->children.push_back(firstNode);
 
@@ -444,6 +465,15 @@ void WindowsSettings::initElemVisibilityTreeAfterRestart()
 }
 
 
+// Создаёт надпись.
+std::shared_ptr<clan::LabelView> WindowsSettings::createLabelForAmount(std::string text)
+{
+	auto retVal = std::make_shared<clan::LabelView>();
+	retVal->style()->set("font: 13px 'Segoe UI'; color: black; height: 17px");
+	//retVal->set_text_alignment(clan::TextAlignment::right);
+	retVal->set_text(text);
+	return retVal;
+}
 
 
 

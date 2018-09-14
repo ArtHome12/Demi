@@ -99,6 +99,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="amounts.cpp" />
     <ClCompile Include="app.cpp" />
     <ClCompile Include="local_coord.cpp" />
     <ClCompile Include="tree_view.cpp" />
@@ -112,6 +113,7 @@
     <ClCompile Include="windows_settings.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="amounts.h" />
     <ClInclude Include="app.h" />
     <ClInclude Include="local_coord.h" />
     <ClInclude Include="reactions.h" />
