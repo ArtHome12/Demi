@@ -12,7 +12,7 @@
 #include "world.h"
 
 
-const float cGeothermRadius = 12.0f;
+const int cGeothermRadius = 12;
 
 // Константы для чтения XML-файла модели
 auto cResGlobalsWorldSize = "Globals/WorldSize";
@@ -121,51 +121,46 @@ void Solar::Shine(const DemiTime &timeModel)
 	// Определим систему координат с положением солнца в центре.
 	LocalCoord coord(getPos(timeModel));
 
-	// Двигаемся по всем точкам
-	//
-	float lightRadius = globalWorld.getLightRadius();
-	for (float x = -lightRadius; x <= lightRadius; ++x)
-		for (float y = -lightRadius; y <= lightRadius; ++y) {
+	int lightRadius = globalWorld.getLightRadius();
+	for (int x = -lightRadius; x <= lightRadius; ++x)
+		for (int y = -lightRadius; y <= lightRadius; ++y) {
 
 			// Фактическое расстояние до центра координат.
-			float r = sqrt(x*x + y*y);
+			double r = sqrt(x*x + y*y);
 
 			// Если оно больше заданного радиуса, ничего не делаем, иначе зададим освещённость, обратную расстоянию в долях от 0 до 1.
-			coord.get_dot(x, y).setSolarEnergy(r < lightRadius ? (lightRadius - r) / lightRadius : 0.0f);
+			r = r < lightRadius ? float((lightRadius - r) / lightRadius) : 0.0f;
+			
+			coord.get_dot(x, y).setSolarEnergy(float(r));
 		}
-
 }
 
 
-clan::Pointf Solar::getPos(const DemiTime &timeModel)
+clan::Point Solar::getPos(const DemiTime &timeModel)
 {
 	// Возвращает позицию для солнца в зависимости от времени.
 
 	// Размеры мира.
-	const clan::Sizef &worldSize = globalWorld.get_worldSize();
+	const clan::Size &worldSize = globalWorld.get_worldSize();
 
 	// Позиция по горизонтали зависит от времени суток.
 	// Солнце двигается с востока на запад пропорционально прошедшей доле суток.
-	clan::Pointf result(worldSize.width * (1.0f - float(timeModel.sec) / (cTicksInDay - 1.0f)), 0.0f);
+	 int x = int(worldSize.width * (1.0f - float(timeModel.sec) / (cTicksInDay - 1.0f)) + 0.5f);
 
 	// Позиция по вертикали зависит от дня года.
 	// Солнце полгода двигается от одной границы тропиков до другой и полгода в обратном направлении, 
 	// то есть через полгода позиция повторяется.
 	
 	// Половина года, для удобства.
-	const float halfYear = cDaysInYear / 2;
+	const int halfYear = int(cDaysInYear / 2 + 0.5f);
 
 	// Высота тропиков
-	const float tropic = globalWorld.getTropicHeight();
+	const int& tropic = globalWorld.getTropicHeight();
 
 	// Когда идёт первая половина года, надо от экватора отнимать долю, а когда вторая - прибавлять.
-	//
-	if (timeModel.day < halfYear)
-		result.y = (worldSize.height - tropic) / 2 + timeModel.day * tropic / halfYear;
-	else
-		result.y = (worldSize.height + tropic) / 2 - (timeModel.day - halfYear) * tropic / halfYear;
+	int y = int((timeModel.day < halfYear ? (worldSize.height - tropic) / 2.0f + timeModel.day * tropic / halfYear : (worldSize.height + tropic) / 2.0 - (timeModel.day - halfYear) * tropic / halfYear) +0.5);
 
-	return result;
+	return clan::Point(x, y);
 }
 
 
@@ -212,7 +207,7 @@ void World::makeTick()
 	// С какой-то периодичностью надо их актуализировать.Если делать это при сохранении, либо при загрузке, либо время от времени, то появится некрасивый эффект скачкообразного изменения внешнего вида без соответствующейго 
 	// изменения модели.Если модель перед сохранением выглядела одним образом, а после стала выглядеть иначе, это будет воспринято как баг. Поэтому просто при каждом тике максимальные концентрации снижаем на 0,1% (если сильнее - видны скачки). 
 	for (int i = 0; i < elemCount; ++i)
-		arResMax[i] = arResMax[i] * 0.999f;
+		arResMax[i] = unsigned long long(arResMax[i] * 0.999f);
 
 
 	// Облучаем мир солнечной энергией.
@@ -258,7 +253,7 @@ void World::makeTick()
 
 
 
-void World::fillRectResource(int resId, float amount, const clan::Rectf &rect)
+void World::fillRectResource(int resId, unsigned long long amount, const clan::Rect &rect)
 {
 	// Задаёт распределение ресурсов по указанной прямоугольной области в указанном количестве.
 	//
@@ -267,9 +262,9 @@ void World::fillRectResource(int resId, float amount, const clan::Rectf &rect)
 	if (arResMax[resId] < amount)
 		arResMax[resId] = amount;
 
-	for (float x = rect.left; x < rect.right; ++x)
-		for (float y = rect.top; y < rect.bottom; ++y)
-			arDots[int(x + y * worldSize.width)].res[resId + 2] = amount;
+	for (int x = rect.left; x < rect.right; ++x)
+		for (int y = rect.top; y < rect.bottom; ++y)
+			arDots[getDotIndexFromXY(x, y)].setElementAmount(resId, amount);
 }
 
 
@@ -279,7 +274,7 @@ void World::diffusion()
 
 	// Границы массива, за которую заходить нельзя.
 	Dot *cur = arDots;											// Исходная точка для переноса ресурсов - первая точка массива.
-	Dot *last = cur + int(worldSize.width * worldSize.height);	// Точка после последней точки массива.
+	Dot *last = cur + worldSize.width * worldSize.height;		// Точка после последней точки массива.
 	Dot *dest;													// Конечная точка
 
 	// Направление движения
@@ -292,8 +287,7 @@ void World::diffusion()
 	while (true) {
 
 		int rnd = rnd_angle(generator);			// от 0 до 7, направление движения
-		const int rndResA = rnd_Elem(generator);		// случайный элемент.
-		const int rndResB = rndResA + 2;				// плюс пропускаем ячейки под солнечную и геотермальную энергии.
+		const int rndResIndex = rnd_Elem(generator);		// случайный элемент.
 
 		// Определяем исходную координату отдельным случайным числом.
 		cur += rnd_Coord(generator);
@@ -308,25 +302,25 @@ void World::diffusion()
 			dest = cur + 1;
 			break;
 		case 1: // на юго-восток.
-			dest = cur + 1 + int(worldSize.width);
+			dest = cur + 1 + worldSize.width;
 			break;
 		case 2:	// на юг.
-			dest = cur + int(worldSize.width);
+			dest = cur + worldSize.width;
 			break;
 		case 3:	// на юго-запад.
-			dest = cur - 1 + int(worldSize.width);
+			dest = cur - 1 + worldSize.width;
 			break;
 		case 4:	// на запад.
 			dest = cur - 1;
 			break;
 		case 5:	// на северо-запад.
-			dest = cur - 1 - int(worldSize.width);
+			dest = cur - 1 - worldSize.width;
 			break;
 		case 6:	// на север.
-			dest = cur - int(worldSize.width);
+			dest = cur - worldSize.width;
 			break;
 		default:	// на северо-восток.
-			dest = cur + 1 - int(worldSize.width);
+			dest = cur + 1 - worldSize.width;
 		}
 		
 		// Откорректируем в случае выхода за пределы, иначе всё вещество скопится у нижнего края из-за дрейфа
@@ -339,14 +333,14 @@ void World::diffusion()
 		// Осуществим перенос вещества из исходной точки в конечную согласно летучести ресурса.
 		Dot &fromDot = *cur;
 		Dot &toDot = *dest;
-		const float amount = fromDot.res[rndResB] * arResVolatility[rndResA];
-		fromDot.res[rndResB] -= amount;
-		toDot.res[rndResB] += amount;
+		const unsigned long long amount = unsigned long long(fromDot.res[rndResIndex] * arResVolatility[rndResIndex] + 0.5f);
+		fromDot.res[rndResIndex] -= amount;
+		toDot.res[rndResIndex] += amount;
 
 		// Обновим максимумы.
 		//
-		if (arResMax[rndResA] < toDot.res[rndResB])
-			arResMax[rndResA] = toDot.res[rndResB];
+		if (arResMax[rndResIndex] < toDot.res[rndResIndex])
+			arResMax[rndResIndex] = toDot.res[rndResIndex];
 
 		// Обработка организма.
 		demi::Organism* curOrganism = fromDot.organism;
@@ -362,7 +356,7 @@ void World::diffusion()
 			// Если в конечной точке нет организма, то попытаемся перенести исходный.
 			if (toDot.organism == nullptr && curOrganism->canMove())
 				// Координаты новой точки.
-				curOrganism->moveTo(getXYFromIndex(dest - arDots));
+				curOrganism->moveTo(getDotXYFromIndex(dest - arDots));
 
 			// Уменьшаем жизненную энергию, потраченную на перенос.
 			curOrganism->processInactiveVitality();
@@ -371,15 +365,15 @@ void World::diffusion()
 }
 
 // Возвращает координаты точки по указанному индексу.
-clan::Pointf World::getXYFromIndex(int index)
+clan::Point World::getDotXYFromIndex(int index)
 {
-	float y = truncf(index / worldSize.width);
-	float x = index - y * worldSize.width;
-	return clan::Pointf(x, y);
+	int y = int(index / worldSize.width);
+	int x = index - y * worldSize.width;
+	return clan::Point(x, y);
 }
 
 
-void World::addGeothermal(int i, const clan::Pointf &coord)
+void World::addGeothermal(int i, const clan::Point &coord)
 {
 	// Задаёт местоположение источников геотермальной энергии.
 	//
@@ -392,15 +386,15 @@ void World::addGeothermal(int i, const clan::Pointf &coord)
 	// Определим систему координат.
 	LocalCoord geothermalCoord(coord);
 
-	for (float xp = -cGeothermRadius; xp <= cGeothermRadius; ++xp)
-		for (float yp = -cGeothermRadius; yp <= cGeothermRadius; ++yp) {
+	for (int xp = -cGeothermRadius; xp <= cGeothermRadius; ++xp)
+		for (int yp = -cGeothermRadius; yp <= cGeothermRadius; ++yp) {
 
 			// Фактическое расстояние до центра координат.
-			float r = sqrt(xp*xp + yp*yp);
+			double r = sqrt(xp*xp + yp*yp);
 
 			// Если оно больше заданного радиуса, ничего не делаем, иначе зададим освещённость, обратную расстоянию в долях от 0 до 1.
 			if (r < cGeothermRadius) 
-				geothermalCoord.get_dot(xp, yp).setGeothermalEnergy((cGeothermRadius - r) / cGeothermRadius);
+				geothermalCoord.get_dot(xp, yp).setGeothermalEnergy(float((cGeothermRadius - r) / cGeothermRadius));
 		}
 }
 
@@ -423,16 +417,16 @@ void World::loadModel(const std::string &filename)
 	clan::DomElement &prop = resDoc->get_resource(cResGlobalsWorldSize).get_element();
 
 	// Ширина мира.
-	worldSize.width = float(prop.get_attribute_int(cResGlobalsWorldSizeWidth, 1000));
+	worldSize.width = prop.get_attribute_int(cResGlobalsWorldSizeWidth, 1000);
 
 	// Высота мира
-	worldSize.height = round(worldSize.width * prop.get_attribute_float(cResGlobalsWorldSizeHeightRatio, 1.0f));
+	worldSize.height = int(worldSize.width * prop.get_attribute_float(cResGlobalsWorldSizeHeightRatio, 1.0f) + 0.5f);
 	if (worldSize.width <= 0 || worldSize.width > 30000 || worldSize.height <= 0 || worldSize.height > 30000)
-		throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongSize), int(worldSize.width), int(worldSize.height)));
+		throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongSize), worldSize.width, worldSize.height));
 
 	// Радиус солнечного пятна и высота тропиков зависит от размера мира.
-	lightRadius = round(0.9f * worldSize.height / 2);
-	tropicHeight = round(worldSize.height / 5);
+	lightRadius = int(0.9f * worldSize.height / 2 + 0.5f);
+	tropicHeight = int(0.2f * worldSize.height + 0.5f);
 
 	// Считываем протоорганизм. Всегда создаём один протоорганизм, считаем что образование живого мира из неживого не останавливается.
 	// Создаём вид протоорганизма по указанным координатам. Внимание - ниже он может быть переопределён из двоичного файла.
@@ -443,21 +437,19 @@ void World::loadModel(const std::string &filename)
 	species->visible = prop.get_attribute_bool(cResGlobalsLUCAVisibility);
 	species->cells.push_back(std::make_shared<demi::CellAbdomen>());
 	species->fissionBarrier = prop.get_attribute_float(cResGlobalsLUCAFissionBarier);
-	species->aliveColor = clan::Colorf(prop.get_attribute(cResGlobalsLUCAAliveColor));
-	species->deadColor = clan::Colorf(prop.get_attribute(cResGlobalsLUCADeadColor));
+	species->aliveColor = clan::Color(prop.get_attribute(cResGlobalsLUCAAliveColor));
+	species->deadColor = clan::Color(prop.get_attribute(cResGlobalsLUCADeadColor));
 
-	LUCAPos = clan::Pointf(float(prop.get_attribute_int("x")), float(prop.get_attribute_int("y")));
+	LUCAPos = clan::Point(prop.get_attribute_int("x"), prop.get_attribute_int("y"));
 	const std::string LUCAReactionName = prop.get_attribute("reaction");
 	demi::Organism::minActiveMetabolicRate = prop.get_attribute_float(cResGlobalsLUCAminActiveMetabolicRate);
 	demi::Organism::minInactiveMetabolicRate = prop.get_attribute_float(cResGlobalsLUCAminInactiveMetabolicRate);
 	demi::Organism::desintegrationVitalityBarrier = prop.get_attribute_float(cResGlobalsLUCADesintegrationVitalityBarrier);
-	
-
 
 	// Инициализируем внешний вид проекта.
 	prop = resDoc->get_resource(cResGlobalsAppearance).get_element();
-	appearanceTopLeft.x = float(prop.get_attribute_int(cResGlobalsAppearanceLeft, int(appearanceTopLeft.x)));
-	appearanceTopLeft.y = float(prop.get_attribute_int(cResGlobalsAppearanceTop, int(appearanceTopLeft.y)));
+	appearanceTopLeft.x = prop.get_attribute_int(cResGlobalsAppearanceLeft, appearanceTopLeft.x);
+	appearanceTopLeft.y = prop.get_attribute_int(cResGlobalsAppearanceTop, appearanceTopLeft.y);
 	appearanceScale = prop.get_attribute_float(cResGlobalsAppearanceScale, appearanceScale);
 
 	// Прочитаем время.
@@ -480,17 +472,17 @@ void World::loadModel(const std::string &filename)
 	energyCount = int(energy.size());
 
 	// Выделим память под массивы.
-	arDots = new Dot[int(worldSize.width * worldSize.height)];	// точки поверхности.
-	arResColors = new clan::Colorf[elemCount];					// цвета элементов.
-	arResMax = new float[elemCount];							// максимальные концентрации элементов в одной точке.
-	arResNames = new std::string[elemCount];					// названия элементов.
-	arResVisible = new bool[elemCount];							// Видимость элементов.
-	arResVolatility = new float[elemCount];						// летучесть элементов.
-	arEnergy = new Geothermal[energyCount];						// геотермальные источники.
+	arDots = new Dot[worldSize.width * worldSize.height];	// точки поверхности.
+	arResColors = new clan::Color[elemCount];				// цвета элементов.
+	arResMax = new unsigned long long [elemCount];			// максимальные концентрации элементов в одной точке.
+	arResNames = new std::string[elemCount];				// названия элементов.
+	arResVisible = new bool[elemCount];						// Видимость элементов.
+	arResVolatility = new float[elemCount];					// летучесть элементов.
+	arEnergy = new Geothermal[energyCount];					// геотермальные источники.
 
 	// Инициализируем массив максимумов единицами, во-избежание деления на ноль.
 	for (int i = 0; i < elemCount; ++i)
-		arResMax[i] = 1.0f;
+		arResMax[i] = 1;
 
 	// Считываем названия элементов.
 	for (int i = 0; i < elemCount; ++i) {
@@ -504,8 +496,8 @@ void World::loadModel(const std::string &filename)
 		// Свойства элемента.
 		clan::DomElement &prop = res.get_element();
 
-		// Цвет для отображения.
-		arResColors[i] = clan::Colorf(prop.get_attribute(cResElementsColor));
+		// Цвет для отображения. У версии Color нет почему-то поиска по имени, приходится через преобразование.
+		arResColors[i] = clan::Color(clan::Colorf(prop.get_attribute(cResElementsColor)));
 
 		// Летучесть, значение от 0 до 1.
 		arResVolatility[i] = prop.get_attribute_float(cResElementsVolatility);
@@ -522,19 +514,19 @@ void World::loadModel(const std::string &filename)
 			// Найденный элемент с информацией о распределении ресурса.
 			clan::DomElement &rectItem = nodes.item(j).to_element();
 
-			float r = float(rectItem.get_attribute_int("right"));
-			if (r == 0)
+			int r = rectItem.get_attribute_int("right");
+			if (!r)
 				r = worldSize.width;
 
-			float b = float(rectItem.get_attribute_int("bottom"));
-			if (b == 0)
+			int b = rectItem.get_attribute_int("bottom");
+			if (!b)
 				b = worldSize.height;
 
 			// Область.
-			clan::Rectf rect(float(rectItem.get_attribute_int("left")), float(rectItem.get_attribute_int("top")), r, b);
+			clan::Rect rect(rectItem.get_attribute_int("left"), rectItem.get_attribute_int("top"), r, b);
 
 			// Заполняем точки.
-			fillRectResource(i, rectItem.get_attribute_float("amount"), rect);
+			fillRectResource(i, rectItem.get_attribute_int("amount"), rect);
 		}
 	}
 
@@ -548,7 +540,7 @@ void World::loadModel(const std::string &filename)
 			clan::DomElement &pointItem = nodes.item(j).to_element();
 
 			// Заполняем точки.
-			addGeothermal(i, clan::Pointf(float(pointItem.get_attribute_int("x")), float(pointItem.get_attribute_int("y"))));
+			addGeothermal(i, clan::Point(pointItem.get_attribute_int("x"), pointItem.get_attribute_int("y")));
 		}
 	}
 
@@ -651,7 +643,7 @@ void World::loadModel(const std::string &filename)
 			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinMarker), "Dots:", strSecMarker));
 
 		// Считываем точки неживого мира. Клетки будут размещены при считывании организмов.
-		int dotsCount = int(worldSize.width * worldSize.height);
+		int dotsCount = worldSize.width * worldSize.height;
 		int dotSize = Dot::getSizeInMemory();
 		for (int i = 0; i < dotsCount; ++i) {
 
@@ -663,7 +655,7 @@ void World::loadModel(const std::string &filename)
 				throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinCannotReadDots), i));
 
 			// Организм в точке.
-			dot.organism = doReadOrganism(binFile, speciesNamesDict, getXYFromIndex(i));
+			dot.organism = doReadOrganism(binFile, speciesNamesDict, getDotXYFromIndex(i));
 		}
 
 		// Маркер начала массива концентраций.
@@ -672,7 +664,7 @@ void World::loadModel(const std::string &filename)
 			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinResmaxMarker), strResMaxMarker));
 
 		// Считываем максимальные концентрации.
-		dotSize = elemCount * sizeof(float);
+		dotSize = elemCount * sizeof(unsigned long long);
 		if (binFile.read(arResMax, dotSize) != dotSize)
 			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinCannotReadResmax)));
 
@@ -682,8 +674,6 @@ void World::loadModel(const std::string &filename)
 
 	// Инициализируем объект для подсчёта количества элементов неживой природы и организмов разных видов.
 	amounts.Init();
-
-	// Создаём экземпляр протоорганизма и размещаем его в геотермальном источнике, если такого ещё нет - перенесено В MakeTick().
 }
 
 // Рекурсивная функция для считывания видов организмов.
@@ -697,12 +687,11 @@ std::shared_ptr<demi::Species> World::doReadSpecies(clan::File &binFile, std::sh
 	retVal->name = binFile.read_string_nul();
 	retVal->author = binFile.read_string_nul();
 	retVal->visible = binFile.read_int8() != 0;
-	float r = binFile.read_float(), g = binFile.read_float(), b = binFile.read_float();
-	retVal->aliveColor = clan::Colorf(r, g, b);
-	r = binFile.read_float(); g = binFile.read_float(); b = binFile.read_float();
-	retVal->deadColor = clan::Colorf(r, g, b);
-
-
+	unsigned char r = binFile.read_uint8(), g = binFile.read_uint8(), b = binFile.read_uint8();
+	retVal->aliveColor = clan::Color(r, g, b);
+	r = binFile.read_uint8(); g = binFile.read_uint8(); b = binFile.read_uint8();
+	retVal->deadColor = clan::Color(r, g, b);
+	
 	// Метаболитическая реакция.
 	std::string reactionName = binFile.read_string_nul();
 	retVal->reaction = reactions[reactionName];
@@ -765,12 +754,12 @@ void World::doWriteSpecies(clan::File &binFile, std::shared_ptr<demi::Species> a
 	binFile.write_int8(aSpecies->get_visible());
 
 	// Цвета отображения.
-	binFile.write_float(aSpecies->aliveColor.get_red());
-	binFile.write_float(aSpecies->aliveColor.get_green());
-	binFile.write_float(aSpecies->aliveColor.get_blue());
-	binFile.write_float(aSpecies->deadColor.get_red());
-	binFile.write_float(aSpecies->deadColor.get_green());
-	binFile.write_float(aSpecies->deadColor.get_blue());
+	binFile.write_uint8(aSpecies->aliveColor.get_red());
+	binFile.write_uint8(aSpecies->aliveColor.get_green());
+	binFile.write_uint8(aSpecies->aliveColor.get_blue());
+	binFile.write_uint8(aSpecies->deadColor.get_red());
+	binFile.write_uint8(aSpecies->deadColor.get_green());
+	binFile.write_uint8(aSpecies->deadColor.get_blue());
 
 	binFile.write_string_nul(aSpecies->reaction->name);
 
@@ -822,8 +811,8 @@ void World::saveModel(const std::string &filename)
 
 	// Сохраняем внешний вид проекта.
 	clan::DomElement &prop = pResDoc->get_resource(cResGlobalsAppearance).get_element();
-	prop.set_attribute_int(cResGlobalsAppearanceLeft, int(appearanceTopLeft.x));
-	prop.set_attribute_int(cResGlobalsAppearanceTop, int(appearanceTopLeft.y));
+	prop.set_attribute_int(cResGlobalsAppearanceLeft, appearanceTopLeft.x);
+	prop.set_attribute_int(cResGlobalsAppearanceTop, appearanceTopLeft.y);
 	prop.set_attribute_float(cResGlobalsAppearanceScale, appearanceScale);
 
 	// Запишем видимость протоорганизма.
@@ -882,7 +871,7 @@ void World::saveModel(const std::string &filename)
 	binFile.write_string_nul("Dots:");
 
 	// Записываем точки.
-	int dotsCount = int(worldSize.width * worldSize.height);
+	int dotsCount = worldSize.width * worldSize.height;
 	int dotSize = Dot::getSizeInMemory();
 	for (int i = 0; i < dotsCount; ++i) {
 		// Текущая точка.
@@ -899,7 +888,7 @@ void World::saveModel(const std::string &filename)
 	binFile.write_string_nul("ResMax:");
 
 	// Записываем максимумы концентраций ресурсов.
-	binFile.write(arResMax, elemCount * sizeof(float));
+	binFile.write(arResMax, elemCount * sizeof(unsigned long long));
 
 	// Закроем файл.
 	binFile.close();
@@ -1000,10 +989,10 @@ void World::doWriteOrganism(clan::File &binFile, std::set<std::string> &dict, de
 
 	// Содержимое ячеек реакции.
 	int cnt = organism->leftReagentAmounts.size();
-	binFile.write(organism->leftReagentAmounts.data(), sizeof(float) * cnt);
+	binFile.write(organism->leftReagentAmounts.data(), sizeof(unsigned long long) * cnt);
 }
 
-demi::Organism* World::doReadOrganism(clan::File &binFile, std::set<std::string> &dict, const clan::Pointf &center)
+demi::Organism* World::doReadOrganism(clan::File &binFile, std::set<std::string> &dict, const clan::Point &center)
 {
 	int dictKey = binFile.read_int16();
 

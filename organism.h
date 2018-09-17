@@ -88,7 +88,7 @@ public:
 	bool visible;
 
 	// Цвет для живого и мёртвого организмов.
-	clan::Colorf aliveColor, deadColor;
+	clan::Color aliveColor, deadColor;
 
 	// Метаболитическая реакция организма.
 	std::shared_ptr<ChemReaction> reaction;
@@ -114,7 +114,7 @@ public:
 class Organism
 {
 public:
-	Organism(std::shared_ptr<Species> species, const clan::Pointf &Acenter, int Aangle, float Avitality, float AfissionBarrier);
+	Organism(std::shared_ptr<Species> species, const clan::Point &Acenter, int Aangle, float Avitality, float AfissionBarrier);
 	~Organism();
 
 	// Местоположение организма в мире (первой клетки живота) и ориентация (0 - север, 1 - северо-восток, 2 - восток и т.д. до 7 - северо-запад).
@@ -143,7 +143,7 @@ public:
 	// Формирование реакции на атаку от другого организма.
 
 	// Безусловное перемещение организма в другую точку.
-	void moveTo(const clan::Pointf &newCenter);
+	void moveTo(const clan::Point &newCenter);
 
 	// Истина, если организм жив. Если нет, то его надо исключить из списка живых.
 	bool isAlive() { return vitality > 0; }
@@ -163,7 +163,7 @@ private:
 
 public:
 	// Текущие ячейки для хранения вещества перед реакцией.
-	std::vector<float> leftReagentAmounts;
+	std::vector<unsigned long long> leftReagentAmounts;
 
 private:
 	// Текущая накопленная энергия.
@@ -173,10 +173,10 @@ private:
 	float fissionBarrier;
 
 	// Возвращает свободную клетку из окрестностей, если такая есть и истину, иначе ложь.
-	bool findFreePlace(clan::Pointf &point);
+	bool findFreePlace(clan::Point &point);
 
 	// Возвращает точку, лежащую относительно исходной в указанном направлении с учётом собственного направления.
-	void getPointAtDirection(int direction, clan::Pointf & dest);
+	void getPointAtDirection(int direction, clan::Point & dest);
 };
 
 };

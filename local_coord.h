@@ -23,16 +23,16 @@ class Dot {
 public:
 
 	// Солнечная энергия в точке.
-	float getSolarEnergy() const { return res[0]; }
-	void setSolarEnergy(float newVal) { res[0] = newVal; }
+	float getSolarEnergy() const { return  solarEnergy; }
+	void setSolarEnergy(float newVal) { solarEnergy = newVal; }
 
 	// Геотермальная энергия в точке.
-	float getGeothermalEnergy() const { return res[1]; }
-	void setGeothermalEnergy(float newVal) { res[1] = newVal; }
+	float getGeothermalEnergy() const { return geothermalEnergy; }
+	void setGeothermalEnergy(float newVal) { geothermalEnergy = newVal; }
 
 	// Количество указанного элемента в абсолютной величине.
-	float getElemAmount(int index) const { return res[index + 2]; }
-	void setElementAmount(int index, float amount) { res[index + 2] = amount; }
+	unsigned long long getElemAmount(int index) const { return res[index]; }
+	void setElementAmount(int index, unsigned long long amount) { res[index] = amount; }
 
 	// Количество указанного элемента в процентах.
 	float getElemAmountPercent(int index) const;
@@ -42,7 +42,7 @@ public:
 	static int getSizeInMemory();
 
 	// Имеющиеся в ней ресурсы - первые два элемента это солнечная и геотермальная энергии (для ускорения сохранения).
-	float *res;
+	unsigned long long *res;
 
 	// Конструктор, массив ресов обнуляем.
 	Dot();
@@ -51,7 +51,7 @@ public:
 	Dot& operator=(const Dot &obj);
 
 	// Возвращает цвет для точки на основе имеющихся ресурсов, передача по ссылке для оптимизации.
-	void get_color(clan::Colorf &aValue) const;
+	void get_color(clan::Color &aValue) const;
 
 	// Клетки организмов, размещённые в точке.
 	std::vector<std::shared_ptr<demi::GenericCell>> cells;
@@ -63,6 +63,9 @@ public:
 private:
 	// Установлено в истину для точек после конструктора копирования. Копии не освобождают память из-под res.
 	bool isCopy;
+
+	float solarEnergy = 0.0f;
+	float geothermalEnergy = 0.0f;
 };
 
 
@@ -71,26 +74,26 @@ private:
 //
 class LocalCoord {
 public:
-	LocalCoord(const clan::Pointf &coord);
+	LocalCoord(const clan::Point &coord);
 
 	// Возвращает точку в локальных координаах.
-	Dot& get_dot(float x, float y) const;
-	Dot& get_dot(const clan::Pointf &coord) const { return get_dot(coord.x, coord.y); }
+	Dot& get_dot(int x, int y) const;
+	Dot& get_dot(const clan::Point &coord) const { return get_dot(coord.x, coord.y); }
 
 	// Возвращает адрес точки в глобальных координатах.
-	clan::Pointf getGlobalPoint() { return center; }
-	clan::Pointf getGlobalPoint(const clan::Pointf &localPoint) { return center + localPoint; }
+	clan::Point getGlobalPoint() { return center; }
+	clan::Point getGlobalPoint(const clan::Point &localPoint) { return center + localPoint; }
 
 private:
 	// Массив с точками поверхности.
 	Dot *dots;
 
 	// Размеры мира на момент создания, для оптимизаци.
-	float worldWidth;
-	float worldHeight;
+	int worldWidth;
+	int worldHeight;
 
 	// Центр локальных координат, выраженный в глобальных координатах.
-	clan::Pointf center;
+	clan::Point center;
 };
 
 

@@ -69,7 +69,7 @@ class Solar {
 private:
 
 	// Возвращает позицию для солнца в зависимости от времени.
-	clan::Pointf getPos(const DemiTime &timeModel);
+	clan::Point getPos(const DemiTime &timeModel);
 
 public:
 
@@ -83,7 +83,7 @@ public:
 //
 class Geothermal {
 public:
-	clan::Pointf coord;
+	clan::Point coord;
 };
 
 
@@ -92,8 +92,8 @@ public:
 //
 class World {
 
-	friend Dot;
-	friend Solar;
+//	friend Dot;
+//	friend Solar;
 
 public:
 	World();
@@ -114,17 +114,18 @@ public:
 	DemiTime getModelTime() { return timeBackup; }
 
 	// Доступ к свойствам.
-	clan::Sizef get_worldSize() { return worldSize; }
+	clan::Size get_worldSize() { return worldSize; }
 	int getElemCount() { return elemCount; }
 	int getEnergyCount() { return energyCount; }
-	float getLightRadius() { return lightRadius; }
-	float getTropicHeight() { return tropicHeight; }
-	float getResMaxValue(int index) { return arResMax[index]; }
+	int getLightRadius() { return lightRadius; }
+	int getTropicHeight() { return tropicHeight; }
+	unsigned long long getResMaxValue(int index) { return arResMax[index]; }
+	const clan::Color &getResColors(int index) { return arResColors[index]; }
 	const std::string &getResName(int index) { return arResNames[index]; }
 	const bool getResVisibility(int index) { return arResVisible[index]; }
 	void setResVisibility(int index, bool visible) { arResVisible[index] = visible; }
-	const clan::Pointf &getAppearanceTopLeft() { return appearanceTopLeft; }
-	void setAppearanceTopLeft(const clan::Pointf newTopLeft) { appearanceTopLeft = newTopLeft; }
+	const clan::Point &getAppearanceTopLeft() { return appearanceTopLeft; }
+	void setAppearanceTopLeft(const clan::Point newTopLeft) { appearanceTopLeft = newTopLeft; }
 	float getAppearanceScale() { return appearanceScale; }
 	void setAppearanceScale(float newScale) { appearanceScale = newScale; }
 	std::shared_ptr<demi::Species> getSpecies() { return species; }
@@ -135,7 +136,10 @@ public:
 	void setSettingsStorage(SettingsStorage* pSettingsStorage) { pSettings = pSettingsStorage; }
 
 	// Возвращает координаты точки по указанному индексу.
-	clan::Pointf getXYFromIndex(int index);
+	clan::Point getDotXYFromIndex(int index);
+
+	// Возвращает индекс точки для указанных координат.
+	int getDotIndexFromXY(int x, int y) { return x + y * worldSize.width; }
 
 	// Объект для подсчёта количества элементов. Испортить состояние объекта невозможно, поэтому выносим его в паблик для удобства.
 	Amounts amounts;
@@ -156,24 +160,24 @@ private:
 	Geothermal *arEnergy = nullptr;
 
 	// Размеры мира.
-	clan::Sizef worldSize;
+	clan::Size worldSize;
 
 	// Поверхность земли и копия для отображения на экране.
 	Dot *arDots;
 
 	// Свойства, используемые для отображения модели - координата левого верхнего угла, масштаб.
-	clan::Pointf appearanceTopLeft;
+	clan::Point appearanceTopLeft;
 	float appearanceScale = 1.0f;
 
 	// Максимальный радиус освещённости вокруг местонахождения солнца, составляет 90% высоты мира.
 	// Эта же величина и максимальная яркость солнца - в самой удалённой точке она была минимальной и равной 1, соответственно в центре - равна радиусу.
-	float lightRadius = 0;
+	int lightRadius = 0;
 
 	// Ход солнца по вертикали, обусловленный наклоном земной оси, примерно sin(23.5)=0.4 или по 10% с каждой стороны от экватора.
-	float tropicHeight = 0;
+	int tropicHeight = 0;
 
 	// Цвета элементов.
-	clan::Colorf* arResColors = nullptr;
+	clan::Color* arResColors = nullptr;
 
 	// Количество химических элементов, существующих в модели.
 	int elemCount = 0;
@@ -185,7 +189,7 @@ private:
 	bool *arResVisible = nullptr;
 
 	// Массив максимальных значений ресурсов для целей визуализации на экране.
-	float *arResMax = nullptr;
+	unsigned long long *arResMax = nullptr;
 
 	// Летучесть ресурса для диффузии, значение от 0 до 1.
 	float* arResVolatility = nullptr;
@@ -213,7 +217,7 @@ private:
 	std::uniform_int_distribution<> rnd_Coord;
 
 	// Позиция протоорганизма для восстановления его каждый ход.
-	clan::Pointf LUCAPos;
+	clan::Point LUCAPos;
 
 	// Обновить состояние.
 	void makeTick();
@@ -222,10 +226,10 @@ private:
 	void diffusion();
 
 	// Задаёт распределение ресурсов по указанной прямоугольной области в указанном количестве.
-	void fillRectResource(int resId, float amount, const clan::Rectf &rect);
+	void fillRectResource(int resId, unsigned long long amount, const clan::Rect &rect);
 
 	// Задаёт местоположение источников геотермальной энергии.
-	void addGeothermal(int i, const clan::Pointf &coord);
+	void addGeothermal(int i, const clan::Point &coord);
 
 	// Рабочий поток
 	std::thread thread;
@@ -248,7 +252,7 @@ private:
 
 	// Вынесено из SaveModel() для удобства. Запись одного организма.
 	void doWriteOrganism(clan::File &binFile, std::set<std::string> &dict, demi::Organism* organism);
-	demi::Organism* doReadOrganism(clan::File &binFile, std::set<std::string> &dict, const clan::Pointf &center);
+	demi::Organism* doReadOrganism(clan::File &binFile, std::set<std::string> &dict, const clan::Point &center);
 };
 
 

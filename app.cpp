@@ -228,7 +228,7 @@ bool App::update()
 		}
 
 		// ¬ыведем координаты левого верхнего угла мира.
-		const clan::Pointf &topLeftWorld = globalWorld.getAppearanceTopLeft();
+		const clan::Point &topLeftWorld = globalWorld.getAppearanceTopLeft();
 		if (lastTopLeftWorld != topLeftWorld) {
 			lastTopLeftWorld = topLeftWorld;
 			pButtonTopLeftModelCoordinate->label()->set_text("X:Y "
@@ -354,7 +354,7 @@ void App::on_menuButton_down()
 void App::on_menuTopLeftModelButton_down()
 {
 	// Reset top left coordinate of the world.
-	globalWorld.setAppearanceTopLeft(clan::Pointf());
+	globalWorld.setAppearanceTopLeft(clan::Point());
 }
 
 void App::on_menuScaleModelButton_down()

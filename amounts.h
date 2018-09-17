@@ -19,15 +19,15 @@ public:
 	// »нициализаци€ класса. ≈го инициализаци€ должна происходить после инициализации массивов в World, когда модель готова к первому тику.
 	void Init();
 
-	double getResAmounts(int index) { return arResAmounts[index]; }
+	unsigned long long getResAmounts(int index) { return arResAmounts ? arResAmounts[index] : 0; }
 
 	// ”величивает количество указанного элемента. ћожно увеличивать на отрицательную величину.
-	void incAmount(int index, double amnt) { arResAmounts[index] += amnt; }
-	void decAmount(int index, double amnt) { arResAmounts[index] -= amnt; }
+	void incAmount(int index, unsigned long long amnt) { arResAmounts[index] += amnt; }
+	void decAmount(int index, unsigned long long amnt) { arResAmounts[index] -= amnt; }
 
 private:
 
 	// ћассив количеств элементов неживой природы. 
-	long double *arResAmounts = nullptr;
+	unsigned long long *arResAmounts = nullptr;
 
 };

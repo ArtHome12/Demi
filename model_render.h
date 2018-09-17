@@ -31,7 +31,7 @@ private:
 	std::shared_ptr<SettingsStorage> &pSettings;
 
 	// Размер области для отрисовки модели (используется для ускорения, если размер не менялся).
-	clan::Sizef oldWindowSize;
+	clan::Size oldWindowSize;
 
 	// Буфер для отображения мира в виде точек при соответствующем масштабе.
 	std::shared_ptr<clan::PixelBuffer> pPixelBufToWrite;
@@ -47,8 +47,8 @@ private:
 	bool isScrollStart = false;
 
 	// Точка нажатия кнопки мыши в оконных координатах и в мировых.
-	clan::Pointf scrollWindow;
-	clan::Pointf scrollWorld;
+	clan::Point scrollWindow;
+	clan::Point scrollWorld;
 
 	// Подписи для солнечной и геотермальной энергий.
 	std::string solarTitle;
@@ -64,13 +64,13 @@ private:
 	void on_mouse_dblclk(const clan::PointerEvent &e);
 
 	// Увеличивает масштаб - отдаляет поверхность.
-	void DoScaleStep(const clan::Pointf &pos, float scaleStep, clan::Pointf &newTopLeft);
+	void DoScaleStep(const clan::Pointf &pos, float scaleStep, clan::Point &newTopLeft);
 
 	// Отрисовывает сетку.
-	void DrawGrid(clan::Canvas &canvas, const clan::Sizef &windowSize);
+	void DrawGrid(clan::Canvas &canvas, const clan::Size &windowSize);
 
 	// Отрисовывает клетку в компактном виде - с координатой и ресурсами, которые поместятся.
-	void DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan::Rectf &rect, int xLabel, int yLabel, clan::Colorf color);
+	void DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan::Rect &rect, int xLabel, int yLabel, const clan::Color& dotColor);
 
 	// Звуки включения и выключения подсветки.
 	clan::SoundBuffer soundIlluminateOn;

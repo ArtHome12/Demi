@@ -45,10 +45,10 @@
     <ClCompile Include="tree_view.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="local_coord.cpp">
-      <Filter>Header Files</Filter>
-    </ClCompile>
     <ClCompile Include="amounts.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="local_coord.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

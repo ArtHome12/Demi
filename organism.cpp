@@ -52,7 +52,7 @@ float Organism::minActiveMetabolicRate = 0;
 float Organism::minInactiveMetabolicRate = 0;
 float Organism::desintegrationVitalityBarrier = 0;
 
-Organism::Organism(std::shared_ptr<Species> species, const clan::Pointf &Acenter, int Aangle, float Avitality, float AfissionBarrier) : ourSpecies(species),
+Organism::Organism(std::shared_ptr<Species> species, const clan::Point &Acenter, int Aangle, float Avitality, float AfissionBarrier) : ourSpecies(species),
 	cells(), 
 	leftReagentAmounts(ourSpecies->reaction->leftReagents.size()),
 	center(Acenter),
@@ -80,15 +80,15 @@ Organism::~Organism()
 
 	// Возвращаем накопленные минеральные вещества в мир.
 	//
-	std::vector<float>::iterator itAmounts = leftReagentAmounts.begin();
+	std::vector<unsigned long long>::iterator itAmounts = leftReagentAmounts.begin();
 	const demi::ChemReaction &reaction = *ourSpecies->reaction;
 	for (auto &reagent : reaction.leftReagents) {
 
 		// Текущее имеющееся значение, которое надо вернуть.
-		float amount = *itAmounts++;
+		unsigned long long amount = *itAmounts++;
 
 		// Получаем доступное в точке количество соответствующего минерала.
-		float amountInDot = dot.getElemAmount(reagent.elementIndex);
+		unsigned long long amountInDot = dot.getElemAmount(reagent.elementIndex);
 
 		dot.setElementAmount(reagent.elementIndex, amountInDot + amount);
 
@@ -110,19 +110,19 @@ Organism* Organism::makeTickAndGetNewBorn()
 
 	// Необходимо проверить наличие пищи. Получим точку, где находимся.
 	// Итератор на вектор количеств, чтобы синхронно двигаться с вектором вида в цикле.
-	std::vector<float>::iterator itAmounts = leftReagentAmounts.begin();
+	std::vector<unsigned long long>::iterator itAmounts = leftReagentAmounts.begin();
 	bool isFull = true;
 	const demi::ChemReaction &reaction = *ourSpecies->reaction;
 	for (auto &reagent : reaction.leftReagents) {
 
 		// Текущее имеющееся значение.
-		float amount = *itAmounts;
+		unsigned long long amount = *itAmounts;
 
 		// Величина для пополнения.
-		float topIt = reagent.amount - amount;
+		unsigned long long topIt = reagent.amount - amount;
 
 		// Получаем доступное в точке количество соответствующего минерала.
-		float maxAvailable = dot.getElemAmount(reagent.elementIndex);
+		unsigned long long maxAvailable = dot.getElemAmount(reagent.elementIndex);
 
 		// Доступное количество для пополнения.
 		// Если недонабрали вещества до реакции, сбросим флаг.
@@ -142,7 +142,7 @@ Organism* Organism::makeTickAndGetNewBorn()
 
 		// Реакция прошла, выбросим в мир результаты.
 		for (auto &reagent : reaction.rightReagents) {
-			float dotAmount = dot.getElemAmount(reagent.elementIndex) + reagent.amount;
+			unsigned long long dotAmount = dot.getElemAmount(reagent.elementIndex) + reagent.amount;
 			dot.setElementAmount(reagent.elementIndex, dotAmount);
 
 			// Не забудем обновить и общее количество.
@@ -162,7 +162,7 @@ Organism* Organism::makeTickAndGetNewBorn()
 		vitality += reaction.vitalityProductivity;
 
 		// Самое время делиться, если есть такая возможность.
-		clan::Pointf freePlace;
+		clan::Point freePlace;
 		if (vitality >= fissionBarrier && findFreePlace(freePlace)) {
 			// Создаём новый экземпляр, передаём ему половину энергии, на порог деления делаем мутацию в пределах 1%.
 			vitality /= 2;
@@ -186,7 +186,7 @@ Organism* Organism::makeTickAndGetNewBorn()
 
 
 // Возвращает свободную клетку из окрестностей, если такая есть или 0, 0.
-bool Organism::findFreePlace(clan::Pointf &point)
+bool Organism::findFreePlace(clan::Point &point)
 {
 	// Пребираем все направления, если не находим, возвращаем ложь.
 	for (int i = 0; i <= 7; i++) {
@@ -199,7 +199,7 @@ bool Organism::findFreePlace(clan::Pointf &point)
 }
 
 // Возвращает точку, лежащую относительно исходной в указанном направлении с учётом собственного направления.
-void Organism::getPointAtDirection(int direction, clan::Pointf & dest)
+void Organism::getPointAtDirection(int direction, clan::Point & dest)
 {
 	// Добавим к заданному направлению собственное направление.
 	direction += angle;
@@ -236,7 +236,7 @@ void Organism::getPointAtDirection(int direction, clan::Pointf & dest)
 
 
 // Безусловное перемещение организма в другую точку.
-void Organism::moveTo(const clan::Pointf &newCenter)
+void Organism::moveTo(const clan::Point &newCenter)
 {
 	// Удалим себя с прежнего местоположения.
 	Dot &dot = center.get_dot(0, 0);

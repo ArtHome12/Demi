@@ -33,7 +33,7 @@ private:
 	std::shared_ptr<clan::LabelView> pLabelModelTime;
 
 	//  нопка-надпись левого верхнего угла координат мира.
-	clan::Pointf lastTopLeftWorld;
+	clan::Point lastTopLeftWorld;
 	std::shared_ptr<clan::ButtonView> pButtonTopLeftModelCoordinate;
 
 	//  нопка-надпись масштаба координат мира.

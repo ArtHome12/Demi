@@ -78,10 +78,10 @@ void ModelRender::render_content(clan::Canvas &canvas)
 	isFrameUpdated = false;
 
 	// Получим размеры для отображения.
-	const clan::Sizef windowSize = geometry().content_size();
+	const clan::Size windowSize(geometry().content_size());
 
 	// Для оптимизации.
-	const clan::Sizef earthSize = globalWorld.get_worldSize();
+	const clan::Size earthSize = globalWorld.get_worldSize();
 
 	// Если некуда или нечего рисовать, выходим. Что windowSize не пуст было проверено библиотекой.
 	if (earthSize.width == 0 || earthSize.height == 0)
@@ -91,7 +91,7 @@ void ModelRender::render_content(clan::Canvas &canvas)
 	CorrectScale();
 
 	// Мировые координаты левого верхнего угла окна и масштаб.
-	clan::Pointf topLeftWorld = globalWorld.getAppearanceTopLeft();
+	clan::Point topLeftWorld = globalWorld.getAppearanceTopLeft();
 	float scale = globalWorld.getAppearanceScale();
 
 	// В зависимости от масштаба, отрисовываем точки либо клетки.
@@ -105,9 +105,9 @@ void ModelRender::render_content(clan::Canvas &canvas)
 			// Если размер поменялся, пересоздадим пиксельбуфер.
 			if (oldWindowSize != windowSize) {
 				oldWindowSize = windowSize;
-				pPixelBufToDraw = std::make_shared<clan::PixelBuffer>(int(windowSize.width), int(windowSize.height), clan::tf_rgba8);
-				pPixelBufToWrite = std::make_shared<clan::PixelBuffer>(int(windowSize.width), int(windowSize.height), clan::tf_rgba8);
-				pImage = std::make_shared<clan::Image>(canvas, *pPixelBufToDraw, clan::Rectf(0, 0, windowSize));
+				pPixelBufToDraw = std::make_shared<clan::PixelBuffer>(windowSize.width, windowSize.height, clan::tf_rgba8);
+				pPixelBufToWrite = std::make_shared<clan::PixelBuffer>(windowSize.width, windowSize.height, clan::tf_rgba8);
+				pImage = std::make_shared<clan::Image>(canvas, *pPixelBufToDraw, clan::Rect(0, 0, windowSize));
 
 				// Запустим поток и дождёмся нового пиксельбуфера.
 				threadRunFlag = true;
@@ -139,11 +139,11 @@ void ModelRender::render_content(clan::Canvas &canvas)
 		// Рисуем клетками.
 
 		// Координаты отрисовываемой точки мира, от нуля с учётом сдвига в coordSystem.
-		float xDotIndex = 0;
-		float yDotIndex = 0;
+		int xDotIndex = 0;
+		int yDotIndex = 0;
 
 		// Область клетки.
-		clan::Rectf r;
+		clan::Rect r;
 
 		// Помещается ли текст, для оптимизации.
 		bool showTextInCell = scale < cCompactCellDetailLevel;
@@ -155,7 +155,7 @@ void ModelRender::render_content(clan::Canvas &canvas)
 		bool illuminated = getIlluminatedWorld();
 
 		// Цвет точки, для оптимизации объявление вынесено сюда.
-		clan::Colorf color;
+		clan::Color color;
 		Dot d;
 
 		// В цикле двигаемся, пока не выйдем за границу окна.
@@ -163,10 +163,10 @@ void ModelRender::render_content(clan::Canvas &canvas)
 		while (r.top < windowSize.height) {
 
 			r.top = r.bottom;
-			r.bottom = std::min((yDotIndex + 1) / scale, windowSize.height);
+			r.bottom = std::min(int((yDotIndex + 1) / scale + 0.5f), windowSize.height);
 
 			// Если не осталось места, прерываемся.
-			if (r.get_height() < 1.0f)
+			if (r.get_height() < 1)
 				break;
 
 			r.left = r.right = 0;
@@ -183,17 +183,17 @@ void ModelRender::render_content(clan::Canvas &canvas)
 
 				// Если включено освещение, заменим альфа-канал.
 				if (illuminated)
-					color.set_alpha(1);
+					color.set_alpha(255);
 
 				// Сразу переходим к следующей клетке, см. оператор ++!.
 				r.left = r.right;
-				r.right = std::min((xDotIndex++ + 1) / scale, windowSize.width);
+				r.right = std::min(int((xDotIndex++ + 1) / scale + 0.5f), windowSize.width);
 
-				if (r.get_width() < 1.0f)
+				if (r.get_width() < 1)
 					break;
 
 				// Отрисовываем клетку.
-				canvas.fill_rect(r, color);
+				canvas.fill_rect(r, clan::Colorf(color));
 
 				// Отрисовываем её внутренности, если помещаются.
 				if (showTextInCell)
@@ -213,7 +213,7 @@ void ModelRender::render_content(clan::Canvas &canvas)
 
 }
 
-void ModelRender::DrawGrid(clan::Canvas &canvas, const clan::Sizef &windowSize)
+void ModelRender::DrawGrid(clan::Canvas &canvas, const clan::Size &windowSize)
 {
 	// Отрисовывает сетку.
 
@@ -221,20 +221,21 @@ void ModelRender::DrawGrid(clan::Canvas &canvas, const clan::Sizef &windowSize)
 	float scale = globalWorld.getAppearanceScale();
 
 	// Расстояние между линиями это обратная к масштабу величина. Количество линий, помещающихся в окне.
-	clan::Sizef numLines(windowSize * scale);
+	const int numLinesH = int(windowSize.height * scale + 0.5f);
+	const int numLinesW = int(windowSize.width * scale + 0.5f);
 
 	// Отрисовываем горизонтальные и вертикальные линии.
-	for (float i = 1; i <= numLines.height; i++) {
+	for (int i = 1; i <= numLinesH; i++) {
 		float y = i / scale;
-		canvas.draw_line(0, y, windowSize.width, y, clan::Colorf::darkblue);
+		canvas.draw_line(0, y, float(windowSize.width), y, clan::Colorf::darkblue);
 	}
-	for (float i = 1; i <= numLines.width; i++) {
+	for (int i = 1; i <= numLinesW; i++) {
 		float x = i / scale;
-		canvas.draw_line(x, 0, x, windowSize.height, clan::Colorf::darkblue);
+		canvas.draw_line(x, 0, x, float(windowSize.height), clan::Colorf::darkblue);
 	}
 }
 
-void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan::Rectf &rect, int xLabel, int yLabel, clan::Colorf color)
+void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan::Rect &rect, int xLabel, int yLabel, const clan::Color& dotColor)
 {
 	// Отрисовывает клетку в компактном виде - с координатой и ресурсами, которые поместятся.
 
@@ -243,28 +244,28 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 		return;
 
 	// Высота, отведённая под отрисовку, за вычетом строки под координату внизу.
-	const float h = rect.bottom - cCompactCellResLineHeight;
+	const int h = rect.bottom - cCompactCellResLineHeight;
 
 	// Отступ слева для надписей.
-	const float indent = rect.left + 3;
+	const int indent = rect.left + 3;
 
 	// Количество элементов.
 	const int elemCount = globalWorld.getElemCount();
 
 	// Координата текущей строки для вывода информации.
-	float yLine = rect.top + 16;
+	int yLine = rect.top + 16;
 
 	// Цвет шрифта либо белый либо чёрный в зависимости от цвета самой клетки.
-	color = (color.get_red() + color.get_green() + color.get_blue()) * color.get_alpha() < 1.5f ? clan::Colorf::white : clan::Colorf::black;
+	clan::Colorf color((dotColor.get_red() + dotColor.get_green() + dotColor.get_blue()) * dotColor.get_alpha() < 255*1.5f ? clan::Colorf::white : clan::Colorf::black);
 
 	// Выводим солнечную энергию.
 	if (yLine < h) {
-		cellFont.draw_text(canvas, indent, yLine, solarTitle + clan::StringHelp::float_to_text(d.getSolarEnergy() * 100) + "%", color);
+		cellFont.draw_text(canvas, float(indent), float(yLine), solarTitle + clan::StringHelp::float_to_text(d.getSolarEnergy() * 100) + "%", color);
 		yLine += cCompactCellResLineHeight;
 
 		// Выводим геотермальную энергию.
 		if (yLine < h) {
-			cellFont.draw_text(canvas, indent, yLine, geothermalTitle + clan::StringHelp::float_to_text(d.getGeothermalEnergy() * 100) + "%", color);
+			cellFont.draw_text(canvas, float(indent), float(yLine), geothermalTitle + clan::StringHelp::float_to_text(d.getGeothermalEnergy() * 100) + "%", color);
 			yLine += cCompactCellResLineHeight;
 
 			// Отрисовываем строки с ресурсами, сколько поместится.
@@ -277,7 +278,7 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 					// Значение в процентах.
 					float percent = d.getElemAmountPercent(i);
 
-					cellFont.draw_text(canvas, indent, yLine, globalWorld.getResName(i) + '\t' + clan::StringHelp::float_to_text(percent) + "%", color);
+					cellFont.draw_text(canvas, float(indent), float(yLine), globalWorld.getResName(i) + '\t' + clan::StringHelp::float_to_text(percent) + "%", color);
 
 					yLine += cCompactCellResLineHeight;
 				}
@@ -287,7 +288,7 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 					break;
 			}
 
-			// Количество мёртых клеток, без организма.
+			// Количество мёртвых клеток, без организма.
 			int detrit = 0;
 
 			// Отрисовываем имеющиеся живые клетки.
@@ -302,7 +303,7 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 				if (organism != nullptr) {
 					// Проверим, включено ли отображение для данного вида.
 					if (organism->get_species()->get_visible()) {
-						cellFont.draw_text(canvas, indent, yLine, organism->get_species()->name + '\t' + clan::StringHelp::float_to_text(organism->getVitality()) + "", color);
+						cellFont.draw_text(canvas, float(indent), float(yLine), organism->get_species()->name + '\t' + clan::StringHelp::float_to_text(organism->getVitality()) + "", color);
 
 						yLine += cCompactCellResLineHeight;
 					}
@@ -314,7 +315,7 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 
 			// Отрисовываем количество мертвых клеток, если есть место.
 			if (yLine < h && detrit > 0) {
-				cellFont.draw_text(canvas, indent, yLine, "Detrit\t"  + clan::StringHelp::int_to_text(detrit) + ".", color);
+				cellFont.draw_text(canvas, float(indent), float(yLine), "Detrit\t"  + clan::StringHelp::int_to_text(detrit) + ".", color);
 
 				yLine += cCompactCellResLineHeight;
 			}
@@ -323,7 +324,7 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 
 	// Отрисовываем в нижнем левом углу координату.
 	// Наличие пространства не проверяем, так как расчитываем, что раз попали сюда, наличие было проверено.
-	cellFont.draw_text(canvas, indent, rect.bottom - 3, "X:Y " + clan::StringHelp::int_to_text(xLabel) + ":" + clan::StringHelp::int_to_text(yLabel), color);
+	cellFont.draw_text(canvas, float(indent), float(rect.bottom - 3), "X:Y " + clan::StringHelp::int_to_text(xLabel) + ":" + clan::StringHelp::int_to_text(yLabel), color);
 }
 
 
@@ -335,7 +336,7 @@ inline int max1(float a)
 void ModelRender::on_mouse_down(clan::PointerEvent &e)
 {
 	// Мировые координаты левого верхнего угла окна и масштаб.
-	clan::Pointf topLeftWorld = globalWorld.getAppearanceTopLeft();
+	clan::Point topLeftWorld = globalWorld.getAppearanceTopLeft();
 	float scale = globalWorld.getAppearanceScale();
 
 	switch (e.button())
@@ -344,7 +345,7 @@ void ModelRender::on_mouse_down(clan::PointerEvent &e)
 
 		// Включаем флаг прокрутки и запоминаем позицию
 		isScrollStart = true;
-		scrollWindow = e.pos(this);
+		scrollWindow = clan::Point(e.pos(this));
 		scrollWorld = topLeftWorld;
 		break;
 
@@ -393,10 +394,10 @@ void ModelRender::on_mouse_move(const clan::PointerEvent &e)
 	if (isScrollStart) {
 
 		// Смещение мыши относительно точки нажатия средней кнопки.
-		clan::Pointf dif = scrollWindow - e.pos(this);
+		clan::Pointf dif = scrollWindow - clan::Point(e.pos(this));
 
 		// По определённому смещению задаём новую мировую координату с учётом масштаба.
-		globalWorld.setAppearanceTopLeft(scrollWorld + dif * globalWorld.getAppearanceScale());
+		globalWorld.setAppearanceTopLeft(scrollWorld + clan::Point(dif * globalWorld.getAppearanceScale()));
 
 		// Корректируем масштаб и верхний левый угол модели во-избежание выхода за границы.
 		CorrectScale();
@@ -420,7 +421,7 @@ void ModelRender::on_mouse_dblclk(const clan::PointerEvent &e)
 			const clan::Sizef windowSize = geometry().content_size();
 
 			// Размеры мира (для удобства).
-			const clan::Sizef worldSize = globalWorld.get_worldSize();
+			const clan::Sizef worldSize(globalWorld.get_worldSize());
 
 			// Определим максимально-возможный масштаб.
 			const float maxScale = std::min<float>(worldSize.width / windowSize.width, worldSize.height / windowSize.height);
@@ -434,7 +435,7 @@ void ModelRender::on_mouse_dblclk(const clan::PointerEvent &e)
 
 		// Запускаем анимацию.
 		//
-		clan::Pointf topLeftWorld = globalWorld.getAppearanceTopLeft();
+		clan::Point topLeftWorld = globalWorld.getAppearanceTopLeft();
 		for (int i = 0; i <= 12; ++i) {
 			DoScaleStep(e.pos(this), 1/scaleStep, topLeftWorld);
 			globalWorld.setAppearanceTopLeft(topLeftWorld);
@@ -447,14 +448,14 @@ void ModelRender::on_mouse_dblclk(const clan::PointerEvent &e)
 
 		// Если это было максимальное отдаление, встанем на исходную позицию, потому что какая-то ерунда получается.
 		if (scaleStep < 1)
-			globalWorld.setAppearanceTopLeft(clan::Pointf());
+			globalWorld.setAppearanceTopLeft(clan::Point());
 
 		break;
 	}
 }
 
 
-void ModelRender::DoScaleStep(const clan::Pointf &pos, float scaleStep, clan::Pointf &newTopLeft)
+void ModelRender::DoScaleStep(const clan::Pointf &pos, float scaleStep, clan::Point &newTopLeft)
 {
 	// Изменяет масштаб на 1 шаг - отдаляет или приближает поверхность.
 
@@ -478,8 +479,8 @@ void ModelRender::DoScaleStep(const clan::Pointf &pos, float scaleStep, clan::Po
 		float wx2 = pos.x * scale;
 		float wy2 = pos.y * scale;
 		// Сохраним изменения.
-		newTopLeft.x += int(wx1 - wx2);
-		newTopLeft.y += int(wy1 - wy2);
+		newTopLeft.x += int(wx1 - wx2 + 0.5f);
+		newTopLeft.y += int(wy1 - wy2 + 0.5f);
 	}
 
 	// Сохраним изменения.
@@ -539,15 +540,15 @@ void ModelRender::workerThread()
 			const int lineSize = int(width * 4);
 
 			// Цвет точки, для оптимизации объявление вынесено сюда.
-			clan::Colorf color;
+			clan::Color color;
 
 			// Индекс текущей точки.
-			float xIndex, oldXIndex = -1, yIndex, oldYIndex = -1;
+			int xIndex, oldXIndex = -1, yIndex, oldYIndex = -1;
 
 			for (int ypos = 0; ypos < height; ++ypos)
 			{
 				// Индекс точки мира.
-				yIndex = roundf(ypos * scale);
+				yIndex = int(ypos * scale + 0.5f);
 
 				// Если индекс не поменялся, можно просто скопировать предыдущую строку, иначе вычисляем заново.
 				if (oldYIndex == yIndex) {
@@ -561,20 +562,19 @@ void ModelRender::workerThread()
 					for (int xpos = 0; xpos < width; ++xpos)
 					{
 						// Точка мира. Доступ через индекс потому, что в физической матрице точки могут быть расположены иначе, хотя это повод для оптимизации.
-						xIndex = roundf(xpos * scale);
+						xIndex = int(xpos * scale + 0.5f);
 
 						// Если одна координата не меняется, не делаем медленные вычисления.
-						// Обязательно получаем именно копию точки, а не ссылку - иначе вылетим при изменении клеток в расчётном потоке.
 						if (xIndex != oldXIndex) {
 							d = coordSystem.get_dot(xIndex, yIndex);
 							d.get_color(color);
 							oldXIndex = xIndex;
 						}
 
-						*(pixels++) = (unsigned char)(color.get_red() * 255);
-						*(pixels++) = (unsigned char)(color.get_green() * 255);
-						*(pixels++) = (unsigned char)(color.get_blue() * 255);
-						*(pixels++) = illuminated ? 255 : (unsigned char)(color.get_alpha() * 255);
+						*(pixels++) = color.get_red();
+						*(pixels++) = color.get_green();
+						*(pixels++) = color.get_blue();
+						*(pixels++) = illuminated ? 255 : color.get_alpha();
 					}
 				}
 			}
@@ -603,7 +603,7 @@ void ModelRender::CorrectScale()
 	const clan::Sizef windowSize = geometry().content_size();
 
 	// Размер мира.
-	const clan::Sizef earthSize = globalWorld.get_worldSize();
+	const clan::Size earthSize = globalWorld.get_worldSize();
 
 	// Если некуда или нечего рисовать, выходим.
 	if (windowSize.width == 0 || windowSize.height == 0 || earthSize.width == 0 || earthSize.height == 0)
@@ -620,19 +620,19 @@ void ModelRender::CorrectScale()
 	}
 	else {
 		// Мировые координаты левого верхнего угла окна.
-		clan::Pointf topLeftWorld = globalWorld.getAppearanceTopLeft();
+		clan::Point topLeftWorld = globalWorld.getAppearanceTopLeft();
 
 		// Если в результате увеличения размера окно выезжает за границу мира, надо откорректировать мировые координаты.
 		// По вертикали ограничиваем, по горизонтали - циклическая прокрутка.
-		if (topLeftWorld.x < 0.0f)
+		if (topLeftWorld.x < 0)
 			topLeftWorld.x += earthSize.width;
 		else if (topLeftWorld.x >= earthSize.width)
 			topLeftWorld.x -= earthSize.width;
 
-		if (topLeftWorld.y < 0.0f)
-			topLeftWorld.y = 0.0f;
+		if (topLeftWorld.y < 0)
+			topLeftWorld.y = 0;
 		else if (topLeftWorld.y + scaledSize.height > earthSize.height)
-			topLeftWorld.y = earthSize.height - scaledSize.height;
+			topLeftWorld.y = int(earthSize.height - scaledSize.height);
 		
 		// Сохраняем результат.
 		globalWorld.setAppearanceTopLeft(topLeftWorld);

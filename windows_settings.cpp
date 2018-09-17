@@ -376,10 +376,9 @@ void WindowsSettings::modelRenderNotify(float secondsElapsed)
 			std::shared_ptr<clan::LabelView> label = std::dynamic_pointer_cast<clan::LabelView>(*child++);
 
 			// Впишем количество, округлив до целого.
-			unsigned long long amount = (unsigned long long)round(globalWorld.amounts.getResAmounts(i));
+			std::string str = std::to_string(globalWorld.amounts.getResAmounts(i));
 
 			// Добавим пробелы для разеделения разрядов.
-			std::string str = std::to_string(amount);
 			for (int i = str.length(); i > 0; i -= 3)
 				str.insert(i, " ");
 
