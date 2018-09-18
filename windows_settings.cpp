@@ -375,12 +375,8 @@ void WindowsSettings::modelRenderNotify(float secondsElapsed)
 			// Преобразуем указатель на базовый тип View на дочерний LabelView.
 			std::shared_ptr<clan::LabelView> label = std::dynamic_pointer_cast<clan::LabelView>(*child++);
 
-			// Впишем количество, округлив до целого.
-			std::string str = std::to_string(globalWorld.amounts.getResAmounts(i));
-
-			// Добавим пробелы для разеделения разрядов.
-			for (int i = str.length(); i > 0; i -= 3)
-				str.insert(i, " ");
+			// Впишем количество с делением по разрядам.
+			std::string str = IntToStrWithDigitPlaces(globalWorld.amounts.getResAmounts(i));
 
 			label->set_text(str, true);
 		}

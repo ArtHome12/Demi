@@ -25,7 +25,7 @@ const float cCompactCellDetailLevel = 0.01f;
 const float cAmountDetailLevel = 0.008f;
 
 // Высота одной строки для отображения ресурсов в клетке в компактной форме.
-const int cCompactCellResLineHeight = 30;
+const int cCompactCellResLineHeight = 21;
 
 // Минимальная ширина клетки в компактной форме, при которой выводим текст.
 const int cCompactCellMinWidth = 30;
@@ -45,7 +45,7 @@ const std::string cEnergyTitle = "ModelRenderGeothermal";		// Подпись для геотер
 ModelRender::ModelRender(std::shared_ptr<SettingsStorage> &pSettingsStorage) : pSettings(pSettingsStorage),
 	soundIlluminateOn("IlluminateOn.wav", false, pSettingsStorage->fileResDoc.get_file_system()),
 	soundIlluminateOff("IlluminateOff.wav", false, pSettingsStorage->fileResDoc.get_file_system()),
-	cellFont("Tahoma", 12)
+	cellFont("Lucida Console", 12)
 {
 	slots.connect(sig_pointer_press(), this, &ModelRender::on_mouse_down);
 	slots.connect(sig_pointer_release(), this, &ModelRender::on_mouse_up);
@@ -275,11 +275,34 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 				// Если ресурс не включен для отображения, пропускаем его.
 				if (globalWorld.getResVisibility(i)) {
 
-					// Значение в процентах.
-					float percent = d.getElemAmountPercent(i);
+					// Название задаём с минимальной шириной для наглядности форматирования, так как табуляция через \t не работает.
+					//
+					std::string str = globalWorld.getResName(i);
+					size_t len = str.length();
+					size_t tabbed = std::max<size_t>(20, (size_t(0.1f * len) + 1) * 10);
+					if (len < tabbed)
+						str += std::string(tabbed - len, ' ');
+					//str +=  + "%\t" + ;
 
-					cellFont.draw_text(canvas, float(indent), float(yLine), globalWorld.getResName(i) + '\t' + clan::StringHelp::float_to_text(percent) + "%", color);
+					// Если вещества нет, ставим прочерк и всё.
+					const unsigned long long amnt = d.getElemAmount(i);
+					if (amnt) {
+						
+						// Значение в процентах.
+						std::string strPers = clan::StringHelp::float_to_text(d.getElemAmountPercent(i), 2) + "% ";
+						len = strPers.length();
+						if (len < 8)
+							strPers += std::string(8 - len, ' ');
 
+						// Добавляем строку с процентами и абсолютное количество.
+						str += ": " + strPers + IntToStrWithDigitPlaces(amnt);
+
+					} else
+						str += ": ---";
+
+
+					// Выводим строку.
+					cellFont.draw_text(canvas, float(indent), float(yLine), str, color);
 					yLine += cCompactCellResLineHeight;
 				}
 
