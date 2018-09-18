@@ -91,9 +91,6 @@ Organism::~Organism()
 		unsigned long long amountInDot = dot.getElemAmount(reagent.elementIndex);
 
 		dot.setElementAmount(reagent.elementIndex, amountInDot + amount);
-
-		// Откорректируем сумму в общем количестве.
-		globalWorld.amounts.incAmount(reagent.elementIndex, amount);
 	}
 
 	// Пока у нас в каждой точке только одна клетка, а надо удалять адресно.

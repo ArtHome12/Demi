@@ -239,9 +239,9 @@ void World::makeTick()
 	}
 
 	// —оздаЄм экземпл€р протоорганизма, если есть место.
-	//Dot& protoDot = LocalCoord(LUCAPos).get_dot(0, 0);
-	//if (protoDot.organism == nullptr)
-	//	animals.push_back(new demi::Organism(species, LUCAPos, 0, species->fissionBarrier, species->fissionBarrier));
+	Dot& protoDot = LocalCoord(LUCAPos).get_dot(0, 0);
+	if (protoDot.organism == nullptr)
+		animals.push_back(new demi::Organism(species, LUCAPos, 0, species->fissionBarrier, species->fissionBarrier));
 }
 
 
@@ -442,8 +442,8 @@ void World::loadModel(const std::string &filename)
 	species->visible = prop.get_attribute_bool(cResGlobalsLUCAVisibility);
 	species->cells.push_back(std::make_shared<demi::CellAbdomen>());
 	species->fissionBarrier = prop.get_attribute_float(cResGlobalsLUCAFissionBarier);
-	species->aliveColor = clan::Color(prop.get_attribute(cResGlobalsLUCAAliveColor));
-	species->deadColor = clan::Color(prop.get_attribute(cResGlobalsLUCADeadColor));
+	species->aliveColor = clan::Color(clan::Colorf(prop.get_attribute(cResGlobalsLUCAAliveColor)));
+	species->deadColor = clan::Color(clan::Colorf(prop.get_attribute(cResGlobalsLUCADeadColor)));
 
 	LUCAPos = clan::Point(prop.get_attribute_int("x"), prop.get_attribute_int("y"));
 	const std::string LUCAReactionName = prop.get_attribute("reaction");
@@ -1024,7 +1024,7 @@ demi::Organism* World::doReadOrganism(clan::File &binFile, std::set<std::string>
 
 	// —одержимое €чеек реакции.
 	int cnt = retVal->leftReagentAmounts.size();
-	binFile.read(retVal->leftReagentAmounts.data(), sizeof(float) * cnt);
+	binFile.read(retVal->leftReagentAmounts.data(), sizeof(unsigned long long) * cnt);
 
 	// ≈сли жизненна€ энерги€ положительна, поместим организм в список живых.
 	if (retVal->isAlive())

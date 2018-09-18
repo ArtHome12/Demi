@@ -40,10 +40,10 @@ void Amounts::Init()
 
 			std::vector<unsigned long long>::iterator itAmounts = organism->leftReagentAmounts.begin();
 			const demi::ChemReaction &reaction = *organism->get_species()->reaction;
-			for (auto &reagent : reaction.leftReagents) 
+			for (auto &reagent : reaction.leftReagents) {
 				// Текущее имеющееся значение во "рту" организма.
 				arResAmounts[reagent.elementIndex] += *itAmounts++;
-
+			}
 		}
 
 		++cur;

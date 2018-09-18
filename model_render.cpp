@@ -240,7 +240,8 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 	// Отрисовывает клетку в компактном виде - с координатой и ресурсами, которые поместятся.
 
 	// Проверка на минимальный размер.
-	if ((rect.get_width() < cCompactCellMinWidth) || (rect.get_height() < cCompactCellResLineHeight))
+	const int rectWidth = rect.get_width();
+	if ((rectWidth < cCompactCellMinWidth) || (rect.get_height() < cCompactCellResLineHeight))
 		return;
 
 	// Высота, отведённая под отрисовку, за вычетом строки под координату внизу.
@@ -256,7 +257,11 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 	int yLine = rect.top + 16;
 
 	// Цвет шрифта либо белый либо чёрный в зависимости от цвета самой клетки.
-	clan::Colorf color((dotColor.get_red() + dotColor.get_green() + dotColor.get_blue()) * dotColor.get_alpha() < 255*1.5f ? clan::Colorf::white : clan::Colorf::black);
+	clan::Colorf color((dotColor.get_red() + dotColor.get_green() + dotColor.get_blue()) * dotColor.get_alpha() < 255*3*255/2.0f ? clan::Colorf::white : clan::Colorf::black);
+
+	// Ширина 1 символа текстом клетки, если не была определена ранее.
+	if (!cellFontSymbolWidth)
+		cellFontSymbolWidth = int(cellFont.measure_text(canvas, " ").advance.width);
 
 	// Выводим солнечную энергию.
 	if (yLine < h) {
@@ -300,6 +305,11 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 					} else
 						str += ": ---";
 
+					// Проверим ограничение на максимальную длину строки.
+					len = str.length();
+					const size_t maxLen = int(rectWidth / cellFontSymbolWidth);
+					if (len > maxLen)
+						str.resize(maxLen);
 
 					// Выводим строку.
 					cellFont.draw_text(canvas, float(indent), float(yLine), str, color);
