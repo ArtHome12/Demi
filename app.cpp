@@ -81,15 +81,12 @@ App::App()
 
 	// Панель меню и информации в вехней части окна
 	auto pTopPanel = std::make_shared<clan::View>();
-	pTopPanel->style()->set("background-color: darkgray");
-	pTopPanel->style()->set("flex-direction: row");
-	pTopPanel->style()->set("height: 30px");
+	pTopPanel->style()->set("background-color: darkgray; flex-direction: row; height: 30px");
 	pRootView->add_child(pTopPanel);
 
 	// Кнопка в панели меню
 	pMenuButton = Theme::create_button();
-	pMenuButton->style()->set("margin: 3px");
-	pMenuButton->style()->set("width: 23px");
+	pMenuButton->style()->set("margin: 3px; width: 23px");
 	pMenuButton->set_sticky(true);
 	pMenuButton->image_view()->set_image(clan::Image(canvas, "Options.png", pSettings->fileResDoc.get_file_system()));
 	pMenuButton->image_view()->style()->set("padding: 0 3px");
@@ -98,48 +95,33 @@ App::App()
 
 	// Надпись для отображения FPS
 	pLabelFPS = std::make_shared<clan::LabelView>();
-	pLabelFPS->style()->set("color: white");
-	pLabelFPS->style()->set("flex: none");
-	pLabelFPS->style()->set("margin: 8px");
-	pLabelFPS->style()->set("width: 60px");
-	pLabelFPS->style()->set("font: 12px 'tahoma'");
+	pLabelFPS->style()->set("color: white; flex: none; margin: 8px; width: 60px; font: 12px 'tahoma'");
 	//pLabelFPS->style()->set("border: 1px solid #DD3B2A");
 	pTopPanel->add_child(pLabelFPS);
 
 	// Подпись для отображения времени модели
 	auto pLabelModelTimeTitle = std::make_shared<clan::LabelView>();
-	pLabelModelTimeTitle->style()->set("color: white");
-	pLabelModelTimeTitle->style()->set("flex: none");
-	pLabelModelTimeTitle->style()->set("margin: 8px");
-	pLabelModelTimeTitle->style()->set("font: 12px 'tahoma'");
+	pLabelModelTimeTitle->style()->set("color: white; flex: none; margin: 8px; font: 12px 'tahoma'");
 	//pLabelModelTimeTitle->style()->set("border: 1px solid #003B2A");
 	pLabelModelTimeTitle->set_text(pSettings->LocaleStr(cModelTimeLabel));
 	pTopPanel->add_child(pLabelModelTimeTitle);
 
 	// Надпись для отображения времени модели
 	pLabelModelTime = std::make_shared<clan::LabelView>();
-	pLabelModelTime->style()->set("color: white");
-	pLabelModelTime->style()->set("flex: none");
-	pLabelModelTime->style()->set("margin: 8px");
-	pLabelModelTime->style()->set("width: 60px");
-	pLabelModelTime->style()->set("font: 12px 'tahoma'");
+	pLabelModelTime->style()->set("color: white; flex: none; margin: 8px; width: 120px; font: 12px 'tahoma'");
 	pTopPanel->add_child(pLabelModelTime);
 
 	// Кнопка-надпись левого верхнего угла координат мира.
 	pButtonTopLeftModelCoordinate = Theme::create_button();
-	pButtonTopLeftModelCoordinate->style()->set("flex: none");
-	pButtonTopLeftModelCoordinate->style()->set("margin: 3px");
-	pButtonTopLeftModelCoordinate->style()->set("width: 120px");
-	pButtonTopLeftModelCoordinate->label()->style()->set("font: 12px 'tahoma';");
+	pButtonTopLeftModelCoordinate->style()->set("flex: none; margin: 3px; width: 120px");
+	pButtonTopLeftModelCoordinate->label()->style()->set("font: 12px 'tahoma'");
 	pButtonTopLeftModelCoordinate->label()->set_text("X:Y 0:0");
 	pButtonTopLeftModelCoordinate->func_clicked() = clan::bind_member(this, &App::on_menuTopLeftModelButton_down);
 	pTopPanel->add_child(pButtonTopLeftModelCoordinate);
 
 	// Кнопка-надпись масштаба координат мира.
 	pButtonScaleModel = Theme::create_button();
-	pButtonScaleModel->style()->set("flex: none");
-	pButtonScaleModel->style()->set("margin: 3px");
-	pButtonScaleModel->style()->set("width: 120px");
+	pButtonScaleModel->style()->set("flex: none; margin: 3px; width: 120px");
 	pButtonScaleModel->label()->style()->set("font: 12px 'tahoma';");
 	pButtonScaleModel->label()->set_text("Scale 1.0");
 	pButtonScaleModel->func_clicked() = clan::bind_member(this, &App::on_menuScaleModelButton_down);
@@ -147,8 +129,7 @@ App::App()
 
 	// Кнопка постоянного освещения мира.
 	pButtonIlluminatedModel = Theme::create_button();
-	pButtonIlluminatedModel->style()->set("margin: 3px");
-	pButtonIlluminatedModel->style()->set("width: 23px");
+	pButtonIlluminatedModel->style()->set("margin: 3px; width: 23px");
 	pButtonIlluminatedModel->set_sticky(true);
 	pButtonIlluminatedModel->image_view()->set_image(clan::Image(canvas, "IlluminateOn.png", pSettings->fileResDoc.get_file_system()));
 	pButtonIlluminatedModel->image_view()->style()->set("padding: 0 3px");
