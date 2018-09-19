@@ -48,11 +48,11 @@ std::shared_ptr<Species> Species::getSpeciesByFullName(std::string fullName)
 //
 // Организм.
 //
-float Organism::minActiveMetabolicRate = 0;
-float Organism::minInactiveMetabolicRate = 0;
-float Organism::desintegrationVitalityBarrier = 0;
+int Organism::minActiveMetabolicRate = 0;
+int Organism::minInactiveMetabolicRate = 0;
+int Organism::desintegrationVitalityBarrier = 0;
 
-Organism::Organism(std::shared_ptr<Species> species, const clan::Point &Acenter, int Aangle, float Avitality, float AfissionBarrier) : ourSpecies(species),
+Organism::Organism(std::shared_ptr<Species> species, const clan::Point &Acenter, int Aangle, int Avitality, int AfissionBarrier) : ourSpecies(species),
 	cells(), 
 	leftReagentAmounts(ourSpecies->reaction->leftReagents.size()),
 	center(Acenter),
@@ -163,10 +163,10 @@ Organism* Organism::makeTickAndGetNewBorn()
 		if (vitality >= fissionBarrier && findFreePlace(freePlace)) {
 			// Создаём новый экземпляр, передаём ему половину энергии, на порог деления делаем мутацию в пределах 1%.
 			vitality /= 2;
-			std::uniform_int_distribution<> rndAngle(0, 7);
+			std::uniform_int_distribution<> rndAngle(0, 7); 
 			int childAngle = rndAngle(globalWorld.getRandomGenerator());
-			std::uniform_real_distribution<float> rndFission(0.99f, 1.01f);
-			float childFissionBarrier = fissionBarrier * rndFission(globalWorld.getRandomGenerator());
+			std::uniform_int_distribution<> rndFission(-1, 1);
+			int childFissionBarrier = std::max<int>(1, fissionBarrier + rndFission(globalWorld.getRandomGenerator()));
 			return new Organism(get_species(), center.getGlobalPoint(freePlace), childAngle, vitality, childFissionBarrier);
 		}
 	}

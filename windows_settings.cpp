@@ -376,7 +376,7 @@ void WindowsSettings::modelRenderNotify(float secondsElapsed)
 			std::shared_ptr<clan::LabelView> label = std::dynamic_pointer_cast<clan::LabelView>(*child++);
 
 			// Впишем количество с делением по разрядам.
-			std::string str = IntToStrWithDigitPlaces(globalWorld.amounts.getResAmounts(i));
+			std::string str = IntToStrWithDigitPlaces<unsigned long long>(globalWorld.amounts.getResAmounts(i));
 
 			label->set_text(str, true);
 		}

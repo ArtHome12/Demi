@@ -39,7 +39,9 @@ const float yWorldInc = xWorldInc;
 
 // Строковые ресурсы
 const std::string cSolarTitle = "ModelRenderSolar";			// Подпись для солнечной энергии.
-const std::string cEnergyTitle = "ModelRenderGeothermal";		// Подпись для геотермальной энергии.
+const std::string cEnergyTitle = "ModelRenderGeothermal";	// Подпись для геотермальной энергии.
+const std::string cOrganismTitle = "ModelRenderOrganism";		// Подпись для организма.
+
 
 
 ModelRender::ModelRender(std::shared_ptr<SettingsStorage> &pSettingsStorage) : pSettings(pSettingsStorage),
@@ -263,14 +265,18 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 	if (!cellFontSymbolWidth)
 		cellFontSymbolWidth = int(cellFont.measure_text(canvas, " ").advance.width);
 
+	// Максимальная ширина строки.
+	const size_t maxStrLen = int(rectWidth / cellFontSymbolWidth);
+
 	// Выводим солнечную энергию.
 	if (yLine < h) {
-		cellFont.draw_text(canvas, float(indent), float(yLine), solarTitle + clan::StringHelp::float_to_text(d.getSolarEnergy() * 100) + "%", color);
+
+		cellFont.draw_text(canvas, float(indent), float(yLine), solarTitle + clan::StringHelp::float_to_text(d.getSolarEnergy() * 100.0f, 2) + "%", color);
 		yLine += cCompactCellResLineHeight;
 
 		// Выводим геотермальную энергию.
 		if (yLine < h) {
-			cellFont.draw_text(canvas, float(indent), float(yLine), geothermalTitle + clan::StringHelp::float_to_text(d.getGeothermalEnergy() * 100) + "%", color);
+			cellFont.draw_text(canvas, float(indent), float(yLine), geothermalTitle + clan::StringHelp::float_to_text(d.getGeothermalEnergy() * 100.0f, 2) + "%", color);
 			yLine += cCompactCellResLineHeight;
 
 			// Отрисовываем строки с ресурсами, сколько поместится.
@@ -287,7 +293,6 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 					size_t tabbed = std::max<size_t>(20, (size_t(0.1f * len) + 1) * 10);
 					if (len < tabbed)
 						str += std::string(tabbed - len, ' ');
-					//str +=  + "%\t" + ;
 
 					// Если вещества нет, ставим прочерк и всё.
 					const unsigned long long amnt = d.getElemAmount(i);
@@ -300,16 +305,16 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 							strPers += std::string(8 - len, ' ');
 
 						// Добавляем строку с процентами и абсолютное количество.
-						str += ": " + strPers + IntToStrWithDigitPlaces(amnt);
+						str += ": " + strPers + IntToStrWithDigitPlaces<unsigned long long>(amnt);
 
-					} else
+					}
+					else {
 						str += ": ---";
+					}
 
 					// Проверим ограничение на максимальную длину строки.
-					len = str.length();
-					const size_t maxLen = int(rectWidth / cellFontSymbolWidth);
-					if (len > maxLen)
-						str.resize(maxLen);
+					if (str.length() > maxStrLen)
+						str.resize(maxStrLen);
 
 					// Выводим строку.
 					cellFont.draw_text(canvas, float(indent), float(yLine), str, color);
@@ -321,37 +326,63 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 					break;
 			}
 
-			// Количество мёртвых клеток, без организма.
-			int detrit = 0;
+			// Продолжаем только если осталось место.
+			if (yLine < h) {
 
-			// Отрисовываем имеющиеся живые клетки.
-			for (auto &cell : d.cells) {
+				// Выводим информацию об организме либо прочерк если такого нет.
+				//
+				std::string str = pSettings->LocaleStr(cOrganismTitle);
+				if (d.organism) {
 
-				// Если кончилось место, прерываемся.
-				if (yLine > h)
-					break;
+					// Название вида.
+					str += d.organism->get_species()->getAuthorAndNamePair() + ", ";
 
-				// Организм, которому принадлежит клетка.
-				demi::Organism *organism = cell->organism;
-				if (organism != nullptr) {
-					// Проверим, включено ли отображение для данного вида.
-					if (organism->get_species()->get_visible()) {
-						cellFont.draw_text(canvas, float(indent), float(yLine), organism->get_species()->name + '\t' + clan::StringHelp::float_to_text(organism->getVitality()) + "", color);
+					// Жизненная сила и порог размножения.
+					str += IntToStrWithDigitPlaces<int>(d.organism->getVitality()) + " / " + IntToStrWithDigitPlaces<int>(d.organism->getFissionBarrier());
 
-						yLine += cCompactCellResLineHeight;
-					}
+					// Проверим ограничение на максимальную длину строки.
+					if (str.length() > maxStrLen)
+						str.resize(maxStrLen);
 				}
-				else
-					detrit++;
+				else {
+					str += ": ---";
+				}
 
-			}
-
-			// Отрисовываем количество мертвых клеток, если есть место.
-			if (yLine < h && detrit > 0) {
-				cellFont.draw_text(canvas, float(indent), float(yLine), "Detrit\t"  + clan::StringHelp::int_to_text(detrit) + ".", color);
-
+				// Выводим строку.
+				cellFont.draw_text(canvas, float(indent), float(yLine), str, color);
 				yLine += cCompactCellResLineHeight;
 			}
+
+			// Отрисовку клеток других организмов в точке оставим на будущее.
+			// Количество мёртвых клеток, без организма.
+			//int detrit = 0;
+
+			//// Отрисовываем имеющиеся живые клетки.
+			//for (auto &cell : d.cells) {
+
+			//if (yLine > h)
+			//	break;
+			//	// Организм, которому принадлежит клетка.
+			//	demi::Organism *organism = cell->organism;
+			//	if (organism != nullptr) {
+			//		// Проверим, включено ли отображение для данного вида.
+			//		if (organism->get_species()->get_visible()) {
+			//			cellFont.draw_text(canvas, float(indent), float(yLine), organism->get_species()->name + '\t' + clan::StringHelp::float_to_text(organism->getVitality()) + "", color);
+
+			//			yLine += cCompactCellResLineHeight;
+			//		}
+			//	}
+			//	else
+			//		detrit++;
+
+			//}
+
+			//// Отрисовываем количество мертвых клеток, если есть место.
+			//if (yLine < h && detrit > 0) {
+			//	cellFont.draw_text(canvas, float(indent), float(yLine), "Detrit\t"  + clan::StringHelp::int_to_text(detrit) + ".", color);
+
+			//	yLine += cCompactCellResLineHeight;
+			//}
 		}
 	}
 

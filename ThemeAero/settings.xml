@@ -30,8 +30,9 @@
 		<lang name="WorldWrongBinaryFileResmaxMarker" eng="Error reading binary file: need ResMax:, read %1" rus="Ошибка чтения двоичного файла: ожидается маркер ResMax:, прочитано %1"/>
 		<lang name="WorldWrongBinaryFileCannotReadResmax" eng="Error reading binary file: cannot read ResMax" rus="Ошибка чтения двоичного файла: не удалось прочитать ResMax"/>
 		<!--User message in module: model_render-->
-		<lang name="ModelRenderSolar" eng="Solar " rus="Солнце "/>
-		<lang name="ModelRenderGeothermal" eng="Geothermal " rus="Геотерм "/>
+		<lang name="ModelRenderSolar" eng="Solar      : " rus="Солнце  : "/>
+		<lang name="ModelRenderGeothermal" eng="Geothermal : " rus="Геотерм : "/>
+		<lang name="ModelRenderOrganism" eng="Organism   : " rus="Организм: "/>
 		<!--User message in module: windows_settings-->
 		<lang name="WindowsSettingsFileExistDlg" eng="File %1 exists. Rewrite it?" rus="Файл %1 существует. Перезаписать его?"/>
 		<lang name="WindowsSettingsRestartModel" eng="Start simulation of the world anew? Attention - file .demib if exists, will be deleted." rus="Начать расчёт модели заново? Внимание - файл .demib будет удалён, если он существует."/>

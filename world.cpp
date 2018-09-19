@@ -441,15 +441,15 @@ void World::loadModel(const std::string &filename)
 	species->author = "Demi";
 	species->visible = prop.get_attribute_bool(cResGlobalsLUCAVisibility);
 	species->cells.push_back(std::make_shared<demi::CellAbdomen>());
-	species->fissionBarrier = prop.get_attribute_float(cResGlobalsLUCAFissionBarier);
+	species->fissionBarrier = prop.get_attribute_int(cResGlobalsLUCAFissionBarier);
 	species->aliveColor = clan::Color(clan::Colorf(prop.get_attribute(cResGlobalsLUCAAliveColor)));
 	species->deadColor = clan::Color(clan::Colorf(prop.get_attribute(cResGlobalsLUCADeadColor)));
 
 	LUCAPos = clan::Point(prop.get_attribute_int("x"), prop.get_attribute_int("y"));
 	const std::string LUCAReactionName = prop.get_attribute("reaction");
-	demi::Organism::minActiveMetabolicRate = prop.get_attribute_float(cResGlobalsLUCAminActiveMetabolicRate);
-	demi::Organism::minInactiveMetabolicRate = prop.get_attribute_float(cResGlobalsLUCAminInactiveMetabolicRate);
-	demi::Organism::desintegrationVitalityBarrier = prop.get_attribute_float(cResGlobalsLUCADesintegrationVitalityBarrier);
+	demi::Organism::minActiveMetabolicRate = prop.get_attribute_int(cResGlobalsLUCAminActiveMetabolicRate);
+	demi::Organism::minInactiveMetabolicRate = prop.get_attribute_int(cResGlobalsLUCAminInactiveMetabolicRate);
+	demi::Organism::desintegrationVitalityBarrier = prop.get_attribute_int(cResGlobalsLUCADesintegrationVitalityBarrier);
 
 	// Инициализируем внешний вид проекта.
 	prop = resDoc->get_resource(cResGlobalsAppearance).get_element();
@@ -563,7 +563,7 @@ void World::loadModel(const std::string &filename)
 		curReaction->name = res.get_name();
 		curReaction->geoEnergy = prop.get_attribute_float(cResReactionsGeoEnergy);
 		curReaction->solarEnergy = prop.get_attribute_float(cResReactionsSolarEnergy);
-		curReaction->vitalityProductivity = prop.get_attribute_float(cResReactionsVitalityProductivity);
+		curReaction->vitalityProductivity = prop.get_attribute_int(cResReactionsVitalityProductivity);
 
 		// Реагенты слева.
 		clan::DomNodeList nodes = prop.get_elements_by_tag_name(cResReactionsLeftReagent);
@@ -989,8 +989,8 @@ void World::doWriteOrganism(clan::File &binFile, std::set<std::string> &dict, de
 
 	// Угол, жизненная энергия, порог деления.
 	binFile.write_uint8(uint8_t(organism->angle));
-	binFile.write_float(organism->getVitality());
-	binFile.write_float(organism->getFissionBarrier());
+	binFile.write_int32(organism->getVitality());
+	binFile.write_int32(organism->getFissionBarrier());
 
 	// Содержимое ячеек реакции.
 	int cnt = organism->leftReagentAmounts.size();
@@ -1007,8 +1007,8 @@ demi::Organism* World::doReadOrganism(clan::File &binFile, std::set<std::string>
 
 	// Прочитаем оставшиеся поля.
 	int angle = binFile.read_uint8();
-	float vitality = binFile.read_float();
-	float fissionBarrier = binFile.read_float();
+	int vitality = binFile.read_int32();
+	int fissionBarrier = binFile.read_int32();
 
 	// Название вида в полной форме вытащим по индексу из словаря.
 	auto it = dict.begin();

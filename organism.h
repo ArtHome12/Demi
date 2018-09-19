@@ -94,7 +94,7 @@ public:
 	std::shared_ptr<ChemReaction> reaction;
 
 	// Ќачальный порог размножени€ (будет мен€тьс€ из-за изменчивости).
-	float fissionBarrier;
+	int fissionBarrier;
 
 	void set_visible(bool AVisible) { visible = AVisible; };
 	bool get_visible() { return visible; }
@@ -114,7 +114,7 @@ public:
 class Organism
 {
 public:
-	Organism(std::shared_ptr<Species> species, const clan::Point &Acenter, int Aangle, float Avitality, float AfissionBarrier);
+	Organism(std::shared_ptr<Species> species, const clan::Point &Acenter, int Aangle, int Avitality, int AfissionBarrier);
 	~Organism();
 
 	// ћестоположение организма в мире (первой клетки живота) и ориентаци€ (0 - север, 1 - северо-восток, 2 - восток и т.д. до 7 - северо-запад).
@@ -128,10 +128,10 @@ public:
 	std::shared_ptr<Species> get_species() { return ourSpecies; }
 
 	// ћинимальна€ энерги€ метаболизма дл€ активной клетки и дл€ пассивной.
-	static float minActiveMetabolicRate, minInactiveMetabolicRate;
+	static int minActiveMetabolicRate, minInactiveMetabolicRate;
 
 	// ∆изненна€ энерги€, ниже которой организм разрушаетс€.
-	static float desintegrationVitalityBarrier;
+	static int desintegrationVitalityBarrier;
 
 	// ѕроцессорное врем€ организма дл€ формировани€ поведени€ - поедани€ пищи, атаки, разворота, перемещени€, размножени€.
 	// ћожет вернуть указатель на новый родившийс€ организм.
@@ -151,8 +151,8 @@ public:
 	// »стина, если организм уже разложилс€ и его надо уничтожить.
 	bool needDesintegration() { return vitality < desintegrationVitalityBarrier; }
 
-	float getVitality() { return vitality; }
-	float getFissionBarrier() { return fissionBarrier; }
+	int getVitality() { return vitality; }
+	int getFissionBarrier() { return fissionBarrier; }
 
 	// ¬ычитает жизненную энергию на неактивное состо€ние.
 	void processInactiveVitality() { vitality -= minActiveMetabolicRate; }
@@ -167,10 +167,10 @@ public:
 
 private:
 	// “екуща€ накопленна€ энерги€.
-	float vitality;
+	int vitality;
 
 	// ѕорог размножени€ дл€ организма (изначально совпадает со значением дл€ вида, потом мен€етс€ из-за изменчивости).
-	float fissionBarrier;
+	int fissionBarrier;
 
 	// ¬озвращает свободную клетку из окрестностей, если така€ есть и истину, иначе ложь.
 	bool findFreePlace(clan::Point &point);

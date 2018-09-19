@@ -10,14 +10,3 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 
 #include "precomp.h"
 
-// ѕреобразует целое число в строку с делением по разр€дам.
-std::string IntToStrWithDigitPlaces(unsigned long long num)
-{
-	std::string retVal = std::to_string(num);
-
-	// ƒобавим пробелы дл€ разделени€ разр€дов.
-	for (int i = retVal.length()-3; i > 0; i -= 3)
-		retVal.insert(i, " ");
-
-	return retVal;
-}
