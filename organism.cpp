@@ -75,8 +75,13 @@ Organism::Organism(std::shared_ptr<Species> species, const clan::Point &Acenter,
 
 Organism::~Organism()
 {
-	// ”дал€ем собственные клетки из точек.
 	Dot &dot = center.get_dot(0, 0);
+
+	// ƒл€ минимизации ошибки в потоке дл€ отображени€ сначала удалим ссылку на себ€ из точки.
+	dot.organism = nullptr;
+
+	// ѕока у нас в каждой точке только одна клетка, а надо удал€ть адресно.
+	dot.cells.pop_back();
 
 	// ¬озвращаем накопленные минеральные вещества в мир.
 	//
@@ -92,10 +97,6 @@ Organism::~Organism()
 
 		dot.setElementAmount(reagent.elementIndex, amountInDot + amount);
 	}
-
-	// ѕока у нас в каждой точке только одна клетка, а надо удал€ть адресно.
-	dot.cells.pop_back();
-	dot.organism = nullptr;
 }
 
 

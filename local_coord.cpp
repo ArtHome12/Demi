@@ -52,7 +52,7 @@ Dot& Dot::operator=(const Dot &obj)
 Dot::~Dot()
 {
 	if (!isCopy)
-		delete res;
+		delete[] res;
 }
 
 int Dot::getSizeInMemory()

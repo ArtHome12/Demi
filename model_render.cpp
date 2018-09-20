@@ -331,26 +331,29 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 
 				// Выводим информацию об организме либо прочерк если такого нет.
 				//
-				std::string str = pSettings->LocaleStr(cOrganismTitle);
-				if (d.organism) {
+				try {
+					std::string str = pSettings->LocaleStr(cOrganismTitle);
+					if (d.organism) {
 
-					// Название вида.
-					str += d.organism->get_species()->getAuthorAndNamePair() + ", ";
+						// Название вида.
+						str += d.organism->get_species()->getAuthorAndNamePair() + ", ";
 
-					// Жизненная сила и порог размножения.
-					str += IntToStrWithDigitPlaces<int>(d.organism->getVitality()) + " / " + IntToStrWithDigitPlaces<int>(d.organism->getFissionBarrier());
+						// Жизненная сила и порог размножения.
+						str += IntToStrWithDigitPlaces<int>(d.organism->getVitality()) + " / " + IntToStrWithDigitPlaces<int>(d.organism->getFissionBarrier());
 
-					// Проверим ограничение на максимальную длину строки.
-					if (str.length() > maxStrLen)
-						str.resize(maxStrLen);
+						// Проверим ограничение на максимальную длину строки.
+						if (str.length() > maxStrLen)
+							str.resize(maxStrLen);
+					}
+					else {
+						str += ": ---";
+					}
+
+					// Выводим строку.
+					cellFont.draw_text(canvas, float(indent), float(yLine), str, color);
+					yLine += cCompactCellResLineHeight;
 				}
-				else {
-					str += ": ---";
-				}
-
-				// Выводим строку.
-				cellFont.draw_text(canvas, float(indent), float(yLine), str, color);
-				yLine += cCompactCellResLineHeight;
+				catch (...) {}
 			}
 
 			// Отрисовку клеток других организмов в точке оставим на будущее.
@@ -564,10 +567,6 @@ void ModelRender::setIlluminatedWorld(bool newValue)
 void ModelRender::workerThread()
 {
 	// Рабочая функция потока, вычисляющего пиксельбуфер.
-
-	// Для оптимизации вынесено сюда.
-	Dot d;
-
 	try
 	{
 		while (true)
@@ -630,7 +629,7 @@ void ModelRender::workerThread()
 
 						// Если одна координата не меняется, не делаем медленные вычисления.
 						if (xIndex != oldXIndex) {
-							d = coordSystem.get_dot(xIndex, yIndex);
+							Dot& d = coordSystem.get_dot(xIndex, yIndex);
 							d.get_color(color);
 							oldXIndex = xIndex;
 						}
