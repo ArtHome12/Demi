@@ -29,7 +29,7 @@ public:
 	// Местоположение клетки в системе координат организма.
 	int x, y;
 
-	GenericCell() {}
+	GenericCell() : x(0), y(0), organism(nullptr) {}
 	GenericCell(int Ax, int Ay, Organism * Aorganism) : x(Ax), y(Ay), organism(Aorganism) {}
 
 

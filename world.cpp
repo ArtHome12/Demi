@@ -149,7 +149,7 @@ clan::Point Solar::getPos(const DemiTime &timeModel)
 	// то есть через полгода позиция повторяется.
 	
 	// Половина года, для удобства.
-	const size_t halfYear = int(cDaysInYear / 2 + 0.5f);
+	const size_t halfYear = size_t(cDaysInYear / 2 + 0.5f);
 
 	// Высота тропиков
 	const size_t tropic = globalWorld.getTropicHeight();
@@ -269,12 +269,8 @@ void World::diffusion()
 	Dot *last = cur + worldSize.width * worldSize.height;		// Точка после последней точки массива.
 	Dot *dest;													// Конечная точка
 
-	// Направление движения
-	std::uniform_int_distribution<> rnd_angle(0, 7);
 	// Элемент
 	std::uniform_int_distribution<> rnd_Elem(0, elemCount-1);
-	// Приращение координаты
-	std::uniform_int_distribution<> rnd_Coord(0, 12-1);
 
 	while (true) {
 
@@ -743,12 +739,14 @@ void World::doWriteSpecies(clan::File &binFile, std::shared_ptr<demi::Species> a
 	binFile.write_int8(aSpecies->get_visible());
 
 	// Цвета отображения.
-	binFile.write_uint8(aSpecies->aliveColor.get_red());
-	binFile.write_uint8(aSpecies->aliveColor.get_green());
-	binFile.write_uint8(aSpecies->aliveColor.get_blue());
-	binFile.write_uint8(aSpecies->deadColor.get_red());
-	binFile.write_uint8(aSpecies->deadColor.get_green());
-	binFile.write_uint8(aSpecies->deadColor.get_blue());
+	const clan::Color& aliveColor = aSpecies->aliveColor;
+	const clan::Color& deadColor = aSpecies->deadColor;
+	binFile.write_uint8(aliveColor.get_red());
+	binFile.write_uint8(aliveColor.get_green());
+	binFile.write_uint8(aliveColor.get_blue());
+	binFile.write_uint8(deadColor.get_red());
+	binFile.write_uint8(deadColor.get_green());
+	binFile.write_uint8(deadColor.get_blue());
 
 	binFile.write_string_nul(aSpecies->reaction->name);
 
@@ -1022,7 +1020,6 @@ void World::InitResMaxArray()
 
 	// Перебираем все точки и сохраняем количества.
 	Dot *cur = globalWorld.getDotsArray();						// Первая точка массива.
-	clan::Size worldSize = globalWorld.get_worldSize();
 	Dot *last = cur + worldSize.width * worldSize.height;		// Точка после последней точки массива.
 	while (cur < last) {
 

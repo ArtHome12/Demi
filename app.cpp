@@ -219,7 +219,7 @@ bool App::update()
 
 		// Выведем масштаб координат мира.
 		float scaleWorld = globalWorld.getAppearanceScale();
-		if (lastScaleWorld != scaleWorld) {
+		if (fabs(lastScaleWorld - scaleWorld) > 0.0001f) {
 			lastScaleWorld = scaleWorld;
 			pButtonScaleModel->label()->set_text(scaleLabelTemplate + clan::StringHelp::float_to_text(scaleWorld, 3, false), true);
 		}

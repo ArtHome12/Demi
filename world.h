@@ -53,13 +53,6 @@ public:
 	const bool operator!=(const DemiTime& rv) const {
 		return (year != rv.year) || (day != rv.day) || (sec != rv.sec);
 	}
-
-	DemiTime &operator=(const DemiTime& rv) {
-		year = rv.year;
-		day = rv.day;
-		sec = rv.sec;
-		return *this;
-	}
 };
 
 //
@@ -125,7 +118,7 @@ public:
 	const bool getResVisibility(size_t index) { return arResVisible[index]; }
 	void setResVisibility(size_t index, bool visible) { arResVisible[index] = visible; }
 	const clan::Point &getAppearanceTopLeft() { return appearanceTopLeft; }
-	void setAppearanceTopLeft(const clan::Point newTopLeft) { appearanceTopLeft = newTopLeft; }
+	void setAppearanceTopLeft(const clan::Point& newTopLeft) { appearanceTopLeft = newTopLeft; }
 	float getAppearanceScale() { return appearanceScale; }
 	void setAppearanceScale(float newScale) { appearanceScale = newScale; }
 	std::shared_ptr<demi::Species> getSpecies() { return species; }

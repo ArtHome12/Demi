@@ -122,9 +122,7 @@ void ModelRender::render_content(clan::Canvas &canvas)
 			}
 
 			// Меняем буфера местами для сохранения готового результата.
-			std::shared_ptr<clan::PixelBuffer> tmp = pPixelBufToWrite;
-			pPixelBufToWrite = pPixelBufToDraw;
-			pPixelBufToDraw = tmp;
+			std::swap(pPixelBufToWrite, pPixelBufToDraw);
 
 			// Запустим поток.
 			threadRunFlag = true;

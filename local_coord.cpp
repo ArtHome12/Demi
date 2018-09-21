@@ -18,7 +18,7 @@ Copyright (c) 2013-2018 by Artem Khomenko _mag12@yahoo.com.
 Dot::Dot()
 {
 	// Выделяем память под элементы.
-	int elemCount = globalWorld.getElemCount();
+	size_t elemCount = globalWorld.getElemCount();
 	res = new unsigned long long[elemCount];
 	memset(res, 0, sizeof(unsigned long long) * elemCount);
 }
@@ -54,7 +54,7 @@ void Dot::get_color(clan::Color &aValue) const
 		}
 	}
 	catch (...)
-	{
+	{ //-V565
 		// Ошибки могли возникнуть только при доступе на чтение, игнорируем их.
 	}
 
@@ -113,20 +113,20 @@ worldHeight(globalWorld.get_worldSize().height)
 {
 };
 
-Dot& LocalCoord::get_dot(size_t x, size_t y) const
+Dot& LocalCoord::get_dot(int x, int y) const
 {
 	// По горизонтали координату переносим с одного края на другой.
 	x = x + center.x;
 	if (x < 0)
 		x += worldWidth;
-	else if (x >= worldWidth)
+	else if (x >= int(worldWidth))
 		x -= worldWidth;
 
 	// По вертикали пока просто отрезаем.
 	y = y + center.y;
 	if (y < 0)
 		y = 0;
-	else if (y >= worldHeight)
+	else if (y >= int(worldHeight))
 		y = worldHeight - 1;
 
 	//_ASSERT(x < globalWorld.get_worldWidth());

@@ -70,7 +70,7 @@ public:
 	LocalCoord(const clan::Point &coord);
 
 	// Возвращает точку в локальных координаах.
-	Dot& get_dot(size_t x, size_t y) const;
+	Dot& get_dot(int x, int y) const;
 	Dot& get_dot(const clan::Point &coord) const { return get_dot(coord.x, coord.y); }
 
 	// Возвращает адрес точки в глобальных координатах.
@@ -78,9 +78,6 @@ public:
 	clan::Point getGlobalPoint(const clan::Point &localPoint) { return center + localPoint; }
 
 private:
-	// Массив с точками поверхности.
-	Dot *dots;
-
 	// Размеры мира на момент создания, для оптимизаци.
 	size_t worldWidth;
 	size_t worldHeight;
