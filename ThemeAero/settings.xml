@@ -26,6 +26,7 @@
 		<lang name="WorldWrongBinaryFileElementsCount" eng="Error reading binary file elements count: need %1, read %2" rus="Ошибка чтения количества элементов из двоичного файла: ожидается %1, прочитано %2"/>
 		<lang name="WorldWrongBinaryFileElementsName" eng="Error reading binary file elements names: need %1, read %2" rus="Ошибка чтения названий элементов из двоичного файла: ожидается %1, прочитано %2"/>
 		<lang name="WorldWrongBinaryFileMarker" eng="Error reading binary file: need %1, read %2" rus="Ошибка чтения двоичного файла: ожидается маркер %1, прочитано %2"/>
+		<lang name="WorldWrongBinaryFileCannotReadDots" eng="Error reading binary file: cannot read dot #%1" rus="Ошибка чтения двоичного файла: невозможно прочитать точку №%1"/>
 		<!--User message in module: model_render-->
 		<lang name="ModelRenderSolar" eng="Solar      : " rus="Солнце  : "/>
 		<lang name="ModelRenderGeothermal" eng="Geothermal : " rus="Геотерм : "/>

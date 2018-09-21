@@ -19,10 +19,10 @@
 
 
 // Продолжительность года в днях.
-const int cDaysInYear = 365;
+const size_t cDaysInYear = 365;
 
 // Количество тиков в сутках, приравняем к секундам 60с*60м*24ч=86400
-const int cTicksInDay = 86400;
+const size_t cTicksInDay = 86400;
 //const int cTicksInDay = 10;
 
 // Глобальная переменная - мир.
@@ -36,13 +36,13 @@ extern World globalWorld;
 class DemiTime {
 public:
 	// Год, от 1 до бесконечности.
-	unsigned int year = 1;
+	size_t year = 1;
 
 	// День года, от 1 до cDaysInYear включительно.
-	unsigned int day = 1;
+	size_t day = 1;
 
 	// Момент внутри дня, от 0 до cTicksInDay
-	unsigned int sec = 0;
+	size_t sec = 0;
 
 	// Прибавляет один тик.
 	void MakeTick();
@@ -115,15 +115,15 @@ public:
 
 	// Доступ к свойствам.
 	clan::Size get_worldSize() { return worldSize; }
-	int getElemCount() { return elemCount; }
-	int getEnergyCount() { return energyCount; }
-	int getLightRadius() { return lightRadius; }
-	int getTropicHeight() { return tropicHeight; }
-	unsigned long long getResMaxValue(int index) { return arResMax[index]; }
-	const clan::Color &getResColors(int index) { return arResColors[index]; }
-	const std::string &getResName(int index) { return arResNames[index]; }
-	const bool getResVisibility(int index) { return arResVisible[index]; }
-	void setResVisibility(int index, bool visible) { arResVisible[index] = visible; }
+	size_t getElemCount() { return elemCount; }
+	size_t getEnergyCount() { return energyCount; }
+	size_t getLightRadius() { return lightRadius; }
+	size_t getTropicHeight() { return tropicHeight; }
+	unsigned long long getResMaxValue(size_t index) { return arResMax[index]; }
+	const clan::Color &getResColors(size_t index) { return arResColors[index]; }
+	const std::string &getResName(size_t index) { return arResNames[index]; }
+	const bool getResVisibility(size_t index) { return arResVisible[index]; }
+	void setResVisibility(size_t index, bool visible) { arResVisible[index] = visible; }
 	const clan::Point &getAppearanceTopLeft() { return appearanceTopLeft; }
 	void setAppearanceTopLeft(const clan::Point newTopLeft) { appearanceTopLeft = newTopLeft; }
 	float getAppearanceScale() { return appearanceScale; }
@@ -136,10 +136,10 @@ public:
 	void setSettingsStorage(SettingsStorage* pSettingsStorage) { pSettings = pSettingsStorage; }
 
 	// Возвращает координаты точки по указанному индексу.
-	clan::Point getDotXYFromIndex(int index);
+	clan::Point getDotXYFromIndex(size_t index);
 
 	// Возвращает индекс точки для указанных координат.
-	int getDotIndexFromXY(int x, int y) { return x + y * worldSize.width; }
+	size_t getDotIndexFromXY(size_t x, size_t y) { return x + y * worldSize.width; }
 
 	// Объект для подсчёта количества элементов. Испортить состояние объекта невозможно, поэтому выносим его в паблик для удобства.
 	Amounts amounts;
@@ -154,7 +154,7 @@ private:
 	Solar solar;
 
 	// Количество геотермальных источников.
-	int energyCount = 0;
+	size_t energyCount = 0;
 
 	// Геотермальные источники - массив.
 	Geothermal *arEnergy = nullptr;
@@ -171,16 +171,16 @@ private:
 
 	// Максимальный радиус освещённости вокруг местонахождения солнца, составляет 90% высоты мира.
 	// Эта же величина и максимальная яркость солнца - в самой удалённой точке она была минимальной и равной 1, соответственно в центре - равна радиусу.
-	int lightRadius = 0;
+	size_t lightRadius = 0;
 
 	// Ход солнца по вертикали, обусловленный наклоном земной оси, примерно sin(23.5)=0.4 или по 10% с каждой стороны от экватора.
-	int tropicHeight = 0;
+	size_t tropicHeight = 0;
 
 	// Цвета элементов.
 	clan::Color* arResColors = nullptr;
 
 	// Количество химических элементов, существующих в модели.
-	int elemCount = 0;
+	size_t elemCount = 0;
 
 	// Названия ресурсов. Инициализируется извне.
 	std::string *arResNames = nullptr;
@@ -226,10 +226,10 @@ private:
 	void diffusion();
 
 	// Задаёт распределение ресурсов по указанной прямоугольной области в указанном количестве.
-	void fillRectResource(int resId, unsigned long long amount, const clan::Rect &rect);
+	void fillRectResource(size_t resId, unsigned long long amount, const clan::Rect &rect);
 
 	// Задаёт местоположение источников геотермальной энергии.
-	void addGeothermal(int i, const clan::Point &coord);
+	void addGeothermal(size_t i, const clan::Point &coord);
 
 	// Рабочий поток
 	std::thread thread;
@@ -253,6 +253,9 @@ private:
 	// Вынесено из SaveModel() для удобства. Запись одного организма.
 	void doWriteOrganism(clan::File &binFile, std::set<std::string> &dict, demi::Organism* organism);
 	demi::Organism* doReadOrganism(clan::File &binFile, std::set<std::string> &dict, const clan::Point &center);
+
+	// Инициализирует массим максимумов на основе имеющихся количеств в точках, используется после загрузки.
+	void InitResMaxArray();
 };
 
 

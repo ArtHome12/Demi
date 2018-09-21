@@ -6,7 +6,7 @@
 		<!--Последнее представление модели - координата левого верхнего угла, масштаб-->
 		<item name="Appearance" top="0" left="0" scale="0.390625"/>
 		<!--Время модели - год, день, секунда-->
-		<item name="Time" year="1" day="1" second="949"/>
+		<item name="Time" year="1" day="4" second="59752"/>
 		<!--Протоорганизм, от которого происходят все остальные-->
 		<item name="LUCA" visibility="true" x="300" y="30" reaction="CO2+4H2=CH4+2H2O" main="if (_vitality &gt;= fissionBarrier) _fission()" fissionBarrier="30" minActiveMetabolicRate="10" minInactiveMetabolicRate="1" aliveColor="pink" deadColor="brown" desintegrationVitalityBarrier="-100"/>
 	</section>

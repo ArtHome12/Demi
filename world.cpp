@@ -12,7 +12,7 @@
 #include "world.h"
 
 
-const int cGeothermRadius = 12;
+const size_t cGeothermRadius = 12;
 
 // Константы для чтения XML-файла модели
 auto cResGlobalsWorldSize = "Globals/WorldSize";
@@ -72,7 +72,7 @@ auto cWrongBinVer = "WorldWrongBinaryFileVersion";
 auto cWrongBinElemCount = "WorldWrongBinaryFileElementsCount";
 auto cWrongBinElemName = "WorldWrongBinaryFileElementsName";
 auto cWrongBinMarker = "WorldWrongBinaryFileMarker";
-
+auto cWrongBinCannotReadDots = "WorldWrongBinaryFileCannotReadDots";
 
 // Глобальный объект - неживой мир.
 World globalWorld;
@@ -119,8 +119,8 @@ void Solar::Shine(const DemiTime &timeModel)
 	LocalCoord coord(getPos(timeModel));
 
 	int lightRadius = globalWorld.getLightRadius();
-	for (int x = -lightRadius; x <= lightRadius; ++x)
-		for (int y = -lightRadius; y <= lightRadius; ++y) {
+	for (int x = -lightRadius + 1; x != lightRadius; ++x)			// Симметрично отбрасываем координаты самую левую (верхнюю) и самую правую (нижнюю) для ускорения - иначе ради 1 точки проходить весь ряд прямоугольника.
+		for (int y = -lightRadius + 1; y != lightRadius; ++y) {
 
 			// Фактическое расстояние до центра координат.
 			double r = sqrt(x*x + y*y);
@@ -142,20 +142,20 @@ clan::Point Solar::getPos(const DemiTime &timeModel)
 
 	// Позиция по горизонтали зависит от времени суток.
 	// Солнце двигается с востока на запад пропорционально прошедшей доле суток.
-	 int x = int(worldSize.width * (1.0f - float(timeModel.sec) / (cTicksInDay - 1.0f)) + 0.5f);
+	size_t x = size_t(worldSize.width * (1.0f - float(timeModel.sec) / (cTicksInDay - 1.0f)) + 0.5f);
 
 	// Позиция по вертикали зависит от дня года.
 	// Солнце полгода двигается от одной границы тропиков до другой и полгода в обратном направлении, 
 	// то есть через полгода позиция повторяется.
 	
 	// Половина года, для удобства.
-	const int halfYear = int(cDaysInYear / 2 + 0.5f);
+	const size_t halfYear = int(cDaysInYear / 2 + 0.5f);
 
 	// Высота тропиков
-	const int& tropic = globalWorld.getTropicHeight();
+	const size_t tropic = globalWorld.getTropicHeight();
 
 	// Когда идёт первая половина года, надо от экватора отнимать долю, а когда вторая - прибавлять.
-	int y = int((timeModel.day < halfYear ? (worldSize.height - tropic) / 2.0f + timeModel.day * tropic / halfYear : (worldSize.height + tropic) / 2.0 - (timeModel.day - halfYear) * tropic / halfYear) +0.5);
+	size_t y = size_t((timeModel.day < halfYear ? (worldSize.height - tropic) / 2.0f + timeModel.day * tropic / halfYear : (worldSize.height + tropic) / 2.0 - (timeModel.day - halfYear) * tropic / halfYear) +0.5);
 
 	return clan::Point(x, y);
 }
@@ -213,8 +213,8 @@ void World::makeTick()
 	std::shuffle(animals.begin(), animals.end(), generator);
 
 	// Используем традиционый цикл, так как иначе итераторы портятся после изменения вектора.
-	int cnt = animals.size();
-	for (int i = 0; i < cnt; ++i) {
+	size_t cnt = animals.size();
+	for (size_t i = 0; i < cnt; ++i) {
 
 		demi::Organism &animal = *animals[i];
 
@@ -243,17 +243,12 @@ void World::makeTick()
 
 
 
-void World::fillRectResource(int resId, unsigned long long amount, const clan::Rect &rect)
+void World::fillRectResource(size_t resId, unsigned long long amount, const clan::Rect &rect)
 {
 	// Задаёт распределение ресурсов по указанной прямоугольной области в указанном количестве.
 	//
-	// Откорректируем максимум, если требуется.
-	//
-	if (arResMax[resId] < amount)
-		arResMax[resId] = amount;
-
-	for (int x = rect.left; x < rect.right; ++x)
-		for (int y = rect.top; y < rect.bottom; ++y)
+	for (size_t x = rect.left; x != rect.right; ++x)
+		for (size_t y = rect.top; y != rect.bottom; ++y)
 			arDots[getDotIndexFromXY(x, y)].setElementAmount(resId, amount);
 }
 
@@ -264,7 +259,7 @@ void World::diffusion()
 	// Значения массива arResMax, используемые для выбора цвета точки по самому относительно концентрированному элементу в ней, не должны всегда только расти.
 	// С какой-то периодичностью надо их актуализировать.Если делать это при сохранении, либо при загрузке, либо время от времени, то появится некрасивый эффект скачкообразного изменения внешнего вида без соответствующего
 	// изменения модели.Если модель перед сохранением выглядела одним образом, а после стала выглядеть иначе, это будет воспринято как баг. Поэтому просто при каждом тике максимальные концентрации снижаем на единицу.
-	for (int i = 0; i < elemCount; ++i)
+	for (size_t i = 0; i != elemCount; ++i)
 		if (arResMax[i])
 			--arResMax[i];
 
@@ -283,8 +278,8 @@ void World::diffusion()
 
 	while (true) {
 
-		int rnd = rnd_angle(generator);			// от 0 до 7, направление движения
-		const int rndResIndex = rnd_Elem(generator);		// случайный элемент.
+		size_t rnd = rnd_angle(generator);			// от 0 до 7, направление движения
+		const size_t rndResIndex = rnd_Elem(generator);		// случайный элемент.
 
 		// Определяем исходную координату отдельным случайным числом.
 		cur += rnd_Coord(generator);
@@ -333,7 +328,7 @@ void World::diffusion()
 		unsigned long long amount = unsigned long long(fromDot.res[rndResIndex] * arResVolatility[rndResIndex] + 0.5f);
 
 		// В ситуации, когда вещества в точке мало и перемножение на летучесть даёт ноль, переместим 1 единицу, иначе оно останется неподвижным навечно в отсутствие живых организмов.
-		if (!amount && fromDot.res[rndResIndex] > 0)
+		if (!amount && fromDot.res[rndResIndex])
 			amount = 1;
 
 		fromDot.res[rndResIndex] -= amount;
@@ -346,7 +341,7 @@ void World::diffusion()
 
 		// Обработка организма.
 		demi::Organism* curOrganism = fromDot.organism;
-		if (curOrganism == nullptr)
+		if (!curOrganism)
 			continue;
 
 		// Если в исходной точке есть организм и его надо удалить, сделаем это.
@@ -367,7 +362,7 @@ void World::diffusion()
 }
 
 // Возвращает координаты точки по указанному индексу.
-clan::Point World::getDotXYFromIndex(int index)
+clan::Point World::getDotXYFromIndex(size_t index)
 {
 	int y = int(index / worldSize.width);
 	int x = index - y * worldSize.width;
@@ -375,7 +370,7 @@ clan::Point World::getDotXYFromIndex(int index)
 }
 
 
-void World::addGeothermal(int i, const clan::Point &coord)
+void World::addGeothermal(size_t i, const clan::Point &coord)
 {
 	// Задаёт местоположение источников геотермальной энергии.
 	//
@@ -387,16 +382,16 @@ void World::addGeothermal(int i, const clan::Point &coord)
 
 	// Определим систему координат.
 	LocalCoord geothermalCoord(coord);
-
-	for (int xp = -cGeothermRadius; xp <= cGeothermRadius; ++xp)
-		for (int yp = -cGeothermRadius; yp <= cGeothermRadius; ++yp) {
+	int rad = cGeothermRadius;
+	for (int xp = -rad; xp <= rad; ++xp)
+		for (int yp = -rad; yp <= rad; ++yp) {
 
 			// Фактическое расстояние до центра координат.
 			double r = sqrt(xp*xp + yp*yp);
 
 			// Если оно больше заданного радиуса, ничего не делаем, иначе зададим освещённость, обратную расстоянию в долях от 0 до 1.
-			if (r < cGeothermRadius) 
-				geothermalCoord.get_dot(xp, yp).setGeothermalEnergy(float((cGeothermRadius - r) / cGeothermRadius));
+			if (r < rad)
+				geothermalCoord.get_dot(xp, yp).setGeothermalEnergy(float((rad - r) / rad));
 		}
 }
 
@@ -427,8 +422,8 @@ void World::loadModel(const std::string &filename)
 		throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongSize), worldSize.width, worldSize.height));
 
 	// Радиус солнечного пятна и высота тропиков зависит от размера мира.
-	lightRadius = int(0.9f * worldSize.height / 2 + 0.5f);
-	tropicHeight = int(0.2f * worldSize.height + 0.5f);
+	lightRadius = size_t(0.9f * worldSize.height / 2 + 0.5f);
+	tropicHeight = size_t(0.2f * worldSize.height + 0.5f);
 
 	// Считываем протоорганизм. Всегда создаём один протоорганизм, считаем что образование живого мира из неживого не останавливается.
 	// Создаём вид протоорганизма по указанным координатам. Внимание - ниже он может быть переопределён из двоичного файла.
@@ -465,13 +460,13 @@ void World::loadModel(const std::string &filename)
 	const std::vector<std::string>& names = resDoc->get_resource_names_of_type(cResElementsType, cResElementsSection);
 
 	// Количество ресурсов.
-	elemCount = int(names.size());
+	elemCount = names.size();
 
 	// Источники энергии.
 	const std::vector<std::string>& energy = resDoc->get_resource_names_of_type(cResEnergyType, cResEnergySection);
 
 	// Количество источников.
-	energyCount = int(energy.size());
+	energyCount = energy.size();
 
 	// Выделим память под массивы.
 	arDots = new Dot[worldSize.width * worldSize.height];	// точки поверхности.
@@ -482,12 +477,8 @@ void World::loadModel(const std::string &filename)
 	arResVolatility = new float[elemCount];					// летучесть элементов.
 	arEnergy = new Geothermal[energyCount];					// геотермальные источники.
 
-	// Инициализируем массив максимумов единицами, во-избежание деления на ноль.
-	for (int i = 0; i < elemCount; ++i)
-		arResMax[i] = 1;
-
 	// Считываем названия элементов.
-	for (int i = 0; i < elemCount; ++i) {
+	for (size_t i = 0; i != elemCount; ++i) {
 
 		// Элемент.
 		clan::XMLResourceNode &res = resDoc->get_resource(names[i]);
@@ -533,7 +524,7 @@ void World::loadModel(const std::string &filename)
 	}
 
 	// Считываем местоположение геотермальных источников.
-	for (int i = 0; i < energyCount; ++i) {
+	for (size_t i = 0; i != energyCount; ++i) {
 		clan::DomElement &prop = resDoc->get_resource(energy[i]).get_element();
 		clan::DomNodeList nodes = prop.get_elements_by_tag_name(cResAreaPoint);
 		for (int j = nodes.get_length() - 1; j >= 0; --j) {
@@ -616,7 +607,7 @@ void World::loadModel(const std::string &filename)
 			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinElemCount), strElemCountAwait, strElemCount));
 
 		// Названия элементов.
-		for (int i = 0; i < elemCount; ++i) {
+		for (size_t i = 0; i != elemCount; ++i) {
 			auto &elemName = binFile.read_string_nul();
 			if (elemName != arResNames[i])
 				throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinElemName), arResNames[i], elemName));
@@ -635,8 +626,8 @@ void World::loadModel(const std::string &filename)
 		strSecMarker = binFile.read_string_nul();
 		if (strSecMarker != "SpecDictionary:")
 			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinMarker), "SpecDictionary:", strSecMarker));
-		unsigned int dictCnt = binFile.read_uint32();
-		for (unsigned int i = 0; i < dictCnt; ++i)
+		size_t dictCnt = binFile.read_uint32();
+		for (size_t i = 0; i != dictCnt; ++i)
 			speciesNamesDict.insert(binFile.read_string_nul());
 
 		// Маркер начала массива точек.
@@ -645,23 +636,16 @@ void World::loadModel(const std::string &filename)
 			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinMarker), "Dots:", strSecMarker));
 
 		// Считываем точки неживого мира. Клетки будут размещены при считывании организмов.
-		int dotsCount = worldSize.width * worldSize.height;
-		for (int i = 0; i < dotsCount; ++i) {
+		size_t dotsCount = worldSize.width * worldSize.height;
+		for (size_t i = 0; i != dotsCount; ++i) {
 
 			// Текущая точка.
 			Dot &dot = arDots[i];
 
 			// Количества элементов в точке.
-			for (int j = 0; j < elemCount; ++j) {
-			
-				// Сохраняем количество вещества.
-				unsigned long long amnt = binFile.read_uint64();
-				dot.setElementAmount(j, amnt);
-
-				// Корректируем массив максимумов.
-				if (getResMaxValue(j) < amnt)
-					arResMax[j] = amnt;
-			}
+			const size_t elemArraySize = sizeof(unsigned long long) * elemCount;
+			if (binFile.read(dot.res, elemArraySize) != elemArraySize)
+				throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinCannotReadDots), i));
 
 			// Организм в точке.
 			dot.organism = doReadOrganism(binFile, speciesNamesDict, getDotXYFromIndex(i));
@@ -670,6 +654,9 @@ void World::loadModel(const std::string &filename)
 		// Закроем файл.
 		binFile.close();
 	}
+
+	// Инициализирует массим максимумов на основе имеющихся количеств в точках, используется после загрузки.
+	InitResMaxArray();
 
 	// Инициализируем объект для подсчёта количества элементов неживой природы и организмов разных видов.
 	amounts.Init();
@@ -701,13 +688,13 @@ std::shared_ptr<demi::Species> World::doReadSpecies(clan::File &binFile, std::sh
 	// Создаём и считываем клетки.
 
 	// Количество клеток.
-	int64_t cnt = binFile.read_int64();
+	uint64_t cnt = binFile.read_uint64();
 	
 	// В цикле создаём все клетки.
 	for (int i = 0; i < cnt; ++i) {
 
 		// Тип клетки.
-		int64_t cellType = binFile.read_int64();
+		uint64_t cellType = binFile.read_uint64();
 
 		// Создаём клетку нужного типа.
 		std::shared_ptr<demi::GenericCell> cell;
@@ -737,10 +724,10 @@ std::shared_ptr<demi::Species> World::doReadSpecies(clan::File &binFile, std::sh
 	// Считываем дочерние виды.
 
 	// Количество дочерних видов.
-	cnt = binFile.read_int64();
+	cnt = binFile.read_uint64();
 
 	// Считываем и сохраняем потомков рекурсивно.
-	for (int i = 0; i < cnt; ++i)
+	for (uint64_t i = 0; i != cnt; ++i)
 		retVal->descendants.push_back(doReadSpecies(binFile, retVal));
 	
 	// Возвращаем считанный элемент.
@@ -772,17 +759,17 @@ void World::doWriteSpecies(clan::File &binFile, std::shared_ptr<demi::Species> a
 	binFile.write_uint32(aSpecies->fissionBarrier);
 
 	// Записываем клетки.
-	binFile.write_int64(aSpecies->cells.size());
+	binFile.write_uint64(aSpecies->cells.size());
 	for (auto& cell : aSpecies->cells) {
 		// Тип клетки.
-		int64_t cellType = cell->getCellType();
-		binFile.write_int64(cellType);
+		uint64_t cellType = cell->getCellType();
+		binFile.write_uint64(cellType);
 	}
 
 	// Записываем дочерние виды.
 
 	// Количество дочерних видов.
-	binFile.write_int64(aSpecies->descendants.size());
+	binFile.write_uint64(aSpecies->descendants.size());
 
 	// Сами виды рекурсивно.
 	for (auto &spec : aSpecies->descendants)
@@ -831,7 +818,7 @@ void World::saveModel(const std::string &filename)
 	prop.set_attribute_int(cResGlobalsTimeSecond, timeModel.sec);
 
 	// Запишем видимость элементов.
-	for (int i = 0; i < elemCount; ++i) {
+	for (size_t i = 0; i != elemCount; ++i) {
 
 		// Элемент.
 		prop = pResDoc->get_resource(cResElementsSection + std::string("/") + arResNames[i]).get_element();
@@ -856,7 +843,7 @@ void World::saveModel(const std::string &filename)
 	binFile.write_string_nul("ElementsCount:" + clan::StringHelp::int_to_text(elemCount));
 
 	// Запишем названия элементов.
-	for (int i = 0; i < elemCount; ++i)
+	for (size_t i = 0; i != elemCount; ++i)
 		binFile.write_string_nul(arResNames[i]);
 
 	// Записываем маркер организмов.
@@ -876,14 +863,14 @@ void World::saveModel(const std::string &filename)
 	binFile.write_string_nul("Dots:");
 
 	// Записываем точки.
-	int dotsCount = worldSize.width * worldSize.height;
-	for (int i = 0; i < dotsCount; ++i) {
+	size_t dotsCount = worldSize.width * worldSize.height;
+	const size_t elemArraySize = sizeof(unsigned long long) * elemCount;
+	for (size_t i = 0; i != dotsCount; ++i) {
 		// Текущая точка.
 		const Dot &dot = arDots[i];
 
 		// Количества элементов в точке.
-		for (int j = 0; j < elemCount; ++j)
-		binFile.write_uint64(dot.res[j]);
+		binFile.write(dot.res, elemArraySize);
 
 		// Организм в точке.
 		doWriteOrganism(binFile, speciesNamesDict, dot.organism);
@@ -971,14 +958,14 @@ void World::resetModel(const std::string &modelFilename, const std::string &defa
 void World::doWriteOrganism(clan::File &binFile, std::set<std::string> &dict, demi::Organism* organism)
 {
 	// Если организма нет, в качестве ключа вида запишем -1.
-	if (organism == nullptr) {
+	if (!organism) {
 		binFile.write_int16(-1);
 		return;
 	}
 
 	// Находим имя организма в словаре и записываем его индекс.
 	auto it = dict.find(organism->get_species()->getAuthorAndNamePair());
-	INT16 index = std::distance(dict.begin(), it);
+	ptrdiff_t index = std::distance(dict.begin(), it);
 	binFile.write_int16(index);
 
 	// Угол, жизненная энергия, порог деления.
@@ -987,7 +974,7 @@ void World::doWriteOrganism(clan::File &binFile, std::set<std::string> &dict, de
 	binFile.write_int32(organism->getFissionBarrier());
 
 	// Содержимое ячеек реакции.
-	int cnt = organism->leftReagentAmounts.size();
+	size_t cnt = organism->leftReagentAmounts.size();
 	binFile.write(organism->leftReagentAmounts.data(), sizeof(unsigned long long) * cnt);
 }
 
@@ -1017,7 +1004,7 @@ demi::Organism* World::doReadOrganism(clan::File &binFile, std::set<std::string>
 	demi::Organism* retVal = new demi::Organism(Aspecies, center, angle, vitality, fissionBarrier);
 
 	// Содержимое ячеек реакции.
-	int cnt = retVal->leftReagentAmounts.size();
+	size_t cnt = retVal->leftReagentAmounts.size();
 	binFile.read(retVal->leftReagentAmounts.data(), sizeof(unsigned long long) * cnt);
 
 	// Если жизненная энергия положительна, поместим организм в список живых.
@@ -1025,4 +1012,31 @@ demi::Organism* World::doReadOrganism(clan::File &binFile, std::set<std::string>
 		animals.push_back(retVal);
 
 	return retVal;
+}
+
+// Инициализирует массим максимумов на основе имеющихся количеств в точках, используется после загрузки.
+void World::InitResMaxArray()
+{
+	// Очистим старые значения.
+	memset(arResMax, 0, sizeof(unsigned long long) * elemCount);
+
+	// Перебираем все точки и сохраняем количества.
+	Dot *cur = globalWorld.getDotsArray();						// Первая точка массива.
+	clan::Size worldSize = globalWorld.get_worldSize();
+	Dot *last = cur + worldSize.width * worldSize.height;		// Точка после последней точки массива.
+	while (cur < last) {
+
+		// Перебираем все элементы в точке.
+		for (size_t j = 0; j != elemCount; ++j) {
+			
+			// Количество вещества в точке.
+			unsigned long long amnt = cur->getElemAmount(j);
+
+			// Корректируем при необходимости максимум.
+			if (getResMaxValue(j) < amnt)
+				arResMax[j] = amnt;
+		}
+
+		++cur;
+	}
 }
