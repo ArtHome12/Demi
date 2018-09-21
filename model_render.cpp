@@ -158,7 +158,6 @@ void ModelRender::render_content(clan::Canvas &canvas)
 
 		// Цвет точки, для оптимизации объявление вынесено сюда.
 		clan::Color color;
-		Dot d;
 
 		// В цикле двигаемся, пока не выйдем за границу окна.
 		//
@@ -177,8 +176,7 @@ void ModelRender::render_content(clan::Canvas &canvas)
 			while (r.left < windowSize.width) {
 
 				// Точка мира. 
-				// Обязательно получаем именно копию точки, а не ссылку - иначе вылетим при изменении клеток в расчётном потоке.
-				d = coordSystem.get_dot(xDotIndex, yDotIndex);
+				Dot& d = coordSystem.get_dot(xDotIndex, yDotIndex);
 
 				// Получим цвет точки.
 				d.get_color(color);

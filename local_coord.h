@@ -31,20 +31,20 @@ public:
 	void setGeothermalEnergy(float newVal) { geothermalEnergy = newVal; }
 
 	// Количество указанного элемента в абсолютной величине.
-	unsigned long long getElemAmount(int index) const { return res[index]; }
-	void setElementAmount(int index, unsigned long long amount) { res[index] = amount; }
+	unsigned long long getElemAmount(size_t index) const { return res[index]; }
+	void setElementAmount(size_t index, unsigned long long amount) { res[index] = amount; }
 
 	// Количество указанного элемента в процентах.
-	float getElemAmountPercent(int index) const;
+	float getElemAmountPercent(size_t index) const;
 
 	// Имеющиеся в ней ресурсы - первые два элемента это солнечная и геотермальная энергии (для ускорения сохранения).
 	unsigned long long *res;
 
 	// Конструктор, массив ресов обнуляем.
 	Dot();
-	Dot(const Dot &obj);
+	Dot(const Dot &obj) = delete;
 	~Dot();
-	Dot& operator=(const Dot &obj);
+	void operator=(const Dot &obj) = delete;
 
 	// Возвращает цвет для точки на основе имеющихся ресурсов, передача по ссылке для оптимизации.
 	void get_color(clan::Color &aValue) const;
@@ -57,9 +57,6 @@ public:
 	demi::Organism* organism = nullptr;
 
 private:
-	// Установлено в истину для точек после конструктора копирования. Копии не освобождают память из-под res.
-	bool isCopy;
-
 	float solarEnergy = 0.0f;
 	float geothermalEnergy = 0.0f;
 };
@@ -73,7 +70,7 @@ public:
 	LocalCoord(const clan::Point &coord);
 
 	// Возвращает точку в локальных координаах.
-	Dot& get_dot(int x, int y) const;
+	Dot& get_dot(size_t x, size_t y) const;
 	Dot& get_dot(const clan::Point &coord) const { return get_dot(coord.x, coord.y); }
 
 	// Возвращает адрес точки в глобальных координатах.
@@ -85,8 +82,8 @@ private:
 	Dot *dots;
 
 	// Размеры мира на момент создания, для оптимизаци.
-	int worldWidth;
-	int worldHeight;
+	size_t worldWidth;
+	size_t worldHeight;
 
 	// Центр локальных координат, выраженный в глобальных координатах.
 	clan::Point center;

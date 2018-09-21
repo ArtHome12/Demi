@@ -15,7 +15,7 @@ Copyright (c) 2013-2018 by Artem Khomenko _mag12@yahoo.com.
 // Инициализация класса. Его инициализация должна происходить после инициализации массивов в World, когда модель готова к первому тику.
 void Amounts::Init()
 {
-	const int elemCount = globalWorld.getElemCount();
+	const size_t elemCount = globalWorld.getElemCount();
 
 	// Выделим память под элементы.
 	delete[] arResAmounts;
@@ -31,7 +31,7 @@ void Amounts::Init()
 	while (cur < last) {
 
 		// Суммируем ресурсы каждой точки.
-		for (int i = 0; i < elemCount; ++i) 
+		for (size_t i = 0; i != elemCount; ++i)
 			arResAmounts[i] += cur->getElemAmount(i);
 
 		// Если в точке есть организм, посчитаем ресурсы в нём.

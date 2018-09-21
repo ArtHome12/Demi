@@ -409,7 +409,7 @@ void WindowsSettings::initElemVisibilityTree()
 	panelElemAmounts->add_child(createLabelForAmount(pSettings->LocaleStr(cWindowsSettingsAmountsLabel)));
 
 	// Добавляем химэлементы, первым символом пробел для маркировки, что это неживой элемент.
-	for (int i = 0; i < globalWorld.getElemCount(); ++i) {
+	for (size_t i = 0; i != globalWorld.getElemCount(); ++i) {
 		// Чекбокс с названием элемента.
 		firstNode->children.push_back(std::make_shared<TreeItem>(" " + globalWorld.getResName(i), i, globalWorld.getResVisibility(i)));
 

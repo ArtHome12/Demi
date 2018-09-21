@@ -21,38 +21,12 @@ Dot::Dot()
 	int elemCount = globalWorld.getElemCount();
 	res = new unsigned long long[elemCount];
 	memset(res, 0, sizeof(unsigned long long) * elemCount);
-	isCopy = false;
 }
-
-Dot::Dot(const Dot &obj)
-{
-	// ќсновна€ цель конструктора копировани€ - создать копию вектора, чтобы не падать при его изменении в другом потоке.
-	res = obj.res;
-	solarEnergy = obj.solarEnergy;
-	geothermalEnergy = obj.geothermalEnergy;
-	cells = obj.cells;
-	organism = obj.organism;
-	isCopy = true;
-}
-
-Dot& Dot::operator=(const Dot &obj)
-{
-	// ќсновна€ цель конструктора копировани€ - создать копию вектора, чтобы не падать при его изменении в другом потоке.
-	res = obj.res;
-	solarEnergy = obj.solarEnergy;
-	geothermalEnergy = obj.geothermalEnergy;
-	cells = obj.cells;
-	organism = obj.organism;
-	isCopy = true;
-	return *this;
-}
-
 
 
 Dot::~Dot()
 {
-	if (!isCopy)
-		delete[] res;
+	delete[] res;
 }
 
 void Dot::get_color(clan::Color &aValue) const
@@ -61,7 +35,7 @@ void Dot::get_color(clan::Color &aValue) const
 	//
 
 	// —олнечный свет и энерги€ это альфа-канал.
-	unsigned char alpha = (unsigned char)(clan::max<float, float>(getSolarEnergy(), getGeothermalEnergy()) * 255.0);
+	unsigned char alpha = (unsigned char)(clan::max<float, float>(getSolarEnergy(), getGeothermalEnergy()) * 255.0f);
 
 	// —начала ищем среди живых организмов. “ак как есть веро€тность, что расчЄтный поток изменит их состо€ние, игнорируем возможные ошибки доступа.
 	//
@@ -101,7 +75,7 @@ void Dot::get_color(clan::Color &aValue) const
 	float resBright = 0.0f;
 
 	// ѕеребираем в цикле все и ищем наиболее €ркий, то есть с наибольшей относительной концентрацией.
-	for (int i = 0; i < globalWorld.getElemCount(); i++) {
+	for (size_t i = 0; i != globalWorld.getElemCount(); i++) {
 
 		// »щем только среди элементов, выранных дл€ отображени€.
 		if (globalWorld.getResVisibility(i)) {
@@ -124,7 +98,7 @@ void Dot::get_color(clan::Color &aValue) const
 }
 
 //  оличество указанного элемента в процентах.
-float Dot::getElemAmountPercent(int index) const
+float Dot::getElemAmountPercent(size_t index) const
 {
 	return getElemAmount(index) * 100.0f / globalWorld.getResMaxValue(index);
 }
@@ -139,7 +113,7 @@ worldHeight(globalWorld.get_worldSize().height)
 {
 };
 
-Dot& LocalCoord::get_dot(int x, int y) const
+Dot& LocalCoord::get_dot(size_t x, size_t y) const
 {
 	// ѕо горизонтали координату переносим с одного кра€ на другой.
 	x = x + center.x;
