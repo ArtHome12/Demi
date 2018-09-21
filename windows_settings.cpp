@@ -362,7 +362,7 @@ void WindowsSettings::set_modelFilename(const std::string &newName)
 }
 
 // Для получения уведомлений об отработке основного цикла (для возможного автосохранения модели, обновления количеств).
-void WindowsSettings::modelRenderNotify(float secondsElapsed)
+void WindowsSettings::modelRenderNotify(size_t secondsElapsed)
 {
 	// Обновим надписи с количествами элементов согласно информации из специального объекта.
 	// Пользуемся тем, что знаем порядок - первым идёт надпись напротив "неживая природа", далее первый элемент и т.д.
@@ -383,7 +383,7 @@ void WindowsSettings::modelRenderNotify(float secondsElapsed)
 	}
 
 	// Если прошёл час и установлена галочка регулярного автосохранения модели, сделаем это.
-	if (abs(secondsElapsed - this->secondsElapsed) > 3600.0f) {
+	if (secondsElapsed - this->secondsElapsed > 3600) {
 		this->secondsElapsed = secondsElapsed;
 
 		// Если стоит галочка, сохраним модель.

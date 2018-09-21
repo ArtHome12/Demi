@@ -187,7 +187,7 @@ Organism* Organism::makeTickAndGetNewBorn()
 bool Organism::findFreePlace(clan::Point &point)
 {
 	// ѕребираем все направлени€, если не находим, возвращаем ложь.
-	for (int i = 0; i <= 7; i++) {
+	for (int i = 0; i != 8; ++i) {
 		getPointAtDirection(i, point);
 
 		if (center.get_dot(point).organism == nullptr)
@@ -229,7 +229,6 @@ void Organism::getPointAtDirection(int direction, clan::Point & dest)
 	default:	// на северо-восток.
 		dest.x = 1; dest.y = -1;
 	}
-
 }
 
 
@@ -238,10 +237,10 @@ void Organism::moveTo(const clan::Point &newCenter)
 {
 	// ”далим себ€ с прежнего местоположени€.
 	Dot &dot = center.get_dot(0, 0);
+	dot.organism = nullptr;		// „ем раньше занулим организм, тем меньше шансов на вылет в отображающем потоке.
 	auto iter = std::find(dot.cells.begin(), dot.cells.end(), cells[0]);
 	if (iter != dot.cells.end())
 		dot.cells.erase(iter);
-	dot.organism = nullptr;
 
 	// –азместим свои клетки в точках мира. ѕока одна клетка.
 	center = LocalCoord(newCenter);

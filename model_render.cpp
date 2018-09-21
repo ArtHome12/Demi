@@ -141,8 +141,8 @@ void ModelRender::render_content(clan::Canvas &canvas)
 		// Рисуем клетками.
 
 		// Координаты отрисовываемой точки мира, от нуля с учётом сдвига в coordSystem.
-		int xDotIndex = 0;
-		int yDotIndex = 0;
+		size_t xDotIndex = 0;
+		size_t yDotIndex = 0;
 
 		// Область клетки.
 		clan::Rect r;
@@ -264,7 +264,7 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 		cellFontSymbolWidth = int(cellFont.measure_text(canvas, " ").advance.width);
 
 	// Максимальная ширина строки.
-	const size_t maxStrLen = int(rectWidth / cellFontSymbolWidth);
+	const size_t maxStrLen = size_t(rectWidth / cellFontSymbolWidth);
 
 	// Выводим солнечную энергию.
 	if (yLine < h) {
@@ -579,8 +579,8 @@ void ModelRender::workerThread()
 
 			// Получим размеры для отображения.
 			const clan::Sizef windowSize = geometry().content_size();
-			float width = windowSize.width;
-			float height = windowSize.height;
+			size_t width = size_t(windowSize.width);
+			size_t height = size_t(windowSize.height);
 			float scale = globalWorld.getAppearanceScale();
 
 			// Определим систему координат.
@@ -598,18 +598,18 @@ void ModelRender::workerThread()
 			unsigned char *pixels = (unsigned char *)pPixelBufToWrite->get_data();
 
 			// Количество байт под одну строку в буфере.
-			const int lineSize = int(width * 4);
+			const size_t lineSize = width * 4;
 
 			// Цвет точки, для оптимизации объявление вынесено сюда.
 			clan::Color color;
 
 			// Индекс текущей точки.
-			int xIndex, oldXIndex = -1, yIndex, oldYIndex = -1;
+			size_t xIndex, oldXIndex = MAXSIZE_T, yIndex, oldYIndex = MAXSIZE_T;
 
-			for (int ypos = 0; ypos < height; ++ypos)
+			for (size_t ypos = 0; ypos != height; ++ypos)
 			{
 				// Индекс точки мира.
-				yIndex = int(ypos * scale + 0.5f);
+				yIndex = size_t(ypos * scale + 0.5f);
 
 				// Если индекс не поменялся, можно просто скопировать предыдущую строку, иначе вычисляем заново.
 				if (oldYIndex == yIndex) {
@@ -617,13 +617,13 @@ void ModelRender::workerThread()
 					pixels+=lineSize;
 				}
 				else {
-					oldXIndex = -1;
+					oldXIndex = MAXSIZE_T;
 					oldYIndex = yIndex;
 
-					for (int xpos = 0; xpos < width; ++xpos)
+					for (size_t xpos = 0; xpos != width; ++xpos)
 					{
 						// Точка мира. Доступ через индекс потому, что в физической матрице точки могут быть расположены иначе, хотя это повод для оптимизации.
-						xIndex = int(xpos * scale + 0.5f);
+						xIndex = size_t(xpos * scale + 0.5f);
 
 						// Если одна координата не меняется, не делаем медленные вычисления.
 						if (xIndex != oldXIndex) {

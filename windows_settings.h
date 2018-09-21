@@ -21,7 +21,7 @@ public:
 	~WindowsSettings();
 
 	// Для получения уведомлений об отработке основного цикла (для возможного автосохранения модели, обновления количеств).
-	void modelRenderNotify(float secondsElapsed);
+	void modelRenderNotify(size_t secondsElapsed);
 
 private:
 	// Название текущей модели
@@ -59,7 +59,7 @@ private:
 	std::shared_ptr<SettingsStorage> pSettings;
 
 	// Количество прошедших секунд с момента старта программы.
-	float secondsElapsed = 0;
+	size_t secondsElapsed = 0;
 
 	// Обработчики событий
 	void onButtondownNew();

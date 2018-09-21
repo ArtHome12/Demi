@@ -28,7 +28,7 @@ public:
 	float geoEnergy, solarEnergy;
 
 	// Выхлоп жизненной энергии для организма от данной реакции.
-	int vitalityProductivity;
+	size_t vitalityProductivity;
 
 	// Реагенты (индексы элементов неживой природы) с левой и с правой сторон.
 	std::vector<ReactionReagent> leftReagents, rightReagents;

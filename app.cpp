@@ -255,7 +255,7 @@ bool App::update()
 		game_time.update();
 
 	// Уведомляем окно настроек об отрисовке (для проверки наступления момента автосохранения модели).
-	pWindowSettings->modelRenderNotify(game_time.get_current_time());
+	pWindowSettings->modelRenderNotify(size_t(game_time.get_current_time()));
 
 	// Выводим заэкранный буфер на экран.
 	pWindow->display_window().flip();

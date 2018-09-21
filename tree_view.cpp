@@ -38,7 +38,6 @@ TreeView::TreeView() : impl(new TreeView_Impl())
 	//slots.connect(sig_key_press(), impl.get(), &ListBoxViewImpl::on_key_press);
 	//slots.connect(content_view()->sig_pointer_press(), impl.get(), &ListBoxViewImpl::on_pointer_press);
 	//slots.connect(content_view()->sig_pointer_release(), impl.get(), &ListBoxViewImpl::on_pointer_release);
-
 }
 
 TreeView::~TreeView()
