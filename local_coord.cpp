@@ -55,12 +55,6 @@ Dot::~Dot()
 		delete[] res;
 }
 
-int Dot::getSizeInMemory()
-{
-	// Объём памяти в байтах под объект - массив количества ресурсов плюс солнечная и геотермальная энергии.
-	return globalWorld.getElemCount() * sizeof(unsigned long long) + sizeof(float) * 2;
-}
-
 void Dot::get_color(clan::Color &aValue) const
 {
 	// Возвращает цвет для точки на основе имеющихся ресурсов, передача по ссылке для оптимизации.

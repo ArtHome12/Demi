@@ -72,9 +72,6 @@ auto cWrongBinVer = "WorldWrongBinaryFileVersion";
 auto cWrongBinElemCount = "WorldWrongBinaryFileElementsCount";
 auto cWrongBinElemName = "WorldWrongBinaryFileElementsName";
 auto cWrongBinMarker = "WorldWrongBinaryFileMarker";
-auto cWrongBinCannotReadDots = "WorldWrongBinaryFileCannotReadDots";
-auto cWrongBinResmaxMarker = "WorldWrongBinaryFileResmaxMarker";
-auto cWrongBinCannotReadResmax = "WorldWrongBinaryFileCannotReadResmax";
 
 
 // Глобальный объект - неживой мир.
@@ -649,29 +646,26 @@ void World::loadModel(const std::string &filename)
 
 		// Считываем точки неживого мира. Клетки будут размещены при считывании организмов.
 		int dotsCount = worldSize.width * worldSize.height;
-		int dotSize = Dot::getSizeInMemory();
 		for (int i = 0; i < dotsCount; ++i) {
 
 			// Текущая точка.
 			Dot &dot = arDots[i];
 
 			// Количества элементов в точке.
-			if (binFile.read(dot.res, dotSize) != dotSize)
-				throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinCannotReadDots), i));
+			for (int j = 0; j < elemCount; ++j) {
+			
+				// Сохраняем количество вещества.
+				unsigned long long amnt = binFile.read_uint64();
+				dot.setElementAmount(j, amnt);
+
+				// Корректируем массив максимумов.
+				if (getResMaxValue(j) < amnt)
+					arResMax[j] = amnt;
+			}
 
 			// Организм в точке.
 			dot.organism = doReadOrganism(binFile, speciesNamesDict, getDotXYFromIndex(i));
 		}
-
-		// Маркер начала массива концентраций.
-		auto &strResMaxMarker = binFile.read_string_nul();
-		if (strResMaxMarker != "ResMax:")
-			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinResmaxMarker), strResMaxMarker));
-
-		// Считываем максимальные концентрации.
-		dotSize = elemCount * sizeof(unsigned long long);
-		if (binFile.read(arResMax, dotSize) != dotSize)
-			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinCannotReadResmax)));
 
 		// Закроем файл.
 		binFile.close();
@@ -700,6 +694,9 @@ std::shared_ptr<demi::Species> World::doReadSpecies(clan::File &binFile, std::sh
 	// Метаболитическая реакция.
 	std::string reactionName = binFile.read_string_nul();
 	retVal->reaction = reactions[reactionName];
+
+	// Начальный порог размножения (будет меняться из-за изменчивости).
+	retVal->fissionBarrier = binFile.read_uint32();
 
 	// Создаём и считываем клетки.
 
@@ -770,6 +767,9 @@ void World::doWriteSpecies(clan::File &binFile, std::shared_ptr<demi::Species> a
 
 	// Сохраняем название в словаре.
 	dict.insert(aSpecies->getAuthorAndNamePair());
+
+	// Начальный порог размножения.
+	binFile.write_uint32(aSpecies->fissionBarrier);
 
 	// Записываем клетки.
 	binFile.write_int64(aSpecies->cells.size());
@@ -877,23 +877,17 @@ void World::saveModel(const std::string &filename)
 
 	// Записываем точки.
 	int dotsCount = worldSize.width * worldSize.height;
-	int dotSize = Dot::getSizeInMemory();
 	for (int i = 0; i < dotsCount; ++i) {
 		// Текущая точка.
 		const Dot &dot = arDots[i];
 
 		// Количества элементов в точке.
-		binFile.write(dot.res, dotSize);
+		for (int j = 0; j < elemCount; ++j)
+		binFile.write_uint64(dot.res[j]);
 
 		// Организм в точке.
 		doWriteOrganism(binFile, speciesNamesDict, dot.organism);
 	}
-
-	// Записываем маркер начала массива максимумов.
-	binFile.write_string_nul("ResMax:");
-
-	// Записываем максимумы концентраций ресурсов.
-	binFile.write(arResMax, elemCount * sizeof(unsigned long long));
 
 	// Закроем файл.
 	binFile.close();

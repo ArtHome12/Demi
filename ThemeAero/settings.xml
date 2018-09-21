@@ -4,7 +4,7 @@
 		<!--Main window position, size and state (6-maximized, 7-minimized, 10-normal)-->
 		<item name="Appearance" left="219" top="84" width="1476" height="849" state="6" is_fullscreen="false"/>
 		<!--Top menu states-->
-		<item name="TopMenuState" SettingsWindowVisible="true" ModelIlluminated="false"/>
+		<item name="TopMenuState" SettingsWindowVisible="true" ModelIlluminated="true"/>
 		<!--Language-->
 		<item name="Locale" Language="rus"/>
 	</section>--&gt;
@@ -26,9 +26,6 @@
 		<lang name="WorldWrongBinaryFileElementsCount" eng="Error reading binary file elements count: need %1, read %2" rus="Ошибка чтения количества элементов из двоичного файла: ожидается %1, прочитано %2"/>
 		<lang name="WorldWrongBinaryFileElementsName" eng="Error reading binary file elements names: need %1, read %2" rus="Ошибка чтения названий элементов из двоичного файла: ожидается %1, прочитано %2"/>
 		<lang name="WorldWrongBinaryFileMarker" eng="Error reading binary file: need %1, read %2" rus="Ошибка чтения двоичного файла: ожидается маркер %1, прочитано %2"/>
-		<lang name="WorldWrongBinaryFileCannotReadDots" eng="Error reading binary file: cannot read dot #%1" rus="Ошибка чтения двоичного файла: невозможно прочитать точку №%1"/>
-		<lang name="WorldWrongBinaryFileResmaxMarker" eng="Error reading binary file: need ResMax:, read %1" rus="Ошибка чтения двоичного файла: ожидается маркер ResMax:, прочитано %1"/>
-		<lang name="WorldWrongBinaryFileCannotReadResmax" eng="Error reading binary file: cannot read ResMax" rus="Ошибка чтения двоичного файла: не удалось прочитать ResMax"/>
 		<!--User message in module: model_render-->
 		<lang name="ModelRenderSolar" eng="Solar      : " rus="Солнце  : "/>
 		<lang name="ModelRenderGeothermal" eng="Geothermal : " rus="Геотерм : "/>

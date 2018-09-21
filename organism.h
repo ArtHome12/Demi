@@ -94,7 +94,7 @@ public:
 	std::shared_ptr<ChemReaction> reaction;
 
 	// Начальный порог размножения (будет меняться из-за изменчивости).
-	int fissionBarrier;
+	unsigned int fissionBarrier;
 
 	void set_visible(bool AVisible) { visible = AVisible; };
 	bool get_visible() { return visible; }
