@@ -207,9 +207,9 @@ void World::makeTick()
 	}
 
 	// Создаём экземпляр протоорганизма, если есть место.
-	//Dot& protoDot = LocalCoord(LUCAPos).get_dot(0, 0);
-	//if (protoDot.organism == nullptr)
-	//	animals.push_back(new demi::Organism(species, LUCAPos, 0, species->fissionBarrier, species->fissionBarrier));
+	Dot& protoDot = LocalCoord(LUCAPos).get_dot(0, 0);
+	if (protoDot.organism == nullptr)
+		animals.push_back(new demi::Organism(species, LUCAPos, 0, species->fissionBarrier, species->fissionBarrier, 0));
 }
 
 
@@ -318,12 +318,17 @@ void World::diffusion()
 		}
 		else {
 			// Если в конечной точке нет организма, то попытаемся перенести исходный.
-			if (toDot.organism == nullptr && curOrganism->canMove())
+			if (toDot.organism == nullptr && curOrganism->canMove()) {
 				// Координаты новой точки.
 				curOrganism->moveTo(getDotXYFromIndex(dest - arDots));
 
-			// Уменьшаем жизненную энергию, потраченную на перенос.
-			curOrganism->processInactiveVitality();
+				// Уменьшаем жизненную энергию, потраченную на перенос.
+				curOrganism->processInactiveVitality();
+			} else {
+				// Если организм мёртв, то уменьшаем его энергию, чтобы он распался.
+				if (!curOrganism->isAlive())
+					curOrganism->processInactiveVitality();
+			}
 		}
 	}
 }
@@ -942,6 +947,9 @@ void World::doWriteOrganism(clan::File &binFile, std::set<std::string> &dict, de
 	binFile.write_int32(organism->getVitality());
 	binFile.write_int32(organism->getFissionBarrier());
 
+	// Количество предков.
+	binFile.write_uint64(organism->ancestorsCount);
+
 	// Содержимое ячеек реакции.
 	size_t cnt = organism->leftReagentAmounts.size();
 	binFile.write(organism->leftReagentAmounts.data(), sizeof(unsigned long long) * cnt);
@@ -964,6 +972,7 @@ demi::Organism* World::doReadOrganism(clan::File &binFile, std::set<std::string>
 	int angle = binFile.read_uint8();
 	int vitality = binFile.read_int32();
 	int fissionBarrier = binFile.read_int32();
+	unsigned long long ancestorsCount = binFile.read_uint64();
 
 	// Название вида в полной форме вытащим по индексу из словаря.
 	auto it = dict.begin();
@@ -975,7 +984,7 @@ demi::Organism* World::doReadOrganism(clan::File &binFile, std::set<std::string>
 	std::shared_ptr<demi::Species> Aspecies = fullSpeciesName == species->getAuthorAndNamePair() ? species : species->getSpeciesByFullName(fullSpeciesName);
 
 	// Создаём организм.
-	demi::Organism* retVal = new demi::Organism(Aspecies, center, angle, vitality, fissionBarrier);
+	demi::Organism* retVal = new demi::Organism(Aspecies, center, angle, vitality, fissionBarrier, ancestorsCount);
 
 	// Содержимое ячеек реакции.
 	size_t cnt = retVal->leftReagentAmounts.size();

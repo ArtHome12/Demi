@@ -52,13 +52,14 @@ int Organism::minActiveMetabolicRate = 0;
 int Organism::minInactiveMetabolicRate = 0;
 int Organism::desintegrationVitalityBarrier = 0;
 
-Organism::Organism(std::shared_ptr<Species> species, const clan::Point &Acenter, int Aangle, int Avitality, int AfissionBarrier) : ourSpecies(species),
+Organism::Organism(std::shared_ptr<Species> species, const clan::Point &Acenter, int Aangle, int Avitality, int AfissionBarrier, unsigned long long AancestorsCount) : ourSpecies(species),
 	cells(), 
 	leftReagentAmounts(ourSpecies->reaction->leftReagents.size()),
 	center(Acenter),
 	angle(Aangle),
 	vitality(Avitality), fissionBarrier(AfissionBarrier),
-	birthday(globalWorld.getModelTime())
+	birthday(globalWorld.getModelTime()),
+	ancestorsCount(AancestorsCount)
 {
 	// Надо создать собственные клетки на основе клеток вида.
 	for (auto &sCell : species->cells) {
@@ -169,12 +170,12 @@ Organism* Organism::makeTickAndGetNewBorn()
 			int childAngle = rndAngle(globalWorld.getRandomGenerator());
 			std::uniform_int_distribution<> rndFission(-1, 1);
 			int childFissionBarrier = std::max<int>(1, fissionBarrier + rndFission(globalWorld.getRandomGenerator()));
-			return new Organism(get_species(), center.getGlobalPoint(freePlace), childAngle, vitality, childFissionBarrier);
+			return new Organism(get_species(), center.getGlobalPoint(freePlace), childAngle, vitality, childFissionBarrier, ancestorsCount+1);
 		}
 	}
 	else {
 		// Реакция не прошла, вычитаем энергию на метаболизм.
-		vitality -= minInactiveMetabolicRate;
+		processInactiveVitality();
 
 		// Если жизненная энергия стала отрицательной, значит организм умер.
 		// Объект сам себя уничтожить не может, он будет удалён из списка живых при первом к нему обращении.

@@ -37,7 +37,7 @@ template<typename T> std::string IntToStrWithDigitPlaces(T num)
 	// ƒобавим пробелы дл€ разделени€ разр€дов.
 	int i = int(retVal.length()) - 3;
 	while (i > 0) {
-		retVal.insert(i, " ");
+		retVal.insert(size_t(i), " ");
 		i -= 3;
 	}
 

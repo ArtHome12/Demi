@@ -114,7 +114,7 @@ public:
 class Organism
 {
 public:
-	Organism(std::shared_ptr<Species> species, const clan::Point &Acenter, int Aangle, int Avitality, int AfissionBarrier);
+	Organism(std::shared_ptr<Species> species, const clan::Point &Acenter, int Aangle, int Avitality, int AfissionBarrier, unsigned long long AancestorsCount);
 	~Organism();
 
 	// ћестоположение организма в мире (первой клетки живота) и ориентаци€ (0 - север, 1 - северо-восток, 2 - восток и т.д. до 7 - северо-запад).
@@ -126,6 +126,9 @@ public:
 
 	// ƒата и врем€ рождени€.
 	DemiTime birthday;
+
+	//  оличество предков данного вида.
+	unsigned long long ancestorsCount;
 
 	// ƒоступ к пол€м.
 	std::shared_ptr<Species> get_species() { return ourSpecies; }

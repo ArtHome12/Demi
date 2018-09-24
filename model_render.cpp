@@ -195,7 +195,7 @@ void ModelRender::render_content(clan::Canvas &canvas)
 
 				// Отрисовываем её внутренности, если помещаются.
 				if (showTextInCell)
-					DrawCellCompact(canvas, d, r, lround(topLeftWorld.x + xDotIndex - 1), lround(topLeftWorld.y + yDotIndex), color);
+					DrawCellCompact(canvas, d, r, topLeftWorld.x + xDotIndex - 1, topLeftWorld.y + yDotIndex, color);
 			}
 
 			// Переходим к следующему ряду клеток.
@@ -300,7 +300,7 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 						if (len < 8)
 							strPers += std::string(8 - len, ' ');
 
-						// Добавляем строку с процентами и абсолютное количество.
+						// Добавляем строку с процентами, абсолютное количество.
 						str += ": " + strPers + IntToStrWithDigitPlaces<unsigned long long>(amnt);
 
 					}
@@ -329,13 +329,17 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 				//
 				try {
 					std::string str = pSettings->LocaleStr(cOrganismTitle);
-					if (d.organism) {
+					demi::Organism* pOrganism = d.organism;
+					if (pOrganism) {
 
 						// Название вида.
-						str += d.organism->get_species()->getAuthorAndNamePair() + ", ";
+						str += pOrganism->get_species()->getAuthorAndNamePair() + ", ";
 
-						// Жизненная сила и порог размножения.
-						str += IntToStrWithDigitPlaces<int>(d.organism->getVitality()) + " / " + IntToStrWithDigitPlaces<int>(d.organism->getFissionBarrier());
+						// Жизненная сила, порог размножения, количество предков, дата рождения.
+						str += IntToStrWithDigitPlaces<int>(pOrganism->getVitality())
+							+ " / " + IntToStrWithDigitPlaces<int>(pOrganism->getFissionBarrier())
+							+ ", " + IntToStrWithDigitPlaces<unsigned long long>(pOrganism->ancestorsCount)
+							+" / " + pOrganism->birthday.getDateStr();
 
 						// Проверим ограничение на максимальную длину строки.
 						if (str.length() > maxStrLen)

@@ -118,20 +118,20 @@ Dot& LocalCoord::get_dot(int x, int y) const
 	// По горизонтали координату переносим с одного края на другой.
 	x = x + center.x;
 	if (x < 0)
-		x += worldWidth;
+		x += int(worldWidth);
 	else if (x >= int(worldWidth))
-		x -= worldWidth;
+		x -= int(worldWidth);
 
-	// По вертикали пока просто отрезаем.
+	// По вертикали.
 	y = y + center.y;
 	if (y < 0)
-		y = 0;
+		y += int(worldHeight);
 	else if (y >= int(worldHeight))
-		y = worldHeight - 1;
+		y = int(worldHeight - 1);
 
 	//_ASSERT(x < globalWorld.get_worldWidth());
 	//_ASSERT(y < globalWorld.get_worldHeight());
 
-	return globalWorld.getDotsArray()[x + y * worldWidth];
+	return globalWorld.getDotsArray()[size_t(x) + size_t(y) * worldWidth];
 }
 
