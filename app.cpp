@@ -231,7 +231,7 @@ bool App::update()
 		}
 
 		// Выведем время модели.
-		DemiTime modelTime = globalWorld.getModelTime();
+		const demi::DemiTime& modelTime = globalWorld.getModelTime();
 		if (lastModelTime != modelTime) {
 			lastModelTime = modelTime;
 			pLabelModelTime->set_text(modelTime.getDateStr(), true);

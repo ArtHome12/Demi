@@ -102,6 +102,7 @@
   <ItemGroup>
     <ClCompile Include="amounts.cpp" />
     <ClCompile Include="app.cpp" />
+    <ClCompile Include="demi_time.cpp" />
     <ClCompile Include="local_coord.cpp" />
     <ClCompile Include="tree_view.cpp" />
     <ClCompile Include="world.cpp" />
@@ -116,6 +117,7 @@
   <ItemGroup>
     <ClInclude Include="amounts.h" />
     <ClInclude Include="app.h" />
+    <ClInclude Include="demi_time.h" />
     <ClInclude Include="local_coord.h" />
     <ClInclude Include="reactions.h" />
     <ClInclude Include="tree_view.h" />

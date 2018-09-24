@@ -78,38 +78,9 @@ auto cWrongBinCannotReadDots = "WorldWrongBinaryFileCannotReadDots";
 World globalWorld;
 
 // =============================================================================
-// Формат мирового времени
-// =============================================================================
-void DemiTime::MakeTick()
-{
-	// Прибавляет один тик.
-	//
-	// Прибавляем одну секунду и проверяем, не достигли ли полных суток
-	if (++sec >= cTicksInDay) {
-
-		// Обнуляем секунды, прибавляем один день и аналогично секундам.
-		sec = 0;
-		if (++day >= cDaysInYear) {
-			day = 1;
-
-			// Года просто прибавляем до скончания времён.
-			year++;
-		}
-	}
-}
-
-std::string DemiTime::getDateStr() const
-{
-	// Возвращает строку с временем модели.
-	//
-	return clan::string_format("%1:%2:%3", year, day, sec);
-}
-
-
-// =============================================================================
 // Источник солнечной энергии
 // =============================================================================
-void Solar::Shine(const DemiTime &timeModel)
+void Solar::Shine(const demi::DemiTime &timeModel)
 {
 	// Облучает энергией для указанного момента времени землю.
 	//
@@ -133,7 +104,7 @@ void Solar::Shine(const DemiTime &timeModel)
 }
 
 
-clan::Point Solar::getPos(const DemiTime &timeModel)
+clan::Point Solar::getPos(const demi::DemiTime &timeModel)
 {
 	// Возвращает позицию для солнца в зависимости от времени.
 
@@ -142,14 +113,14 @@ clan::Point Solar::getPos(const DemiTime &timeModel)
 
 	// Позиция по горизонтали зависит от времени суток.
 	// Солнце двигается с востока на запад пропорционально прошедшей доле суток.
-	size_t x = size_t(worldSize.width * (1.0f - float(timeModel.sec) / (cTicksInDay - 1.0f)) + 0.5f);
+	size_t x = size_t(worldSize.width * (1.0f - float(timeModel.sec) / (demi::cTicksInDay - 1.0f)) + 0.5f);
 
 	// Позиция по вертикали зависит от дня года.
 	// Солнце полгода двигается от одной границы тропиков до другой и полгода в обратном направлении, 
 	// то есть через полгода позиция повторяется.
 	
 	// Половина года, для удобства.
-	const size_t halfYear = size_t(cDaysInYear / 2 + 0.5f);
+	const size_t halfYear = size_t(demi::cDaysInYear / 2 + 0.5f);
 
 	// Высота тропиков
 	const size_t tropic = globalWorld.getTropicHeight();
@@ -236,9 +207,9 @@ void World::makeTick()
 	}
 
 	// Создаём экземпляр протоорганизма, если есть место.
-	Dot& protoDot = LocalCoord(LUCAPos).get_dot(0, 0);
-	if (protoDot.organism == nullptr)
-		animals.push_back(new demi::Organism(species, LUCAPos, 0, species->fissionBarrier, species->fissionBarrier));
+	//Dot& protoDot = LocalCoord(LUCAPos).get_dot(0, 0);
+	//if (protoDot.organism == nullptr)
+	//	animals.push_back(new demi::Organism(species, LUCAPos, 0, species->fissionBarrier, species->fissionBarrier));
 }
 
 
@@ -943,7 +914,7 @@ void World::resetModel(const std::string &modelFilename, const std::string &defa
 	// Попытаемся загрузить модель.
 	try {
 		globalWorld.loadModel(modelFilename);
-		timeModel = DemiTime();
+		timeModel = demi::DemiTime();
 		timeBackup = timeModel;
 	}
 	catch (...) {
@@ -974,6 +945,11 @@ void World::doWriteOrganism(clan::File &binFile, std::set<std::string> &dict, de
 	// Содержимое ячеек реакции.
 	size_t cnt = organism->leftReagentAmounts.size();
 	binFile.write(organism->leftReagentAmounts.data(), sizeof(unsigned long long) * cnt);
+
+	// Дата рождения.
+	binFile.write_uint32(organism->birthday.year);
+	binFile.write_uint32(organism->birthday.day);
+	binFile.write_uint32(organism->birthday.sec);
 }
 
 demi::Organism* World::doReadOrganism(clan::File &binFile, std::set<std::string> &dict, const clan::Point &center)
@@ -1004,6 +980,11 @@ demi::Organism* World::doReadOrganism(clan::File &binFile, std::set<std::string>
 	// Содержимое ячеек реакции.
 	size_t cnt = retVal->leftReagentAmounts.size();
 	binFile.read(retVal->leftReagentAmounts.data(), sizeof(unsigned long long) * cnt);
+
+	// Дата рождения.
+	retVal->birthday.year = binFile.read_uint32();
+	retVal->birthday.day = binFile.read_uint32();
+	retVal->birthday.sec = binFile.read_uint32();
 
 	// Если жизненная энергия положительна, поместим организм в список живых.
 	if (retVal->isAlive())

@@ -16,44 +16,13 @@
 #include "reactions.h"
 #include "local_coord.h"
 #include "amounts.h"
+#include "demi_time.h"
 
-
-// Продолжительность года в днях.
-const size_t cDaysInYear = 365;
-
-// Количество тиков в сутках, приравняем к секундам 60с*60м*24ч=86400
-const size_t cTicksInDay = 86400;
-//const int cTicksInDay = 10;
 
 // Глобальная переменная - мир.
 class World;
 extern World globalWorld;
 
-
-//
-// Формат мирового времени
-//
-class DemiTime {
-public:
-	// Год, от 1 до бесконечности.
-	size_t year = 1;
-
-	// День года, от 1 до cDaysInYear включительно.
-	size_t day = 1;
-
-	// Момент внутри дня, от 0 до cTicksInDay
-	size_t sec = 0;
-
-	// Прибавляет один тик.
-	void MakeTick();
-
-	// Возвращает строку с временем.
-	std::string getDateStr() const;
-
-	const bool operator!=(const DemiTime& rv) const {
-		return (year != rv.year) || (day != rv.day) || (sec != rv.sec);
-	}
-};
 
 //
 // Источник солнечной энергии
@@ -62,12 +31,12 @@ class Solar {
 private:
 
 	// Возвращает позицию для солнца в зависимости от времени.
-	clan::Point getPos(const DemiTime &timeModel);
+	clan::Point getPos(const demi::DemiTime &timeModel);
 
 public:
 
 	// Облучает энергией для указанного момента времени землю.
-	void Shine(const DemiTime &timeModel);
+	void Shine(const demi::DemiTime &timeModel);
 };
 
 
@@ -104,7 +73,7 @@ public:
 
 	// Возвращает точки поверхности.
 	Dot *getDotsArray() { return arDots; }
-	DemiTime getModelTime() { return timeBackup; }
+	const demi::DemiTime& getModelTime() { return timeBackup; }
 
 	// Доступ к свойствам.
 	clan::Size get_worldSize() { return worldSize; }
@@ -140,8 +109,8 @@ public:
 private:
 
 	// Текущий момент времени в расчётной модели и в сохранённой для отрисовки на экране копии.
-	DemiTime timeModel;
-	DemiTime timeBackup;
+	demi::DemiTime timeModel;
+	demi::DemiTime timeBackup;
 
 	// Источник солнечной энергии.
 	Solar solar;

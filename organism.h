@@ -11,7 +11,7 @@
 
 #include "reactions.h"
 #include "local_coord.h"
-
+#include "demi_time.h"
 
 
 namespace demi {
@@ -22,7 +22,7 @@ namespace demi {
 //
 // Клетка, базовый тип.
 //
-class Organism;
+	class Organism;
 class GenericCell
 {
 public:
@@ -123,6 +123,9 @@ public:
 
 	// Клетки организма.
 	std::vector<std::shared_ptr<GenericCell>> cells;
+
+	// Дата и время рождения.
+	DemiTime birthday;
 
 	// Доступ к полям.
 	std::shared_ptr<Species> get_species() { return ourSpecies; }

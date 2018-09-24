@@ -57,7 +57,8 @@ Organism::Organism(std::shared_ptr<Species> species, const clan::Point &Acenter,
 	leftReagentAmounts(ourSpecies->reaction->leftReagents.size()),
 	center(Acenter),
 	angle(Aangle),
-	vitality(Avitality), fissionBarrier(AfissionBarrier)
+	vitality(Avitality), fissionBarrier(AfissionBarrier),
+	birthday(globalWorld.getModelTime())
 {
 	// Надо создать собственные клетки на основе клеток вида.
 	for (auto &sCell : species->cells) {

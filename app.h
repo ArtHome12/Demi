@@ -29,7 +29,7 @@ private:
 	std::shared_ptr<clan::LabelView> pLabelFPS;
 
 	// Надпись для отображения времени модели.
-	DemiTime lastModelTime;
+	demi::DemiTime lastModelTime;
 	std::shared_ptr<clan::LabelView> pLabelModelTime;
 
 	// Кнопка-надпись левого верхнего угла координат мира.
