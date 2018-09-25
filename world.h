@@ -206,11 +206,10 @@ private:
 	// Рабочая функция потока, вычисляющего модель.
 	void workerThread();
 
-	// Рекурсивная функция для считывания видов организмов.
-	std::shared_ptr<demi::Species> doReadSpecies(clan::File &binFile, std::shared_ptr<demi::Species> ancestor);
-
+	// Рекурсивная функция для считывания видов организмов. Закомментируем на далёкое будущее.
+	//std::shared_ptr<demi::Species> doReadSpecies(clan::File &binFile, std::shared_ptr<demi::Species> ancestor);
 	// Рекурсивная функция для записи видов организмов, параллельно создаёт словарь названий видов.
-	void doWriteSpecies(clan::File &binFile, std::shared_ptr<demi::Species> aSpecies, std::set<std::string> &dict);
+	//void doWriteSpecies(clan::File &binFile, std::shared_ptr<demi::Species> aSpecies, std::set<std::string> &dict);
 
 	// Вынесено из SaveModel() для удобства. Запись одного организма.
 	void doWriteOrganism(clan::File &binFile, std::set<std::string> &dict, demi::Organism* organism);

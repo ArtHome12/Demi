@@ -7,7 +7,7 @@
 		<item name="Appearance" top="0" left="0" scale="0.520833"/>
 		<!--Время модели - год, день, секунда-->
 		<item name="Time" year="1" day="1" second="0"/>
-		<!--Протоорганизм, от которого происходят все остальные-->
+		<!--Протоорганизм, от которого происходят все остальные. MetabolicRate должна быть от 0 до 255. -->
 		<item name="LUCA" visibility="true" x="300" y="30" reaction="CO2+4H2=CH4+2H2O" main="if (_vitality >= fissionBarrier) _fission()" fissionBarrier="30" 
 			minActiveMetabolicRate="10" minInactiveMetabolicRate="1" aliveColor="pink" deadColor="brown" desintegrationVitalityBarrier="-100"
 		/>
@@ -53,7 +53,7 @@
 	</section>
 	<!--Метаболические реакции-->
 	<section name="Reactions">
-		<!--Из углекислого газа и водорода CO2+4H2->CH4+2H2O - получаем метан и воду.-->
+		<!--Из углекислого газа и водорода CO2+4H2->CH4+2H2O - получаем метан и воду. Кол-во реагентов, Amount и Productivity должны быть от 1 до 255. -->
 		<Reaction name="CO2+4H2=CH4+2H2O" geothermalEnergy="0.0001" solarEnergy="0" vitalityProductivity="5">
 			<LeftReagent name="CarbonDioxide" amount="1"/>
 			<LeftReagent name="Hydrogen" amount="4"/>

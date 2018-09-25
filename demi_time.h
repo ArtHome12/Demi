@@ -15,11 +15,11 @@ namespace demi {
 
 
 	// Продолжительность года в днях.
-	const size_t cDaysInYear = 365;
+	const uint16_t cDaysInYear = 365ui16;
 
 	// Количество тиков в сутках, приравняем к секундам 60с*60м*24ч=86400
-	const size_t cTicksInDay = 86400;
-	//const int cTicksInDay = 10;
+	const uint16_t cTicksInDay = 86400ui16;
+	//const uint16_t cTicksInDay = uint16_t(10);
 
 
 	//
@@ -27,14 +27,17 @@ namespace demi {
 	//
 	class DemiTime {
 	public:
-		// Год, от 1 до бесконечности.
-		size_t year = 1;
-
 		// День года, от 1 до cDaysInYear включительно.
-		size_t day = 1;
+		uint16_t day = 1;
 
 		// Момент внутри дня, от 0 до cTicksInDay
-		size_t sec = 0;
+		uint16_t sec = 0;
+
+		// Год, от 1 до бесконечности.
+		uint32_t year = 1;
+
+		DemiTime() {};
+		DemiTime(uint32_t AYear, uint16_t ADay, uint16_t ASec) : year(AYear), day(ADay), sec(ASec) {};
 
 		// Прибавляет один тик.
 		void MakeTick();

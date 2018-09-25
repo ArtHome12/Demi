@@ -15,8 +15,8 @@ namespace demi {
 
 class ReactionReagent {
 public:
-	int elementIndex, amount;
-	ReactionReagent(int _elementIndex, int _amount) : elementIndex(_elementIndex), amount(_amount) {};
+	uint8_t elementIndex, amount;
+	ReactionReagent(uint8_t _elementIndex, uint8_t _amount) : elementIndex(_elementIndex), amount(_amount) {};
 };
 
 class ChemReaction {
@@ -28,7 +28,7 @@ public:
 	float geoEnergy, solarEnergy;
 
 	// Выхлоп жизненной энергии для организма от данной реакции.
-	size_t vitalityProductivity;
+	uint8_t vitalityProductivity;
 
 	// Реагенты (индексы элементов неживой природы) с левой и с правой сторон.
 	std::vector<ReactionReagent> leftReagents, rightReagents;

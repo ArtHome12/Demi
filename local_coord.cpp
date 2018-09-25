@@ -44,9 +44,9 @@ void Dot::get_color(clan::Color &aValue) const
 			demi::Organism *cellOrganism = cell->organism;
 			if (cellOrganism != nullptr) {
 				// Проверим, включено ли отображение для данного вида.
-				auto spc = cellOrganism->get_species();
-				if (spc->get_visible()) {
-					aValue = cellOrganism->isAlive() ? spc->aliveColor : spc->deadColor;
+				auto spc = cellOrganism->getSpecies();
+				if (spc->getVisible()) {
+					aValue = cellOrganism->isAlive() ? spc->getAliveColor() : spc->getDeadColor();
 					aValue.set_alpha(alpha);
 					return;
 				}

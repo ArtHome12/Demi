@@ -19,6 +19,11 @@ namespace demi {
 	// Типы клеток - мозг, рецептор, мышца, жир, живот, рот, броня.
 	enum CellTypes {cellBrain, cellReceptor, cellMuscle, cellAdipose, cellAbdomen, cellMouth, cellArmor};
 
+	// Тип для хранения текущих накопленных веществ в организме.
+	typedef uint8_t organismAmount_t;
+	typedef std::vector<organismAmount_t> organismAmounts_t;
+
+	const uint16_t cMaxVitality = UINT16_MAX - UINT8_MAX;
 //
 // Клетка, базовый тип.
 //
@@ -66,6 +71,38 @@ class CellAbdomen : public GenericCell
 class Species
 {
 public:
+	Species(const std::weak_ptr<Species>& Aancestor,
+		const std::string& Aname,
+		const std::string& Aauthor,
+		bool Avisible,
+		uint16_t AfissionBarrier,
+		const clan::Color& AaliveColor,
+		const clan::Color& AdeadColor,
+		const std::shared_ptr<ChemReaction>& Areaction
+		);
+
+	// Доступ к полям.
+	const std::weak_ptr<Species>& getAncestor() { return ancestor; }
+	const std::string& getName() { return name; }
+	const std::string& getAuthor() { return author; }
+	void setVisible(bool AVisible) { visible = AVisible; };
+	bool getVisible() { return visible; }
+	const clan::Color& getAliveColor() { return aliveColor; }
+	const clan::Color& getDeadColor() { return deadColor; }
+	uint16_t getFissionBarrier() { return fissionBarrier; }
+	const std::shared_ptr<ChemReaction>& getReaction() { return reaction; }
+
+	// Возвращаем неконстантные ссылки для возможной правки для оптимизации быстродействия.
+	std::vector<std::shared_ptr<GenericCell>>& getCellsRef() { return cells; }
+
+	// Возвращает полное название вида в формате автор/вид\автор/вид... Корневой общий для всех вид не включается.
+	std::string getAuthorAndNamePair() { return author + "\\" + name + "/"; }
+	//std::string getFullName();
+
+	// Возвращает вид по указанному полному названию. Должна вызываться для корневого вида.
+	std::shared_ptr<Species> getSpeciesByFullName(std::string fullName);
+
+private:
 	// Родительский организм.
 	std::weak_ptr<Species> ancestor;
 
@@ -94,17 +131,7 @@ public:
 	std::shared_ptr<ChemReaction> reaction;
 
 	// Начальный порог размножения (будет меняться из-за изменчивости).
-	unsigned int fissionBarrier;
-
-	void set_visible(bool AVisible) { visible = AVisible; };
-	bool get_visible() { return visible; }
-
-	// Возвращает полное название вида в формате автор/вид\автор/вид... Корневой общий для всех вид не включается.
-	std::string getAuthorAndNamePair() { return author + "\\" + name + "/"; }
-	//std::string getFullName();
-
-	// Возвращает вид по указанному полному названию. Должна вызываться для корневого вида.
-	std::shared_ptr<Species> getSpeciesByFullName(std::string fullName);
+	uint16_t fissionBarrier;
 };
 
 
@@ -114,30 +141,26 @@ public:
 class Organism
 {
 public:
-	Organism(std::shared_ptr<Species> species, const clan::Point &Acenter, int Aangle, int Avitality, int AfissionBarrier, unsigned long long AancestorsCount);
+	Organism(const std::shared_ptr<Species>& species, const clan::Point &Acenter, uint8_t Aangle, int32_t Avitality, uint16_t AfissionBarrier, uint64_t AancestorsCount, const DemiTime& Abirthday);
 	~Organism();
 
-	// Местоположение организма в мире (первой клетки живота) и ориентация (0 - север, 1 - северо-восток, 2 - восток и т.д. до 7 - северо-запад).
-	int angle;
-	LocalCoord center;
-
-	// Клетки организма.
-	std::vector<std::shared_ptr<GenericCell>> cells;
-
-	// Дата и время рождения.
-	DemiTime birthday;
-
-	// Количество предков данного вида.
-	unsigned long long ancestorsCount;
-
 	// Доступ к полям.
-	std::shared_ptr<Species> get_species() { return ourSpecies; }
+	uint8_t getAngle() const { return angle; }
+	const LocalCoord& getCenter() const { return center; }
+	const std::vector<std::shared_ptr<GenericCell>>& getCells() const { return cells; }
+	const DemiTime& getBirthday() const { return birthday; }
+	uint64_t getAncestorsCount() const { return ancestorsCount; }
+	const std::shared_ptr<Species>& getSpecies() const { return ourSpecies; }
+	const organismAmounts_t& getLeftReagentAmounts() const { return leftReagentAmounts; }
+	int32_t getVitality() const { return vitality; }
+	uint16_t getFissionBarrier() const { return fissionBarrier; }
+
 
 	// Минимальная энергия метаболизма для активной клетки и для пассивной.
-	static int minActiveMetabolicRate, minInactiveMetabolicRate;
+	static uint8_t minActiveMetabolicRate, minInactiveMetabolicRate;
 
 	// Жизненная энергия, ниже которой организм разрушается.
-	static int desintegrationVitalityBarrier;
+	static int32_t desintegrationVitalityBarrier;
 
 	// Процессорное время организма для формирования поведения - поедания пищи, атаки, разворота, перемещения, размножения.
 	// Может вернуть указатель на новый родившийся организм.
@@ -157,32 +180,40 @@ public:
 	// Истина, если организм уже разложился и его надо уничтожить.
 	bool needDesintegration() { return vitality < desintegrationVitalityBarrier; }
 
-	int getVitality() { return vitality; }
-	int getFissionBarrier() { return fissionBarrier; }
-
 	// Вычитает жизненную энергию на неактивное состояние.
 	void processInactiveVitality() { vitality -= minActiveMetabolicRate; }
 
 private:
+	// Местоположение организма в мире (первой клетки живота) и ориентация (0 - север, 1 - северо-восток, 2 - восток и т.д. до 7 - северо-запад).
+	uint8_t angle;
+	LocalCoord center;
+
+	// Клетки организма.
+	std::vector<std::shared_ptr<GenericCell>> cells;
+
+	// Дата и время рождения.
+	DemiTime birthday;
+
+	// Количество предков данного вида.
+	uint64_t ancestorsCount;
+
 	// Вид организма.
 	std::shared_ptr<Species> ourSpecies;
 
-public:
 	// Текущие ячейки для хранения вещества перед реакцией.
-	std::vector<unsigned long long> leftReagentAmounts;
+	organismAmounts_t leftReagentAmounts;
 
-private:
 	// Текущая накопленная энергия.
-	int vitality;
+	int32_t vitality;
 
 	// Порог размножения для организма (изначально совпадает со значением для вида, потом меняется из-за изменчивости).
-	int fissionBarrier;
+	uint16_t fissionBarrier;
 
 	// Возвращает свободную клетку из окрестностей, если такая есть и истину, иначе ложь.
 	bool findFreePlace(clan::Point &point);
 
 	// Возвращает точку, лежащую относительно исходной в указанном направлении с учётом собственного направления.
-	void getPointAtDirection(int direction, clan::Point & dest);
+	void getPointAtDirection(uint8_t direction, clan::Point & dest);
 };
 
 };

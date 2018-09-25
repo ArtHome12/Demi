@@ -34,7 +34,7 @@ public:
 	bool checked = false;
 
 	// Дополнительное поле для хранения, например, индекса.
-	int tag;
+	size_t tag;
 
 	// Обработчик переключения видимости.
 	void onStateChanged();

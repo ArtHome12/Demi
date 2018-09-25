@@ -66,9 +66,10 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 
 	// Кнопки 
 	//
+	auto fs = pSettings->fileResDoc.get_file_system();
 	pButtonNew = Theme::create_button();
 	pButtonNew->style()->set("width: 120px; margin-left: 5px");
-	pButtonNew->image_view()->set_image(clan::Image(canvas, "New.png", pSettings->fileResDoc.get_file_system()));
+	pButtonNew->image_view()->set_image(clan::Image(canvas, "New.png", fs));
 	pButtonNew->image_view()->style()->set("padding-left: 3px");
 	pButtonNew->label()->set_text(pSettings->LocaleStr(cButtonLabelNew));
 	pButtonNew->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownNew);
@@ -76,7 +77,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 
 	pButtonOpen = Theme::create_button();
 	pButtonOpen->style()->set("width: 120px; margin-left: 12px");
-	pButtonOpen->image_view()->set_image(clan::Image(canvas, "Open.png", pSettings->fileResDoc.get_file_system()));
+	pButtonOpen->image_view()->set_image(clan::Image(canvas, "Open.png", fs));
 	pButtonOpen->image_view()->style()->set("padding-left: 3px");
 	pButtonOpen->label()->set_text(pSettings->LocaleStr(cButtonLabelOpen));
 	pButtonOpen->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownOpen);
@@ -84,7 +85,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 
 	auto bSave = Theme::create_button();
 	bSave->style()->set("width: 120px; margin-left: 12px");
-	bSave->image_view()->set_image(clan::Image(canvas, "Save.png", pSettings->fileResDoc.get_file_system()));
+	bSave->image_view()->set_image(clan::Image(canvas, "Save.png", fs));
 	bSave->image_view()->style()->set("padding-left: 3px");
 	bSave->label()->set_text(pSettings->LocaleStr(cButtonLabelSave));
 	bSave->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownSave);
@@ -92,7 +93,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 
 	auto bSaveAs = Theme::create_button();
 	bSaveAs->style()->set("width: 120px; margin-left: 12px");
-	bSaveAs->image_view()->set_image(clan::Image(canvas, "SaveAs.png", pSettings->fileResDoc.get_file_system()));
+	bSaveAs->image_view()->set_image(clan::Image(canvas, "SaveAs.png", fs));
 	bSaveAs->image_view()->style()->set("padding-left: 3px");
 	bSaveAs->label()->set_text(pSettings->LocaleStr(cButtonLabelSaveAs));
 	bSaveAs->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownSaveAs);
@@ -100,7 +101,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 
 	pButtonRestart = Theme::create_button();
 	pButtonRestart->style()->set("width: 120px; margin-left: 12px");
-	pButtonRestart->image_view()->set_image(clan::Image(canvas, "Restart.png", pSettings->fileResDoc.get_file_system()));
+	pButtonRestart->image_view()->set_image(clan::Image(canvas, "Restart.png", fs));
 	pButtonRestart->image_view()->style()->set("padding-left: 3px");
 	pButtonRestart->label()->set_text(pSettings->LocaleStr(cButtonLabelRestart));
 	pButtonRestart->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownRestart);
@@ -109,7 +110,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 	pButtonRunPause = Theme::create_button();
 	pButtonRunPause->style()->set("width: 150px; margin-left: 12px");
 	pButtonRunPause->set_sticky(true);
-	pButtonRunPause->image_view()->set_image(clan::Image(canvas, "StartStop.png", pSettings->fileResDoc.get_file_system()));
+	pButtonRunPause->image_view()->set_image(clan::Image(canvas, "StartStop.png", fs));
 	pButtonRunPause->image_view()->style()->set("padding-left: 3px");
 	pButtonRunPause->label()->set_text(pSettings->LocaleStr(cButtonLabelRun));
 	pButtonRunPause->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownRunPause);
@@ -224,7 +225,7 @@ void WindowsSettings::onButtondownOpen()
 void WindowsSettings::onButtondownSave()
 {
 	// Если модель не была ранее сохранена, вызовем "сохранить как".
-	if (modelFilename == "")
+	if (modelFilename.empty())
 		onButtondownSaveAs();
 	else {
 		// Преобразуем путь в абсолютный, если у нас относительный.
@@ -336,7 +337,7 @@ void WindowsSettings::onTreeCheckChanged(TreeItem &item)
 	else if (item.tag != 0) {
 		// Считаем, что это указатель на вид организма.
 		demi::Species *spec = reinterpret_cast<demi::Species *>(item.tag);
-		spec->set_visible(item.checked);
+		spec->setVisible(item.checked);
 	}
 }
 
@@ -352,10 +353,10 @@ void WindowsSettings::set_modelFilename(const std::string &newName)
 		// Сохраняем по-возможности относительный путь для облегчения копирования и переноса программы.
 		modelFilename = clan::PathHelp::make_relative(clan::System::get_exe_path(), absPath);
 	else
-		modelFilename = "";
+		modelFilename.clear();
 
 	// Информация для пользователя.
-	pLabelModelName->set_text(pSettings->LocaleStr(cLabelModelName) + (modelFilename != "" ? modelFilename : pSettings->LocaleStr(cLabelModelAbsent)));
+	pLabelModelName->set_text(pSettings->LocaleStr(cLabelModelName) + (!modelFilename.empty() ? modelFilename : pSettings->LocaleStr(cLabelModelAbsent)));
 
 	// Сохраняем в настройках как последний открытый проект.
 	pSettings->setProjectFilename(modelFilename);
@@ -423,7 +424,7 @@ void WindowsSettings::initElemVisibilityTree()
 	auto luca = globalWorld.getSpecies();
 
 	// Корневой узел под организмы.
-	auto curNode = std::make_shared<TreeItem>(pSettings->LocaleStr(cTreeAnimate) + ": " + luca->name + " (" + luca->author + ")", int(luca.get()), luca->visible);
+	auto curNode = std::make_shared<TreeItem>(pSettings->LocaleStr(cTreeAnimate) + ": " + luca->getName() + " (" + luca->getAuthor() + ")", size_t(luca.get()), luca->getVisible());
 	rootNode->children.push_back(curNode);
 
 	// Добавляем виды организмов, удаляя пробелы в начале на всякий случай (чтобы не спутать с неживой природой). В качестве tag - указатель.
@@ -453,10 +454,10 @@ void WindowsSettings::initElemVisibilityTreeAfterRestart()
 	auto luca = globalWorld.getSpecies();
 
 	auto firstAnimalNode = rootNode->children.at(1);
-	firstAnimalNode->tag = int(luca.get());
+	firstAnimalNode->tag = size_t(luca.get());
 
 	// Обновим видимость самого организма на основе значения чекбокса.
-	luca->set_visible(firstAnimalNode->checked);
+	luca->setVisible(firstAnimalNode->checked);
 }
 
 
@@ -475,6 +476,6 @@ std::shared_ptr<clan::LabelView> WindowsSettings::createLabelForAmount(std::stri
 // trim from beginning of string (left)
 inline std::string& ltrim(std::string& s)
 {
-	s.erase(0, s.find_first_not_of(" "));
+	s.erase(0, s.find_first_not_of(' '));
 	return s;
 }

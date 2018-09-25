@@ -37,9 +37,8 @@ void Amounts::Init()
 		// Если в точке есть организм, посчитаем ресурсы в нём.
 		demi::Organism* organism = cur->organism;
 		if (organism) {
-
-			std::vector<unsigned long long>::iterator itAmounts = organism->leftReagentAmounts.begin();
-			const demi::ChemReaction &reaction = *organism->get_species()->reaction;
+			demi::organismAmounts_t::const_iterator itAmounts = organism->getLeftReagentAmounts().begin();
+			const demi::ChemReaction &reaction = *organism->getSpecies()->getReaction();
 			for (auto &reagent : reaction.leftReagents) {
 				// Текущее имеющееся значение во "рту" организма.
 				arResAmounts[reagent.elementIndex] += *itAmounts++;

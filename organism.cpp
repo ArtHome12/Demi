@@ -25,6 +25,20 @@ using namespace demi;
 //
 // Вид организма
 //
+Species::Species(const std::weak_ptr<Species>& Aancestor,
+	const std::string& Aname,
+	const std::string& Aauthor,
+	bool Avisible,
+	uint16_t AfissionBarrier,
+	const clan::Color& AaliveColor,
+	const clan::Color& AdeadColor,
+	const std::shared_ptr<ChemReaction>& Areaction
+) : ancestor(Aancestor), name(Aname), author(Aauthor), visible(Avisible), fissionBarrier(AfissionBarrier), aliveColor(AaliveColor), deadColor(AdeadColor), reaction(Areaction)
+{
+	// Для векторов descendants, cells и reaction сработают конструктора по-умолчанию.
+}
+
+
 // Возвращает полное название вида в формате автор/вид\автор/вид.../ Корневой общий для всех вид не включается.
 //std::string Species::getFullName()
 //{
@@ -48,21 +62,22 @@ std::shared_ptr<Species> Species::getSpeciesByFullName(std::string fullName)
 //
 // Организм.
 //
-int Organism::minActiveMetabolicRate = 0;
-int Organism::minInactiveMetabolicRate = 0;
-int Organism::desintegrationVitalityBarrier = 0;
+uint8_t Organism::minActiveMetabolicRate = 0;
+uint8_t Organism::minInactiveMetabolicRate = 0;
+int32_t Organism::desintegrationVitalityBarrier = 0;
 
-Organism::Organism(std::shared_ptr<Species> species, const clan::Point &Acenter, int Aangle, int Avitality, int AfissionBarrier, unsigned long long AancestorsCount) : ourSpecies(species),
+Organism::Organism(const std::shared_ptr<Species>& species, const clan::Point &Acenter, uint8_t Aangle, int32_t Avitality, uint16_t AfissionBarrier, uint64_t AancestorsCount, const DemiTime& Abirthday) : ourSpecies(species),
 	cells(), 
-	leftReagentAmounts(ourSpecies->reaction->leftReagents.size()),
+	leftReagentAmounts(ourSpecies->getReaction()->leftReagents.size()),
 	center(Acenter),
 	angle(Aangle),
 	vitality(Avitality), fissionBarrier(AfissionBarrier),
-	birthday(globalWorld.getModelTime()),
-	ancestorsCount(AancestorsCount)
+	ancestorsCount(AancestorsCount),
+	birthday(Abirthday)
 {
 	// Надо создать собственные клетки на основе клеток вида.
-	for (auto &sCell : species->cells) {
+	const std::vector<std::shared_ptr<GenericCell>>& specCells = species->getCellsRef();
+	for (auto &sCell : specCells) {
 		GenericCell * ownCell = sCell->getClone();
 		ownCell->organism = this;
 		cells.push_back(std::shared_ptr<GenericCell>(ownCell));
@@ -87,15 +102,15 @@ Organism::~Organism()
 
 	// Возвращаем накопленные минеральные вещества в мир.
 	//
-	std::vector<unsigned long long>::iterator itAmounts = leftReagentAmounts.begin();
-	const demi::ChemReaction &reaction = *ourSpecies->reaction;
+	organismAmounts_t::iterator itAmounts = leftReagentAmounts.begin();
+	const demi::ChemReaction &reaction = *ourSpecies->getReaction();
 	for (auto &reagent : reaction.leftReagents) {
 
 		// Текущее имеющееся значение, которое надо вернуть.
-		unsigned long long amount = *itAmounts++;
+		organismAmount_t amount = *itAmounts++;
 
 		// Получаем доступное в точке количество соответствующего минерала.
-		unsigned long long amountInDot = dot.getElemAmount(reagent.elementIndex);
+		uint64_t amountInDot = dot.getElemAmount(reagent.elementIndex);
 
 		dot.setElementAmount(reagent.elementIndex, amountInDot + amount);
 	}
@@ -110,24 +125,24 @@ Organism* Organism::makeTickAndGetNewBorn()
 
 	// Необходимо проверить наличие пищи. Получим точку, где находимся.
 	// Итератор на вектор количеств, чтобы синхронно двигаться с вектором вида в цикле.
-	std::vector<unsigned long long>::iterator itAmounts = leftReagentAmounts.begin();
+	organismAmounts_t::iterator itAmounts = leftReagentAmounts.begin();
 	bool isFull = true;
-	const demi::ChemReaction &reaction = *ourSpecies->reaction;
+	const demi::ChemReaction &reaction = *ourSpecies->getReaction();
 	for (auto &reagent : reaction.leftReagents) {
 
-		// Текущее имеющееся значение.
-		unsigned long long amount = *itAmounts;
+		// Текущее имеющееся значение в клетке.
+		organismAmount_t amount = *itAmounts;
 
-		// Величина для пополнения.
-		unsigned long long topIt = reagent.amount - amount;
+		// Необходимая величина для пополнения.
+		organismAmount_t topIt = reagent.amount - amount;
 
 		// Получаем доступное в точке количество соответствующего минерала.
-		unsigned long long maxAvailable = dot.getElemAmount(reagent.elementIndex);
+		uint64_t maxAvailable = dot.getElemAmount(reagent.elementIndex);
 
 		// Доступное количество для пополнения.
 		// Если недонабрали вещества до реакции, сбросим флаг.
 		if (topIt > maxAvailable) {
-			topIt = maxAvailable;
+			topIt = organismAmount_t(maxAvailable);	// Исходя из условия здесь не будет потерь разрядов.
 			isFull = false;
 		}
 
@@ -142,7 +157,7 @@ Organism* Organism::makeTickAndGetNewBorn()
 
 		// Реакция прошла, выбросим в мир результаты.
 		for (auto &reagent : reaction.rightReagents) {
-			unsigned long long dotAmount = dot.getElemAmount(reagent.elementIndex) + reagent.amount;
+			uint64_t dotAmount = dot.getElemAmount(reagent.elementIndex) + reagent.amount;
 			dot.setElementAmount(reagent.elementIndex, dotAmount);
 
 			// Не забудем обновить и общее количество.
@@ -158,8 +173,10 @@ Organism* Organism::makeTickAndGetNewBorn()
 			globalWorld.amounts.decAmount(reagent.elementIndex, reagent.amount);
 
 
-		// Сохраним полученную энергию.
+		// Сохраним полученную энергию, если не достигли максимума.
 		vitality += reaction.vitalityProductivity;
+		if (vitality > cMaxVitality)
+			vitality = cMaxVitality;
 
 		// Самое время делиться, если есть такая возможность.
 		clan::Point freePlace;
@@ -167,10 +184,19 @@ Organism* Organism::makeTickAndGetNewBorn()
 			// Создаём новый экземпляр, передаём ему половину энергии, на порог деления делаем мутацию в пределах 1%.
 			vitality /= 2;
 			std::uniform_int_distribution<> rndAngle(0, 7); 
-			int childAngle = rndAngle(globalWorld.getRandomGenerator());
+			uint8_t childAngle = rndAngle(globalWorld.getRandomGenerator());
 			std::uniform_int_distribution<> rndFission(-1, 1);
-			int childFissionBarrier = std::max<int>(1, fissionBarrier + rndFission(globalWorld.getRandomGenerator()));
-			return new Organism(get_species(), center.getGlobalPoint(freePlace), childAngle, vitality, childFissionBarrier, ancestorsCount+1);
+			uint16_t childFissionBarrier = std::max<uint16_t>(1, fissionBarrier + rndFission(globalWorld.getRandomGenerator()));
+
+			// Проверка на предельное значение.
+			if (childFissionBarrier == UINT16_MAX)
+				--childFissionBarrier;
+
+			uint64_t newAncestorCount = ancestorsCount + 1;
+			if (newAncestorCount == UINT64_MAX)
+				--newAncestorCount;
+
+			return new Organism(ourSpecies, center.getGlobalPoint(freePlace), childAngle, vitality, childFissionBarrier, newAncestorCount, globalWorld.getModelTime());
 		}
 	}
 	else {
@@ -189,7 +215,7 @@ Organism* Organism::makeTickAndGetNewBorn()
 bool Organism::findFreePlace(clan::Point &point)
 {
 	// Пребираем все направления, если не находим, возвращаем ложь.
-	for (int i = 0; i != 8; ++i) {
+	for (uint8_t i = 0; i != 8; ++i) {
 		getPointAtDirection(i, point);
 
 		if (center.get_dot(point).organism == nullptr)
@@ -199,7 +225,7 @@ bool Organism::findFreePlace(clan::Point &point)
 }
 
 // Возвращает точку, лежащую относительно исходной в указанном направлении с учётом собственного направления.
-void Organism::getPointAtDirection(int direction, clan::Point & dest)
+void Organism::getPointAtDirection(uint8_t direction, clan::Point & dest)
 {
 	// Добавим к заданному направлению собственное направление.
 	direction += angle;

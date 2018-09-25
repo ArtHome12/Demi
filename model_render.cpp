@@ -139,8 +139,8 @@ void ModelRender::render_content(clan::Canvas &canvas)
 		// Рисуем клетками.
 
 		// Координаты отрисовываемой точки мира, от нуля с учётом сдвига в coordSystem.
-		size_t xDotIndex = 0;
-		size_t yDotIndex = 0;
+		int xDotIndex = 0;
+		int yDotIndex = 0;
 
 		// Область клетки.
 		clan::Rect r;
@@ -249,13 +249,13 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 	const int indent = rect.left + 3;
 
 	// Количество элементов.
-	const int elemCount = globalWorld.getElemCount();
+	const size_t elemCount = globalWorld.getElemCount();
 
 	// Координата текущей строки для вывода информации.
 	int yLine = rect.top + 16;
 
 	// Цвет шрифта либо белый либо чёрный в зависимости от цвета самой клетки.
-	clan::Colorf color((dotColor.get_red() + dotColor.get_green() + dotColor.get_blue()) * dotColor.get_alpha() < 255*3*255/2.0f ? clan::Colorf::white : clan::Colorf::black);
+	clan::Colorf color(float((dotColor.get_red() + dotColor.get_green() + dotColor.get_blue()) * dotColor.get_alpha()) < 255*3*255/2.0f ? clan::Colorf::white : clan::Colorf::black);
 
 	// Ширина 1 символа текстом клетки, если не была определена ранее.
 	if (!cellFontSymbolWidth)
@@ -276,7 +276,7 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 			yLine += cCompactCellResLineHeight;
 
 			// Отрисовываем строки с ресурсами, сколько поместится.
-			int i = 0;
+			size_t i = 0;
 			while (yLine < h) {
 
 				// Если ресурс не включен для отображения, пропускаем его.
@@ -333,13 +333,13 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 					if (pOrganism) {
 
 						// Название вида.
-						str += pOrganism->get_species()->getAuthorAndNamePair() + ", ";
+						str += pOrganism->getSpecies()->getAuthorAndNamePair() + ", ";
 
 						// Жизненная сила, порог размножения, количество предков, дата рождения.
-						str += IntToStrWithDigitPlaces<int>(pOrganism->getVitality())
-							+ " / " + IntToStrWithDigitPlaces<int>(pOrganism->getFissionBarrier())
-							+ ", " + IntToStrWithDigitPlaces<unsigned long long>(pOrganism->ancestorsCount)
-							+" / " + pOrganism->birthday.getDateStr();
+						str += IntToStrWithDigitPlaces<int32_t>(pOrganism->getVitality())
+							+ " / " + IntToStrWithDigitPlaces<uint16_t>(pOrganism->getFissionBarrier())
+							+ ", " + IntToStrWithDigitPlaces<uint64_t>(pOrganism->getAncestorsCount())
+							+" / " + pOrganism->getBirthday().getDateStr();
 
 						// Проверим ограничение на максимальную длину строки.
 						if (str.length() > maxStrLen)
@@ -581,8 +581,8 @@ void ModelRender::workerThread()
 
 			// Получим размеры для отображения.
 			const clan::Sizef windowSize = geometry().content_size();
-			size_t width = size_t(windowSize.width);
-			size_t height = size_t(windowSize.height);
+			int width = int(windowSize.width);
+			int height = int(windowSize.height);
 			float scale = globalWorld.getAppearanceScale();
 
 			// Определим систему координат.
@@ -600,18 +600,18 @@ void ModelRender::workerThread()
 			unsigned char *pixels = (unsigned char *)pPixelBufToWrite->get_data();
 
 			// Количество байт под одну строку в буфере.
-			const size_t lineSize = width * 4;
+			const size_t lineSize = size_t(width) * sizeof(unsigned char) * 4;
 
 			// Цвет точки, для оптимизации объявление вынесено сюда.
 			clan::Color color;
 
 			// Индекс текущей точки.
-			size_t xIndex, oldXIndex = MAXSIZE_T, yIndex, oldYIndex = MAXSIZE_T;
+			int xIndex, oldXIndex = -1, yIndex, oldYIndex = -1;
 
-			for (size_t ypos = 0; ypos != height; ++ypos)
+			for (int ypos = 0; ypos != height; ++ypos)
 			{
 				// Индекс точки мира.
-				yIndex = size_t(ypos * scale + 0.5f);
+				yIndex = int(ypos * scale + 0.5f);
 
 				// Если индекс не поменялся, можно просто скопировать предыдущую строку, иначе вычисляем заново.
 				if (oldYIndex == yIndex) {
@@ -619,13 +619,13 @@ void ModelRender::workerThread()
 					pixels+=lineSize;
 				}
 				else {
-					oldXIndex = MAXSIZE_T;
+					oldXIndex = -1;
 					oldYIndex = yIndex;
 
-					for (size_t xpos = 0; xpos != width; ++xpos)
+					for (int xpos = 0; xpos != width; ++xpos)
 					{
 						// Точка мира. Доступ через индекс потому, что в физической матрице точки могут быть расположены иначе, хотя это повод для оптимизации.
-						xIndex = size_t(xpos * scale + 0.5f);
+						xIndex = int(xpos * scale + 0.5f);
 
 						// Если одна координата не меняется, не делаем медленные вычисления.
 						if (xIndex != oldXIndex) {

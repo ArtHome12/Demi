@@ -203,10 +203,10 @@ void SettingsStorage::LoadLocaleStrings(const std::string &lang)
 	const std::vector<std::string>& names = XMLResDoc.get_resource_names_of_type(cLangType, cLangSection);
 
 	// Количество ресурсов.
-	int elemCount = int(names.size());
+	size_t elemCount = names.size();
 
 	// Считываем ресурсы.
-	for (int i = 0; i < elemCount; ++i) {
+	for (size_t i = 0; i != elemCount; ++i) {
 
 		// Строковый ресурс с разными языками.
 		clan::XMLResourceNode &res = XMLResDoc.get_resource(names[i]);
@@ -230,15 +230,15 @@ std::string SettingsStorage::UTF8_to_CP1251(std::string const & utf8)
 {
 	if (!utf8.empty())
 	{
-		int wchlen = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), utf8.size(), NULL, 0);
+		int wchlen = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), int(utf8.size()), NULL, 0);
 		if (wchlen > 0 && wchlen != 0xFFFD)
 		{
 			std::vector<wchar_t> wbuf(wchlen);
-			MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), utf8.size(), &wbuf[0], wchlen);
+			MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), int(utf8.size()), &wbuf[0], wchlen);
 			std::vector<char> buf(wchlen);
 			WideCharToMultiByte(1251, 0, &wbuf[0], wchlen, &buf[0], wchlen, 0, 0);
 
-			return std::string(&buf[0], wchlen);
+			return std::string(&buf[0], size_t(wchlen));
 		}
 	}
 	return std::string();
