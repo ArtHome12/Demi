@@ -31,14 +31,14 @@ public:
 	void setGeothermalEnergy(float newVal) { geothermalEnergy = newVal; }
 
 	// Количество указанного элемента в абсолютной величине.
-	unsigned long long getElemAmount(size_t index) const { return res[index]; }
-	void setElementAmount(size_t index, unsigned long long amount) { res[index] = amount; }
+	uint64_t getElemAmount(size_t index) const { return res[index]; }
+	void setElementAmount(size_t index, uint64_t amount) { res[index] = amount; }
 
 	// Количество указанного элемента в процентах.
 	float getElemAmountPercent(size_t index) const;
 
 	// Имеющиеся в ней ресурсы - первые два элемента это солнечная и геотермальная энергии (для ускорения сохранения).
-	unsigned long long *res;
+	uint64_t *res;
 
 	// Конструктор, массив ресов обнуляем.
 	Dot();

@@ -19,10 +19,9 @@ Dot::Dot()
 {
 	// Выделяем память под элементы.
 	size_t elemCount = globalWorld.getElemCount();
-	res = new unsigned long long[elemCount];
-	memset(res, 0, sizeof(unsigned long long) * elemCount);
+	res = new uint64_t[elemCount];
+	memset(res, 0, sizeof(uint64_t) * elemCount);
 }
-
 
 Dot::~Dot()
 {

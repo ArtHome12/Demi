@@ -13,7 +13,6 @@ Copyright (c) 2013 by Artem Khomenko _mag12@yahoo.com.
 
 using namespace demi;
 
-
 void DemiTime::MakeTick()
 {
 	// Прибавляет один тик.
@@ -39,4 +38,23 @@ std::string DemiTime::getDateStr() const
 	return clan::string_format("%1:%2:%3", year, day, sec);
 }
 
+
+// Считывают и сохраняют себя в файл для последующего считывания в конструкторе.
+DemiTime* DemiTime::createFromFile(clan::File& binFile)
+{
+	uint16_t Asec = binFile.read_uint16();
+	uint16_t Aday = binFile.read_uint16();
+	uint32_t Ayear = binFile.read_uint32();
+
+	return new DemiTime(Asec, Aday, Ayear);
+}
+
+
+// Сохраняет себя в файл для последующего считывания в конструкторе.
+void DemiTime::saveToFile(clan::File& binFile)
+{
+	binFile.write_uint16(sec);
+	binFile.write_uint16(day);
+	binFile.write_uint32(year);
+}
 

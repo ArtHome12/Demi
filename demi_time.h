@@ -27,17 +27,17 @@ namespace demi {
 	//
 	class DemiTime {
 	public:
-		// День года, от 1 до cDaysInYear включительно.
-		uint16_t day = 1;
-
 		// Момент внутри дня, от 0 до cTicksInDay
 		uint16_t sec = 0;
+
+		// День года, от 1 до cDaysInYear включительно.
+		uint16_t day = 1;
 
 		// Год, от 1 до бесконечности.
 		uint32_t year = 1;
 
 		DemiTime() {};
-		DemiTime(uint32_t AYear, uint16_t ADay, uint16_t ASec) : year(AYear), day(ADay), sec(ASec) {};
+		DemiTime(uint16_t ASec, uint16_t ADay, uint32_t AYear) : sec(ASec), day(ADay), year(AYear){};
 
 		// Прибавляет один тик.
 		void MakeTick();
@@ -48,6 +48,10 @@ namespace demi {
 		const bool operator!=(const DemiTime& rv) const {
 			return (year != rv.year) || (day != rv.day) || (sec != rv.sec);
 		}
+
+		// Считывают и сохраняют себя в файл.
+		static DemiTime* createFromFile(clan::File& binFile);
+		void saveToFile(clan::File& binFile);
 	};
 
 }

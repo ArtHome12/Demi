@@ -141,7 +141,7 @@ private:
 class Organism
 {
 public:
-	Organism(const std::shared_ptr<Species>& species, const clan::Point &Acenter, uint8_t Aangle, int32_t Avitality, uint16_t AfissionBarrier, uint64_t AancestorsCount, const DemiTime& Abirthday);
+	Organism(const clan::Point &Acenter, uint8_t Aangle, uint16_t AfissionBarrier, int32_t Avitality, const DemiTime& Abirthday, uint64_t AancestorsCount, const std::shared_ptr<Species>& species);
 	~Organism();
 
 	// Доступ к полям.
@@ -183,13 +183,20 @@ public:
 	// Вычитает жизненную энергию на неактивное состояние.
 	void processInactiveVitality() { vitality -= minActiveMetabolicRate; }
 
+	// Считывают и сохраняют себя в файл.
+	static Organism* createFromFile(clan::File& binFile, const clan::Point& Acenter, const std::shared_ptr<Species>& Aspecies);
+	void saveToFile(clan::File& binFile);
+
 private:
 	// Местоположение организма в мире (первой клетки живота) и ориентация (0 - север, 1 - северо-восток, 2 - восток и т.д. до 7 - северо-запад).
-	uint8_t angle;
 	LocalCoord center;
+	uint8_t angle;
 
-	// Клетки организма.
-	std::vector<std::shared_ptr<GenericCell>> cells;
+	// Порог размножения для организма (изначально совпадает со значением для вида, потом меняется из-за изменчивости).
+	uint16_t fissionBarrier;
+
+	// Текущая накопленная энергия.
+	int32_t vitality;
 
 	// Дата и время рождения.
 	DemiTime birthday;
@@ -199,15 +206,12 @@ private:
 
 	// Вид организма.
 	std::shared_ptr<Species> ourSpecies;
-public:
+
+	// Клетки организма.
+	std::vector<std::shared_ptr<GenericCell>> cells;
+
 	// Текущие ячейки для хранения вещества перед реакцией.
 	organismAmounts_t leftReagentAmounts;
-
-	// Текущая накопленная энергия.
-	int32_t vitality;
-
-	// Порог размножения для организма (изначально совпадает со значением для вида, потом меняется из-за изменчивости).
-	uint16_t fissionBarrier;
 
 	// Возвращает свободную клетку из окрестностей, если такая есть и истину, иначе ложь.
 	bool findFreePlace(clan::Point &point);

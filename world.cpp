@@ -209,7 +209,7 @@ void World::makeTick()
 	// Создаём экземпляр протоорганизма, если есть место.
 	Dot& protoDot = LocalCoord(LUCAPos).get_dot(0, 0);
 	if (protoDot.organism == nullptr)
-		animals.push_back(new demi::Organism(species, LUCAPos, 0, species->getFissionBarrier(), species->getFissionBarrier(), 0, getModelTime()));
+		animals.push_back(new demi::Organism(LUCAPos, 0, species->getFissionBarrier(), species->getFissionBarrier(), getModelTime(), 0, species));
 }
 
 
@@ -933,34 +933,19 @@ void World::resetModel(const std::string &modelFilename, const std::string &defa
 // Вынесено из SaveModel() для удобства. Запись одного организма.
 void World::doWriteOrganism(clan::File &binFile, std::set<std::string> &dict, demi::Organism* organism)
 {
-	// Если организма нет, в качестве ключа вида запишем -1.
+	// Если организма нет, в качестве ключа вида запишем UINT16_MAX.
 	if (!organism) {
 		binFile.write_uint16(UINT16_MAX);
 		return;
 	}
 
-	// Находим имя организма в словаре и записываем его индекс.
+	// Находим название вида организма в словаре и записываем его индекс.
 	auto it = dict.find(organism->getSpecies()->getAuthorAndNamePair());
 	ptrdiff_t index = std::distance(dict.begin(), it);
 	binFile.write_uint16(uint16_t(index));
 
-	// Угол, жизненная энергия, порог деления.
-	binFile.write_uint8(organism->getAngle());
-	binFile.write_int32(organism->getVitality());
-	binFile.write_uint16(organism->getFissionBarrier());
-
-	// Количество предков.
-	binFile.write_uint64(organism->getAncestorsCount());
-
-	// Дата рождения.
-	auto& birthday = organism->getBirthday();
-	binFile.write_uint32(birthday.year);
-	binFile.write_uint16(birthday.day);
-	binFile.write_uint16(birthday.sec);
-
-	// Содержимое ячеек реакции.
-	auto lrAmounts = organism->getLeftReagentAmounts();
-	binFile.write(organism->leftReagentAmounts.data(), int(sizeof(demi::organismAmount_t) * organism->leftReagentAmounts.size()));
+	// Записываем остальные поля организма.
+	organism->saveToFile(binFile);
 }
 
 demi::Organism* World::doReadOrganism(clan::File &binFile, std::set<std::string> &dict, const clan::Point &center)
@@ -971,15 +956,6 @@ demi::Organism* World::doReadOrganism(clan::File &binFile, std::set<std::string>
 	if (dictKey == UINT16_MAX)
 		return nullptr;
 
-	// Прочитаем оставшиеся поля.
-	uint8_t angle = binFile.read_uint8();
-	int32_t vitality = binFile.read_int32();
-	uint16_t fissionBarrier = binFile.read_uint16();
-	uint64_t ancestorsCount = binFile.read_uint64();
-
-	// Дата рождения.
-	demi::DemiTime birthday(binFile.read_uint32(), binFile.read_uint16(), binFile.read_uint16());
-
 	// Название вида в полной форме вытащим по индексу из словаря.
 	auto it = dict.begin();
 	std::advance(it, dictKey);
@@ -989,12 +965,8 @@ demi::Organism* World::doReadOrganism(clan::File &binFile, std::set<std::string>
 	// species есть шареды только для его потомков.
 	const std::shared_ptr<demi::Species>& Aspecies = fullSpeciesName == species->getAuthorAndNamePair() ? species : species->getSpeciesByFullName(fullSpeciesName);
 
-	// Создаём организм.
-	demi::Organism* retVal = new demi::Organism(Aspecies, center, angle, vitality, fissionBarrier, ancestorsCount, birthday);
-
-	// Содержимое ячеек реакции.
-	demi::organismAmounts_t& lrAmounts = retVal->getLeftReagentAmounts();
-	binFile.read(lrAmounts.data(), int(sizeof(demi::organismAmount_t) * lrAmounts.size()));
+	// Создадим организм из файла.
+	demi::Organism* retVal = demi::Organism::createFromFile(binFile, center, Aspecies);
 
 	// Если жизненная энергия положительна, поместим организм в список живых.
 	if (retVal->isAlive())

@@ -66,14 +66,16 @@ uint8_t Organism::minActiveMetabolicRate = 0;
 uint8_t Organism::minInactiveMetabolicRate = 0;
 int32_t Organism::desintegrationVitalityBarrier = 0;
 
-Organism::Organism(const std::shared_ptr<Species>& species, const clan::Point &Acenter, uint8_t Aangle, int32_t Avitality, uint16_t AfissionBarrier, uint64_t AancestorsCount, const DemiTime& Abirthday) : ourSpecies(species),
-	cells(), 
-	leftReagentAmounts(ourSpecies->getReaction()->leftReagents.size()),
+Organism::Organism(const clan::Point &Acenter, uint8_t Aangle, uint16_t AfissionBarrier, int32_t Avitality, const DemiTime& Abirthday, uint64_t AancestorsCount, const std::shared_ptr<Species>& species) : 
 	center(Acenter),
 	angle(Aangle),
-	vitality(Avitality), fissionBarrier(AfissionBarrier),
+	fissionBarrier(AfissionBarrier),
+	vitality(Avitality),
+	birthday(Abirthday),
 	ancestorsCount(AancestorsCount),
-	birthday(Abirthday)
+	ourSpecies(species),
+	cells(), 
+	leftReagentAmounts(ourSpecies->getReaction()->leftReagents.size())
 {
 	// Ќадо создать собственные клетки на основе клеток вида.
 	const std::vector<std::shared_ptr<GenericCell>>& specCells = species->getCellsRef();
@@ -88,6 +90,7 @@ Organism::Organism(const std::shared_ptr<Species>& species, const clan::Point &A
 	dot.cells.push_back(cells[0]);
 	dot.organism = this;
 }
+
 
 
 Organism::~Organism()
@@ -196,7 +199,7 @@ Organism* Organism::makeTickAndGetNewBorn()
 			if (newAncestorCount == UINT64_MAX)
 				--newAncestorCount;
 
-			return new Organism(ourSpecies, center.getGlobalPoint(freePlace), childAngle, vitality, childFissionBarrier, newAncestorCount, globalWorld.getModelTime());
+			return new Organism(center.getGlobalPoint(freePlace), childAngle, childFissionBarrier, vitality, globalWorld.getModelTime(), newAncestorCount, ourSpecies);
 		}
 	}
 	else {
@@ -276,3 +279,40 @@ void Organism::moveTo(const clan::Point &newCenter)
 	newDot.cells.push_back(cells[0]);
 	newDot.organism = this;
 }
+
+// —читывают и сохран€ют себ€ в файл.
+Organism* Organism::createFromFile(clan::File& binFile, const clan::Point& Acenter, const std::shared_ptr<Species>& Aspecies)
+{
+	uint8_t Aangle = binFile.read_uint8();					// angle
+	uint16_t AfissionBarrier = binFile.read_uint16();		// fissionBarrier
+	int32_t Avitality = binFile.read_int32();				// vitality
+	DemiTime* Abirthday = DemiTime::createFromFile(binFile);// birthday
+	uint64_t AancestorsCount = binFile.read_uint64();		// ancestorsCount
+
+	// —оздаЄм организм.
+	Organism* retVal = new Organism(Acenter, Aangle, AfissionBarrier, Avitality, *Abirthday, AancestorsCount, Aspecies);
+
+	delete Abirthday;
+
+	// —одержимое €чеек реакции.
+	const size_t numBytes = sizeof(demi::organismAmount_t) * retVal->leftReagentAmounts.size();
+	binFile.read(retVal->leftReagentAmounts.data(), int(numBytes));
+
+	return retVal;
+}
+
+// —охран€ет себ€ в файл дл€ последующего считывани€ в конструкторе.
+void Organism::saveToFile(clan::File& binFile)
+{
+	// Center и ourSpecies не записываем, этим управл€ет внешний код при записи точки.
+	binFile.write_uint8(angle);				// angle
+	binFile.write_uint16(fissionBarrier);	// fissionBarrier
+	binFile.write_int32(vitality);			// vitality
+	birthday.saveToFile(binFile);			// birthday
+	binFile.write_uint64(ancestorsCount);	// ancestorsCount
+
+	// —одержимое €чеек реакции.
+	const size_t numBytes = sizeof(demi::organismAmount_t) * leftReagentAmounts.size();
+	binFile.write(leftReagentAmounts.data(), int(numBytes));
+}
+
