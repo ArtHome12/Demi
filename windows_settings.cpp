@@ -13,6 +13,8 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 #include "Theme/theme.h"
 #include "world.h"
 #include <clocale>
+#include <sstream>
+#include "msg_boxes.h"
 
 // Расширение xml-файла и двоичного файла модели и их описания.
 auto cProjectXMLExtension = "demi";
@@ -24,6 +26,7 @@ auto cProjectTemplate = "ThemeAero/template.demi";
 
 
 // Строковые ресурсы
+auto cWindowsSettingsDlgCaption = "WindowsSettingsDlgCaption";		// Заголовок для диалогов.
 auto cMessageBoxTextFileRewrite = "WindowsSettingsFileExistDlg";	// Строка для запроса перезаписи файла.
 auto cMessageBoxTextRestartModel = "WindowsSettingsRestartModel";	// Строка для запроса рестарта модели.
 auto cButtonLabelNew = "WindowsSettingsButtonNew";
@@ -184,6 +187,8 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsS
 		pButtonRunPause->set_pressed(true);
 		onButtondownRunPause();
 	}
+
+	window_manager.set_exit_on_last_close(false);
 }
 
 WindowsSettings::~WindowsSettings()
@@ -254,12 +259,25 @@ void WindowsSettings::onButtondownSaveAs()
 
 		// Если файл существует, необходимо спросить о перезаписи.
 		if (clan::FileHelp::file_exists(filename)) {
-			// Надо переделать на платформонезависимое решение!
-			const clan::DisplayWindow &window = view_tree()->display_window();
-			auto text = SettingsStorage::UTF8_to_CP1251(std::string(clan::string_format(pSettings->LocaleStr(cMessageBoxTextFileRewrite), filename)));
-			if (MessageBox(window.get_handle().hwnd, text.c_str(), SettingsStorage::UTF8_to_CP1251(window.get_title()).c_str(), MB_OKCANCEL) != IDOK)
-				// Пользователь отказался продолжать, выходим.
-				return;
+
+			const std::string caption(pSettings->LocaleStr(cWindowsSettingsDlgCaption));
+			const std::string text(clan::string_format(pSettings->LocaleStr(cMessageBoxTextFileRewrite), filename));
+			auto dialog = std::make_shared<MsgBox>(text, caption, cMbOkCancel);
+
+			dialog->onProcessResult = [=](eMbResultType result)
+			{
+				if (result == cMbResultOk) {
+					// Запоминаем новое имя проекта и перезаписываем XML-файл, сохраняем двоичный файл.
+					clan::FileHelp::copy_file(cProjectTemplate, filename, true);
+					set_modelFilename(filename);
+					globalWorld.saveModel(filename);
+
+				}
+			};
+			window_manager.present_modal(this, dialog);
+			
+			// Перезапись будет сделана в колбек-функции.
+			return;
 		}
 
 		// Запоминаем новое имя проекта и перезаписываем XML-файл, сохраняем двоичный файл.
@@ -268,6 +286,7 @@ void WindowsSettings::onButtondownSaveAs()
 		globalWorld.saveModel(filename);
 	}
 }
+
 
 void WindowsSettings::onButtondownRunPause()
 {
@@ -292,23 +311,26 @@ void WindowsSettings::onButtondownRunPause()
 
 void WindowsSettings::onButtondownRestart()
 {
-	// Начать расчёт заново.
+	// Начать расчёт заново. Получим подтверждение пользователя.
+	//
+	const std::string caption(pSettings->LocaleStr(cWindowsSettingsDlgCaption));
+	const std::string text(pSettings->LocaleStr(cMessageBoxTextRestartModel));
+	auto dialog = std::make_shared<MsgBox>(text, caption, cMbOkCancel);
 
-	// Получим подтверждение пользователя. Надо переделать на платформонезависимое решение!
-	const clan::DisplayWindow &window = view_tree()->display_window();
-	auto text = SettingsStorage::UTF8_to_CP1251(pSettings->LocaleStr(cMessageBoxTextRestartModel));
-	if (MessageBox(window.get_handle().hwnd, text.c_str(), SettingsStorage::UTF8_to_CP1251(window.get_title()).c_str(), MB_OKCANCEL) != IDOK)
-		// Пользователь отказался продолжать, выходим.
-		return;
+	dialog->onProcessResult = [=](eMbResultType result)
+	{
+		if (result == cMbResultOk) {
+			// Преобразуем путь в абсолютный, если у нас относительный.
+			std::string absPath = clan::PathHelp::make_absolute(clan::System::get_exe_path(), modelFilename);
 
-	// Преобразуем путь в абсолютный, если у нас относительный.
-	std::string absPath = clan::PathHelp::make_absolute(clan::System::get_exe_path(), modelFilename);
+			// Сбрасываем модель.
+			globalWorld.resetModel(absPath, cProjectTemplate);
 
-	// Сбрасываем модель.
-	globalWorld.resetModel(absPath, cProjectTemplate);
-
-	// Для новой модели применяем текущие настройки видимости.
-	initElemVisibilityTreeAfterRestart();
+			// Для новой модели применяем текущие настройки видимости.
+			initElemVisibilityTreeAfterRestart();
+		}
+	};
+	window_manager.present_modal(this, dialog);
 }
 
 void WindowsSettings::onCBAutoRunToggle()

@@ -32,6 +32,7 @@
 		<lang name="ModelRenderGeothermal" eng="Geothermal : " rus="Геотерм : "/>
 		<lang name="ModelRenderOrganism" eng="Organism   : " rus="Организм: "/>
 		<!--User message in module: windows_settings-->
+		<lang name="WindowsSettingsDlgCaption" eng="Attention!" rus="Внимание!"/>
 		<lang name="WindowsSettingsFileExistDlg" eng="File %1 exists. Rewrite it?" rus="Файл %1 существует. Перезаписать его?"/>
 		<lang name="WindowsSettingsRestartModel" eng="Start simulation of the world anew? Attention - file .demib if exists, will be deleted." rus="Начать расчёт модели заново? Внимание - файл .demib будет удалён, если он существует."/>
 		<lang name="WindowsSettingsButtonNew" eng="New" rus="Новый"/>

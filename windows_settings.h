@@ -86,5 +86,9 @@ private:
 
 	// Создаёт надпись.
 	std::shared_ptr<clan::LabelView> createLabelForAmount(std::string text);
+
+	// Необходима для модального окна.
+	clan::WindowManager window_manager;
+
 };
 

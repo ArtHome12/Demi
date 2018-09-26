@@ -28,13 +28,13 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -104,6 +104,7 @@
     <ClCompile Include="app.cpp" />
     <ClCompile Include="demi_time.cpp" />
     <ClCompile Include="local_coord.cpp" />
+    <ClCompile Include="msg_boxes.cpp" />
     <ClCompile Include="tree_view.cpp" />
     <ClCompile Include="world.cpp" />
     <ClCompile Include="model_render.cpp" />
@@ -119,6 +120,7 @@
     <ClInclude Include="app.h" />
     <ClInclude Include="demi_time.h" />
     <ClInclude Include="local_coord.h" />
+    <ClInclude Include="msg_boxes.h" />
     <ClInclude Include="reactions.h" />
     <ClInclude Include="tree_view.h" />
     <ClInclude Include="tree_view_impl.h" />

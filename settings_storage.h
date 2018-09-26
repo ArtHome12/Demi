@@ -48,9 +48,6 @@ public:
 	// Возвращает строку по заданному ключу либо сам ключ, если не найдена.
 	std::string LocaleStr(const std::string &key);
 
-	// Преобразует строку из UTF8 в CP1251 для подсовывания OS Windows MessageBox.
-	static std::string UTF8_to_CP1251(std::string const & utf8);
-
 private:
 	// Разделы XML-файла.
 	clan::DomElement sectionMainWindowApperance;			// Раздел с параметрами главного окна.
