@@ -960,7 +960,7 @@ void World::doWriteOrganism(clan::File &binFile, std::set<std::string> &dict, de
 
 	// —одержимое €чеек реакции.
 	auto lrAmounts = organism->getLeftReagentAmounts();
-	binFile.write(lrAmounts.data(), int(sizeof(demi::organismAmount_t) * lrAmounts.size()));
+	binFile.write(organism->leftReagentAmounts.data(), int(sizeof(demi::organismAmount_t) * organism->leftReagentAmounts.size()));
 }
 
 demi::Organism* World::doReadOrganism(clan::File &binFile, std::set<std::string> &dict, const clan::Point &center)
@@ -993,7 +993,7 @@ demi::Organism* World::doReadOrganism(clan::File &binFile, std::set<std::string>
 	demi::Organism* retVal = new demi::Organism(Aspecies, center, angle, vitality, fissionBarrier, ancestorsCount, birthday);
 
 	// —одержимое €чеек реакции.
-	auto lrAmounts = retVal->getLeftReagentAmounts();
+	demi::organismAmounts_t& lrAmounts = retVal->getLeftReagentAmounts();
 	binFile.read(lrAmounts.data(), int(sizeof(demi::organismAmount_t) * lrAmounts.size()));
 
 	// ≈сли жизненна€ энерги€ положительна, поместим организм в список живых.

@@ -151,7 +151,7 @@ public:
 	const DemiTime& getBirthday() const { return birthday; }
 	uint64_t getAncestorsCount() const { return ancestorsCount; }
 	const std::shared_ptr<Species>& getSpecies() const { return ourSpecies; }
-	const organismAmounts_t& getLeftReagentAmounts() const { return leftReagentAmounts; }
+	 organismAmounts_t& getLeftReagentAmounts()  { return leftReagentAmounts; }
 	int32_t getVitality() const { return vitality; }
 	uint16_t getFissionBarrier() const { return fissionBarrier; }
 
@@ -199,7 +199,7 @@ private:
 
 	// Вид организма.
 	std::shared_ptr<Species> ourSpecies;
-
+public:
 	// Текущие ячейки для хранения вещества перед реакцией.
 	organismAmounts_t leftReagentAmounts;
 

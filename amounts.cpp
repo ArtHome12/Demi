@@ -41,7 +41,9 @@ void Amounts::Init()
 			const demi::ChemReaction &reaction = *organism->getSpecies()->getReaction();
 			for (auto &reagent : reaction.leftReagents) {
 				// Текущее имеющееся значение во "рту" организма.
-				arResAmounts[reagent.elementIndex] += *itAmounts++;
+				demi::organismAmount_t amnt = *itAmounts++;
+				if (amnt != 0)
+					arResAmounts[reagent.elementIndex] += amnt;
 			}
 		}
 
