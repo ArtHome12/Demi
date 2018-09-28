@@ -96,6 +96,7 @@ public:
 
 	// »нициализаци€ настроек.
 	void setSettingsStorage(SettingsStorage* pSettingsStorage) { pSettings = pSettingsStorage; }
+	SettingsStorage*getSettingsStorage() { return pSettings; }
 
 	// ¬озвращает координаты точки по указанному индексу.
 	clan::Point getDotXYFromIndex(size_t index);

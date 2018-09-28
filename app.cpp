@@ -137,7 +137,7 @@ App::App()
 	pTopPanel->add_child(pButtonIlluminatedModel);
 
 	// Окно настроек
-	pWindowSettings = std::make_shared<WindowsSettings>(canvas, pSettings);
+	pWindowSettings = std::make_shared<WindowsSettings>(canvas);
 	pWindowSettings->set_hidden(true);
 	pRootView->add_child(pWindowSettings);
 

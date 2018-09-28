@@ -49,5 +49,8 @@
 		<lang name="WindowsSettingsTreeInanimateSubTree" eng="Inanimate world" rus="Неживой мир"/>
 		<lang name="WindowsSettingsTreeAnimateSubTree" eng="First Organism" rus="Живой мир"/>
 		<lang name="WindowsSettingsAmountsLabel" eng="Amounts, pcs:" rus="Количество, шт.:"/>
+		<!--MsgBox labels in module: msg_boxes-->
+		<lang name="MsgBoxOk" eng="Ok" rus="Ок"/>
+		<lang name="MsgBoxCancel" eng="Cancel" rus="Отмена"/>
 	</section>--&gt;
 </resources>

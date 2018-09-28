@@ -611,7 +611,7 @@ void World::loadModel(const std::string &filename)
 			Dot &dot = arDots[i];
 
 			// Количества элементов в точке.
-			const int elemArraySize = int(sizeof(unsigned long long) * elemCount);
+			const size_t elemArraySize = sizeof(uint64_t) * elemCount;
 			if (binFile.read(dot.res, elemArraySize) != elemArraySize)
 				throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinCannotReadDots), i));
 
@@ -840,7 +840,7 @@ void World::saveModel(const std::string &filename)
 
 	// Записываем точки.
 	size_t dotsCount = worldSize.width * worldSize.height;
-	const int elemArraySize = int(sizeof(unsigned long long) * elemCount);
+	const size_t elemArraySize = sizeof(uint64_t) * elemCount;
 	for (size_t i = 0; i != dotsCount; ++i) {
 		// Текущая точка.
 		const Dot &dot = arDots[i];

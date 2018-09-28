@@ -47,8 +47,11 @@ auto cWindowsSettingsAmountsLabel = "WindowsSettingsAmountsLabel";
 
 
 
-WindowsSettings::WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsStorage> pSettingsStorage) : pSettings(pSettingsStorage)
+WindowsSettings::WindowsSettings(clan::Canvas &canvas)
 {
+	// Настройки.
+	auto pSettings = globalWorld.getSettingsStorage();
+
 	style()->set("background: lightgray; height: 300px; flex-direction: column; border: 3px solid bisque");
 
 	// Панель с общими настройками/инструментами (кнопки новый, сохранить и т.д., а также 3 чекбокса под ними.
@@ -260,9 +263,11 @@ void WindowsSettings::onButtondownSaveAs()
 		// Если файл существует, необходимо спросить о перезаписи.
 		if (clan::FileHelp::file_exists(filename)) {
 
+			auto pSettings = globalWorld.getSettingsStorage();
 			const std::string caption(pSettings->LocaleStr(cWindowsSettingsDlgCaption));
 			const std::string text(clan::string_format(pSettings->LocaleStr(cMessageBoxTextFileRewrite), filename));
-			auto dialog = std::make_shared<MsgBox>(text, caption, cMbOkCancel);
+			auto dialog = std::make_shared<MsgBox>(pSettings, text, caption, cMbOkCancel);
+			dialog->loadIcons(canvas(), pSettings->fileResDoc.get_file_system());
 
 			dialog->onProcessResult = [=](eMbResultType result)
 			{
@@ -313,9 +318,11 @@ void WindowsSettings::onButtondownRestart()
 {
 	// Начать расчёт заново. Получим подтверждение пользователя.
 	//
+	auto pSettings = globalWorld.getSettingsStorage();
 	const std::string caption(pSettings->LocaleStr(cWindowsSettingsDlgCaption));
 	const std::string text(pSettings->LocaleStr(cMessageBoxTextRestartModel));
-	auto dialog = std::make_shared<MsgBox>(text, caption, cMbOkCancel);
+	auto dialog = std::make_shared<MsgBox>(pSettings, text, caption, cMbOkCancel);
+	dialog->loadIcons(canvas(), pSettings->fileResDoc.get_file_system());
 
 	dialog->onProcessResult = [=](eMbResultType result)
 	{
@@ -335,16 +342,19 @@ void WindowsSettings::onButtondownRestart()
 
 void WindowsSettings::onCBAutoRunToggle()
 {
+	auto pSettings = globalWorld.getSettingsStorage();
 	pSettings->setProjectAutorun(pCBAutoRun->checked());
 }
 
 void WindowsSettings::onCBAutoSaveToggle()
 {
+	auto pSettings = globalWorld.getSettingsStorage();
 	pSettings->setProjectAutosave(pCBAutoSave->checked());
 }
 
 void WindowsSettings::onCBAutoSaveHourlyToggle()
 {
+	auto pSettings = globalWorld.getSettingsStorage();
 	pSettings->setProjectAutosaveHourly(pCBAutoSaveHourly->checked());
 }
 
@@ -378,6 +388,7 @@ void WindowsSettings::set_modelFilename(const std::string &newName)
 		modelFilename.clear();
 
 	// Информация для пользователя.
+	auto pSettings = globalWorld.getSettingsStorage();
 	pLabelModelName->set_text(pSettings->LocaleStr(cLabelModelName) + (!modelFilename.empty() ? modelFilename : pSettings->LocaleStr(cLabelModelAbsent)));
 
 	// Сохраняем в настройках как последний открытый проект.
@@ -426,6 +437,7 @@ void WindowsSettings::initElemVisibilityTree()
 	auto rootNode = std::make_shared<TreeItem>("", 0);	// В tag хранится либо индекс химэлемента, если первый символ имени - пробел, либо указатель на организм. 0 - заглушка.
 	
 	// Первый узел - под химические элементы.
+	auto pSettings = globalWorld.getSettingsStorage();
 	auto firstNode = std::make_shared<TreeItem>(pSettings->LocaleStr(cTreeInanimate), 0);
 
 	// Добавляем сразу и метку в панель количества.

@@ -12,21 +12,54 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 #include "Theme/theme.h"
 #include "msg_boxes.h"
 
-MsgBox::MsgBox(const std::string& text, const std::string& caption, eMbType mbType)
+// Строковые ресурсы
+auto cMsgBoxOk = "MsgBoxOk";
+auto cMsgBoxCancel = "MsgBoxCancel";
+
+
+MsgBox::MsgBox(SettingsStorage* pSettings, const std::string& text, const std::string& caption, eMbType mbType) :
+	leftIcon(std::make_shared<clan::ImageView>()),
+	bOk(Theme::create_button()),
+	bCancel(Theme::create_button())
 {
+	auto rootView = root_view();
+
 	set_title(caption);
-	root_view()->style()->set("flex-direction: column; background: rgb(240,240,240); padding: 11px; width: 250px");
+	rootView->style()->set("flex-direction: row; background: rgb(240,240,240); padding: 11px; width: 250px");
 
-	auto label = Theme::create_label(true);
-	label->style()->set("margin-bottom: 7px; font: 12px Tahoma; color: black");
-	label->set_text(text);
-	root_view()->add_child(label);
+	// Иконка в левой части диалога (появится только если был вызов loadIcons().
+	rootView->add_child(leftIcon);
 
-	auto ok_button = Theme::create_button();
-	ok_button->label()->set_text("OK");
-	root_view()->add_child(ok_button);
+	// Узнаем ширину текущего окна, чтобы соотнести с размером диалога.
+	// Получим размеры для отображения.
+	int primaryScreenIndex = 0;
+	std::vector<clan::Rectf> screenRects = clan::ScreenInfo().get_screen_geometries(primaryScreenIndex);
+	int screenWidth = int(screenRects.at(size_t(primaryScreenIndex)).get_width());
 
-	ok_button->func_clicked() = [=]()
+	// Ширина диалога не должна быть менее 300 точек и более четверти экрана.
+	screenWidth = std::max<int>(300, screenWidth / 4);
+
+	// Рамка для текста и кнопок правее иконки.
+	auto rightPanel = std::make_shared<clan::View>();
+	rightPanel->style()->set("flex-direction: column; width: " + std::to_string(screenWidth) + "px");
+	rightPanel->style()->set("border: 1px solid red");
+	rootView->add_child(rightPanel);
+
+	// Текст.
+	auto span = Theme::create_span();
+	span->add_text(text);
+	rightPanel->add_child(span);
+
+	// Подрамка справа внизу с кнопками.
+	auto rightBottomPanel = std::make_shared<clan::View>();
+	rightBottomPanel->style()->set("flex-direction: row; height: 32px;");
+	rightBottomPanel->style()->set("border: 1px solid green");
+	rightPanel->add_child(rightBottomPanel);
+
+	bOk->label()->set_text(pSettings->LocaleStr(cMsgBoxOk));
+	rightPanel->add_child(bOk);
+
+	bOk->func_clicked() = [=]()
 	{
 		result = cMbResultOk;
 		dismiss();
@@ -40,3 +73,10 @@ MsgBox::~MsgBox()
 		onProcessResult(result);
 }
 
+void MsgBox::loadIcons(clan::Canvas &canvas, const clan::FileSystem& fs)
+{
+	leftIcon->set_image(clan::Image(canvas, "Exclamation.png", fs));
+	leftIcon->style()->set("border: 1px solid red");
+
+	bOk->image_view()->set_image(clan::Image(canvas, "Ok.png", fs));
+}

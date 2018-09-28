@@ -296,7 +296,7 @@ Organism* Organism::createFromFile(clan::File& binFile, const clan::Point& Acent
 
 	// Содержимое ячеек реакции.
 	const size_t numBytes = sizeof(demi::organismAmount_t) * retVal->leftReagentAmounts.size();
-	binFile.read(retVal->leftReagentAmounts.data(), int(numBytes));
+	binFile.read(retVal->leftReagentAmounts.data(), numBytes);
 
 	return retVal;
 }
@@ -313,6 +313,6 @@ void Organism::saveToFile(clan::File& binFile)
 
 	// Содержимое ячеек реакции.
 	const size_t numBytes = sizeof(demi::organismAmount_t) * leftReagentAmounts.size();
-	binFile.write(leftReagentAmounts.data(), int(numBytes));
+	binFile.write(leftReagentAmounts.data(), numBytes);
 }
 

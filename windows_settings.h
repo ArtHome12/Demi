@@ -17,7 +17,7 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 class WindowsSettings :	public clan::View
 {
 public:
-	WindowsSettings(clan::Canvas &canvas, std::shared_ptr<SettingsStorage> pSettingsStorage);
+	WindowsSettings(clan::Canvas &canvas);
 	~WindowsSettings();
 
 	// Для получения уведомлений об отработке основного цикла (для возможного автосохранения модели, обновления количеств).
@@ -55,9 +55,6 @@ private:
 	// Панель под количества элементов.
 	std::shared_ptr<View> panelElemAmounts;
 
-	// Настройки.
-	std::shared_ptr<SettingsStorage> pSettings;
-
 	// Количество прошедших секунд с момента старта программы.
 	size_t secondsElapsed = 0;
 
@@ -89,6 +86,5 @@ private:
 
 	// Необходима для модального окна.
 	clan::WindowManager window_manager;
-
 };
 

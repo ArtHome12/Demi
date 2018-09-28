@@ -10,6 +10,8 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 
 #pragma once
 
+#include "settings_storage.h"
+
 enum eMbType { cMbOkCancel };
 enum eMbResultType { cMbResultOk, cMbResultCancel };
 
@@ -17,15 +19,23 @@ enum eMbResultType { cMbResultOk, cMbResultCancel };
 class MsgBox : public clan::WindowController
 {
 public:
-	MsgBox(const std::string& text, const std::string& caption, eMbType mbType);
+	MsgBox(SettingsStorage* pSettings, const std::string& text, const std::string& caption, eMbType mbType);
 	~MsgBox();
 
-	// Текущий результат, может быть изменён обработчиками кнопок.
-	eMbResultType result = cMbResultCancel;
+	// Для загрузки иконок, без вызова функции в диалоге будет только текст.
+	void loadIcons(clan::Canvas &canvas, const clan::FileSystem& fs);
 
 	// Обработчик закрытия диалогового окна.
 	void on_window_close();
 
 	// Callback для события на закрытие.
 	std::function<void(eMbResultType)> onProcessResult;
+
+private:
+	// Текущий результат, может быть изменён обработчиками кнопок.
+	eMbResultType result = cMbResultCancel;
+
+	std::shared_ptr<clan::ImageView> leftIcon;
+	std::shared_ptr<clan::ButtonView> bOk;
+	std::shared_ptr<clan::ButtonView> bCancel;
 };
