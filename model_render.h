@@ -13,7 +13,7 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 class ModelRender: public clan::View
 {
 public:
-	ModelRender(std::shared_ptr<SettingsStorage> &pSettingsStorage);
+	ModelRender(SettingsStorage* pSettingsStorage);
 	~ModelRender();
 
 	// Постоянная подсветка мира.
@@ -28,7 +28,7 @@ protected:
 
 private:
 	// Настройки.
-	std::shared_ptr<SettingsStorage> &pSettings;
+	SettingsStorage* pSettings;
 
 	// Размер области для отрисовки модели (используется для ускорения, если размер не менялся).
 	clan::Size oldWindowSize;

@@ -37,7 +37,7 @@ MsgBox::MsgBox(SettingsStorage* pSettings, const std::string& text, const std::s
 	int screenWidth = int(screenRects.at(size_t(primaryScreenIndex)).get_width());
 
 	// Ширина диалога не должна быть менее 300 точек и более четверти экрана.
-	screenWidth = std::max<int>(300, screenWidth / 4);
+	screenWidth = std::max<int>(300, screenWidth / 4); //-V112
 
 	// Рамка для текста и кнопок правее иконки.
 	auto rightPanel = std::make_shared<clan::View>();

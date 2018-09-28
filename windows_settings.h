@@ -17,8 +17,14 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 class WindowsSettings :	public clan::View
 {
 public:
-	WindowsSettings(clan::Canvas &canvas);
+	WindowsSettings();
 	~WindowsSettings();
+
+	// Завершающая часть настройки, которой требуется окно.
+	void initWindow(clan::Canvas& canvas);
+
+	// Для первоначальной загрузки модели.
+	void finishInit(clan::WindowManager* windowManager);
 
 	// Для получения уведомлений об отработке основного цикла (для возможного автосохранения модели, обновления количеств).
 	void modelRenderNotify(size_t secondsElapsed);
@@ -33,6 +39,12 @@ private:
 
 	// Кнопка открытия модели.
 	std::shared_ptr<clan::ButtonView> pButtonOpen;
+
+	// Кнопка сохранения модели.
+	std::shared_ptr<clan::ButtonView> pButtonSave;
+
+	// Кнопка сохранения модели под новым именем.
+	std::shared_ptr<clan::ButtonView> pButtonSaveAs;
 
 	// Кнопка перезапуска модели.
 	std::shared_ptr<clan::ButtonView> pButtonRestart;
@@ -84,7 +96,6 @@ private:
 	// Создаёт надпись.
 	std::shared_ptr<clan::LabelView> createLabelForAmount(std::string text);
 
-	// Необходима для модального окна.
-	clan::WindowManager window_manager;
+	clan::WindowManager* wManager;
 };
 

@@ -10,19 +10,17 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 
 #pragma once
 
-class App : public clan::Application
+class MainWindow : public clan::WindowController
 {
 public:
-	App();
-	~App();
-	bool update() override;
+	MainWindow();
+	~MainWindow();
+
+	// Завершающая часть настройки, которой требуется окно.
+	void initWindow(clan::WindowManager* wManager);
 
 private:
-
-	clan::Canvas canvas;
-
-	// Настройки программы
-	std::shared_ptr<SettingsStorage> pSettings;
+	friend class App;
 
 	// Надпись для отображения FPS
 	int lastFPS;
@@ -52,23 +50,14 @@ private:
 	bool fullscreen_requested = false;
 	bool is_fullscreen = false;
 
-	clan::UIThread ui_thread;
-	std::shared_ptr<clan::TopLevelWindow> pWindow;
+	// Кнопка меню - если нажата, то отображается панель настроек.
+	std::shared_ptr<clan::ButtonView> pMenuButton;
 
 	// Окно настроек
 	std::shared_ptr<WindowsSettings> pWindowSettings;
 
 	// Окно модели
 	std::shared_ptr<ModelRender> pModelRender;
-
-	// Счётчик времени.
-	clan::GameTime game_time;
-
-	// Кнопка меню - если нажата, то отображается панель настроек.
-	std::shared_ptr<clan::ButtonView> pMenuButton;
-
-	// Звуковая подсистема.
-	std::shared_ptr<clan::SoundOutput> pSoundOutput;
 
 	void on_input_down(const clan::KeyEvent &e);
 	void on_window_close();
@@ -77,5 +66,31 @@ private:
 	void on_menuTopLeftModelButton_down();
 	void on_menuScaleModelButton_down();
 	void on_menuIlluminatedModelButton_down();
+};
+
+class App : public clan::Application
+{
+public:
+	App();
+	~App();
+	bool update() override;
+
+private:
+
+	// Настройки программы
+	std::shared_ptr<SettingsStorage> pSettings;
+
+	clan::UIThread ui_thread;
+
+	// Главное окно.
+	std::shared_ptr<MainWindow> pMainWindow;
+
+	// Счётчик времени.
+	clan::GameTime game_time;
+
+	// Звуковая подсистема.
+	std::shared_ptr<clan::SoundOutput> pSoundOutput;
+
+	clan::WindowManager windowManager;
 };
 

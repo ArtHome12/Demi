@@ -44,7 +44,7 @@ const std::string cOrganismTitle = "ModelRenderOrganism";		// Подпись для органи
 
 
 
-ModelRender::ModelRender(std::shared_ptr<SettingsStorage> &pSettingsStorage) : pSettings(pSettingsStorage),
+ModelRender::ModelRender(SettingsStorage* pSettingsStorage) : pSettings(pSettingsStorage),
 	soundIlluminateOn("IlluminateOn.wav", false, pSettingsStorage->fileResDoc.get_file_system()),
 	soundIlluminateOff("IlluminateOff.wav", false, pSettingsStorage->fileResDoc.get_file_system()),
 	cellFont("Lucida Console", 12)

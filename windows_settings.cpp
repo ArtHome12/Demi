@@ -47,7 +47,7 @@ auto cWindowsSettingsAmountsLabel = "WindowsSettingsAmountsLabel";
 
 
 
-WindowsSettings::WindowsSettings(clan::Canvas &canvas)
+WindowsSettings::WindowsSettings()
 {
 	// Настройки.
 	auto pSettings = globalWorld.getSettingsStorage();
@@ -72,54 +72,41 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas)
 
 	// Кнопки 
 	//
-	auto fs = pSettings->fileResDoc.get_file_system();
 	pButtonNew = Theme::create_button();
 	pButtonNew->style()->set("width: 120px; margin-left: 5px");
-	pButtonNew->image_view()->set_image(clan::Image(canvas, "New.png", fs));
 	pButtonNew->image_view()->style()->set("padding-left: 3px");
 	pButtonNew->label()->set_text(pSettings->LocaleStr(cButtonLabelNew));
-	pButtonNew->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownNew);
 	panelGeneral_panelButtons->add_child(pButtonNew);
 
 	pButtonOpen = Theme::create_button();
 	pButtonOpen->style()->set("width: 120px; margin-left: 12px");
-	pButtonOpen->image_view()->set_image(clan::Image(canvas, "Open.png", fs));
 	pButtonOpen->image_view()->style()->set("padding-left: 3px");
 	pButtonOpen->label()->set_text(pSettings->LocaleStr(cButtonLabelOpen));
-	pButtonOpen->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownOpen);
 	panelGeneral_panelButtons->add_child(pButtonOpen);
 
-	auto bSave = Theme::create_button();
-	bSave->style()->set("width: 120px; margin-left: 12px");
-	bSave->image_view()->set_image(clan::Image(canvas, "Save.png", fs));
-	bSave->image_view()->style()->set("padding-left: 3px");
-	bSave->label()->set_text(pSettings->LocaleStr(cButtonLabelSave));
-	bSave->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownSave);
-	panelGeneral_panelButtons->add_child(bSave);
+	pButtonSave = Theme::create_button();
+	pButtonSave->style()->set("width: 120px; margin-left: 12px");
+	pButtonSave->image_view()->style()->set("padding-left: 3px");
+	pButtonSave->label()->set_text(pSettings->LocaleStr(cButtonLabelSave));
+	panelGeneral_panelButtons->add_child(pButtonSave);
 
-	auto bSaveAs = Theme::create_button();
-	bSaveAs->style()->set("width: 120px; margin-left: 12px");
-	bSaveAs->image_view()->set_image(clan::Image(canvas, "SaveAs.png", fs));
-	bSaveAs->image_view()->style()->set("padding-left: 3px");
-	bSaveAs->label()->set_text(pSettings->LocaleStr(cButtonLabelSaveAs));
-	bSaveAs->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownSaveAs);
-	panelGeneral_panelButtons->add_child(bSaveAs);
+	pButtonSaveAs = Theme::create_button();
+	pButtonSaveAs->style()->set("width: 120px; margin-left: 12px");
+	pButtonSaveAs->image_view()->style()->set("padding-left: 3px");
+	pButtonSaveAs->label()->set_text(pSettings->LocaleStr(cButtonLabelSaveAs));
+	panelGeneral_panelButtons->add_child(pButtonSaveAs);
 
 	pButtonRestart = Theme::create_button();
 	pButtonRestart->style()->set("width: 120px; margin-left: 12px");
-	pButtonRestart->image_view()->set_image(clan::Image(canvas, "Restart.png", fs));
 	pButtonRestart->image_view()->style()->set("padding-left: 3px");
 	pButtonRestart->label()->set_text(pSettings->LocaleStr(cButtonLabelRestart));
-	pButtonRestart->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownRestart);
 	panelGeneral_panelButtons->add_child(pButtonRestart);
 
 	pButtonRunPause = Theme::create_button();
 	pButtonRunPause->style()->set("width: 150px; margin-left: 12px");
 	pButtonRunPause->set_sticky(true);
-	pButtonRunPause->image_view()->set_image(clan::Image(canvas, "StartStop.png", fs));
 	pButtonRunPause->image_view()->style()->set("padding-left: 3px");
 	pButtonRunPause->label()->set_text(pSettings->LocaleStr(cButtonLabelRun));
-	pButtonRunPause->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownRunPause);
 	panelGeneral_panelButtons->add_child(pButtonRunPause);
 
 	// Чекбокс для автозапуска модели
@@ -127,7 +114,6 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas)
 	pCBAutoRun->style()->set("margin: 12px 12px 6px;");
 	pCBAutoRun->label()->set_text(pSettings->LocaleStr(cCBAutoRun));
 	pCBAutoRun->set_check(pSettings->getProjectAutorun());
-	pCBAutoRun->func_state_changed() = clan::bind_member(this, &WindowsSettings::onCBAutoRunToggle);
 	panelGeneral->add_child(pCBAutoRun);
 
 	// Чекбокс автосохранения модели при выходе из программы
@@ -135,7 +121,6 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas)
 	pCBAutoSave->style()->set("margin: 0px 12px;");
 	pCBAutoSave->label()->set_text(pSettings->LocaleStr(cCBAutoSave));
 	pCBAutoSave->set_check(pSettings->getProjectAutosave());
-	pCBAutoSave->func_state_changed() = clan::bind_member(this, &WindowsSettings::onCBAutoSaveToggle);
 	panelGeneral->add_child(pCBAutoSave);
 
 	// Чекбокс периодического (ежечасного) автосохранения модели.
@@ -143,7 +128,6 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas)
 	pCBAutoSaveHourly->style()->set("margin: 6px 12px;");
 	pCBAutoSaveHourly->label()->set_text(pSettings->LocaleStr(cCBAutoSaveHourly));
 	pCBAutoSaveHourly->set_check(pSettings->getProjectAutosaveHourly());
-	pCBAutoSaveHourly->func_state_changed() = clan::bind_member(this, &WindowsSettings::onCBAutoSaveHourlyToggle);
 	panelGeneral->add_child(pCBAutoSaveHourly);
 
 	// Панель с информацией о модели (чекбоксы видимости элементов, а также панель с количеством элементов).
@@ -161,6 +145,47 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas)
 	panelElemAmounts->style()->set("flex-direction: column; background-color: lightgray; width: 210px");
 	// panelElemAmounts->style()->set("border: 1px solid red");
 	panelModelInfo->add_child(panelElemAmounts);
+}
+
+WindowsSettings::~WindowsSettings()
+{
+	// Если установлена галочка автосохранения, сделаем это.
+	if (pCBAutoSave->checked())
+		onButtondownSave();
+}
+
+
+// Завершающая часть настройки, которой требуется окно.
+void WindowsSettings::initWindow(clan::Canvas& canvas)
+{
+	auto pSettings = globalWorld.getSettingsStorage();
+	auto fs = pSettings->fileResDoc.get_file_system();
+
+	pButtonNew->image_view()->set_image(clan::Image(canvas, "New.png", fs));
+	pButtonNew->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownNew);
+	pButtonOpen->image_view()->set_image(clan::Image(canvas, "Open.png", fs));
+	pButtonOpen->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownOpen);
+	pButtonSave->image_view()->set_image(clan::Image(canvas, "Save.png", fs));
+	pButtonSave->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownSave);
+	pButtonSaveAs->image_view()->set_image(clan::Image(canvas, "SaveAs.png", fs));
+	pButtonSaveAs->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownSaveAs);
+	pButtonRestart->image_view()->set_image(clan::Image(canvas, "Restart.png", fs));
+	pButtonRestart->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownRestart);
+	pButtonRunPause->image_view()->set_image(clan::Image(canvas, "StartStop.png", fs));
+	pButtonRunPause->func_clicked() = clan::bind_member(this, &WindowsSettings::onButtondownRunPause);
+
+	pCBAutoRun->func_state_changed() = clan::bind_member(this, &WindowsSettings::onCBAutoRunToggle);
+	pCBAutoSave->func_state_changed() = clan::bind_member(this, &WindowsSettings::onCBAutoSaveToggle);
+	pCBAutoSaveHourly->func_state_changed() = clan::bind_member(this, &WindowsSettings::onCBAutoSaveHourlyToggle);
+}
+
+
+// Для первоначальной загрузки модели.
+void WindowsSettings::finishInit(clan::WindowManager* windowManager)
+{
+	auto pSettings = globalWorld.getSettingsStorage();
+
+	wManager = windowManager;
 
 	// Если имя предыдущей модели отсутствует, создаём новую.
 	auto lastModelFilename = pSettings->getProjectFilename();
@@ -190,17 +215,7 @@ WindowsSettings::WindowsSettings(clan::Canvas &canvas)
 		pButtonRunPause->set_pressed(true);
 		onButtondownRunPause();
 	}
-
-	window_manager.set_exit_on_last_close(false);
 }
-
-WindowsSettings::~WindowsSettings()
-{
-	// Если установлена галочка автосохранения, сделаем это.
-	if (pCBAutoSave->checked())
-		onButtondownSave();
-}
-
 
 // Обработчики событий
 void WindowsSettings::onButtondownNew()
@@ -279,7 +294,7 @@ void WindowsSettings::onButtondownSaveAs()
 
 				}
 			};
-			window_manager.present_modal(this, dialog);
+			wManager->present_modal(this, dialog);
 			
 			// Перезапись будет сделана в колбек-функции.
 			return;
@@ -337,7 +352,7 @@ void WindowsSettings::onButtondownRestart()
 			initElemVisibilityTreeAfterRestart();
 		}
 	};
-	window_manager.present_modal(this, dialog);
+	wManager->present_modal(this, dialog);
 }
 
 void WindowsSettings::onCBAutoRunToggle()
