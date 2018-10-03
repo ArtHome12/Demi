@@ -338,7 +338,7 @@ void WindowsSettings::onButtondownRestart()
 	auto pSettings = globalWorld.getSettingsStorage();
 	const std::string caption(pSettings->LocaleStr(cWindowsSettingsDlgCaption));
 	const std::string text(pSettings->LocaleStr(cMessageBoxTextRestartModel));
-	auto dialog = std::make_shared<MsgBox>(pSettings, text, caption, cMbCancel);
+	auto dialog = std::make_shared<MsgBox>(pSettings, text, caption, cMbOkCancel);
 
 	dialog->onProcessResult = [=](eMbResultType result)
 	{
