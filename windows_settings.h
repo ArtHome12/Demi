@@ -97,5 +97,8 @@ private:
 	std::shared_ptr<clan::LabelView> createLabelForAmount(std::string text);
 
 	clan::WindowManager* wManager;
+
+	// Сохраняет модель с показом диалогового окна.
+	void saveModel(const std::string& filename);
 };
 

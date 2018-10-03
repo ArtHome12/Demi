@@ -253,7 +253,7 @@ void WindowsSettings::onButtondownSave()
 	else {
 		// Преобразуем путь в абсолютный, если у нас относительный.
 		std::string absPath = clan::PathHelp::make_absolute(clan::System::get_exe_path(), modelFilename);
-		globalWorld.saveModel(absPath);
+		saveModel(absPath);
 	}
 }
 
@@ -289,7 +289,7 @@ void WindowsSettings::onButtondownSaveAs()
 					// Запоминаем новое имя проекта и перезаписываем XML-файл, сохраняем двоичный файл.
 					clan::FileHelp::copy_file(cProjectTemplate, filename, true);
 					set_modelFilename(filename);
-					globalWorld.saveModel(filename);
+					saveModel(filename);
 
 				}
 			};
@@ -303,8 +303,28 @@ void WindowsSettings::onButtondownSaveAs()
 		// Запоминаем новое имя проекта и перезаписываем XML-файл, сохраняем двоичный файл.
 		clan::FileHelp::copy_file(cProjectTemplate, filename, true);
 		set_modelFilename(filename);
-		globalWorld.saveModel(filename);
+		saveModel(filename);
 	}
+}
+
+// Сохраняет модель с показом диалогового окна.
+void WindowsSettings::saveModel(const std::string& filename)
+{
+	// Создадим диалог с информационной надписью.
+	auto pSettings = globalWorld.getSettingsStorage();
+	const std::string caption(pSettings->LocaleStr(cWindowsSettingsDlgCaption));
+	const std::string text(clan::string_format(pSettings->LocaleStr(cMessageBoxTextFileRewrite), filename));
+	auto dialog = std::make_shared<MsgBox>(pSettings, text, caption, cMbOk);
+	wManager->present_modal(this, dialog);
+	dialog->initWindow(pSettings->fileResDoc.get_file_system());
+
+	// Отрисуем вне очереди.
+	dialog->immediate_update();
+
+	globalWorld.saveModel(filename);
+
+	// Погасим диалог.
+	dialog->dismiss();
 }
 
 
