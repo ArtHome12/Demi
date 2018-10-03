@@ -147,9 +147,8 @@ void MainWindow::initWindow(clan::WindowManager* wManager)
 		on_menuIlluminatedModelButton_down();
 	}
 
-	// Отрисуем главное окно, если получится.
-	auto displayWindow = root_view()->view_tree()->display_window();
-	displayWindow.flip();
+	// Отрисуем главное окно на текущем этапе.
+	immediate_update();
 
 	// Инициализируем модель.
 	pWindowSettings->finishInit(wManager);

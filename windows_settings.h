@@ -100,5 +100,8 @@ private:
 
 	// —охран€ет модель с показом диалогового окна.
 	void saveModel(const std::string& filename);
+
+	// «агружает модель с показом диалогового окна.
+	void loadModel(const std::string& filename);
 };
 

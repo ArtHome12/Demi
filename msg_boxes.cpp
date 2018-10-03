@@ -52,11 +52,13 @@ MsgBox::MsgBox(SettingsStorage* pSettings, const std::string& text, const std::s
 	span->add_text(text);
 	rightPanel->add_child(span);
 
-	// Подрамка справа внизу с кнопками.
+	// Подрамка справа внизу с кнопками, но только если кнопки есть.
 	auto rightBottomPanel = std::make_shared<clan::View>();
-	rightBottomPanel->style()->set("flex-direction: row; height: 32px; justify-content: center");
-	//rightBottomPanel->style()->set("border: 1px solid green");
-	rightPanel->add_child(rightBottomPanel);
+	if (mbType != cMbNone) {
+		rightBottomPanel->style()->set("flex-direction: row; height: 32px; justify-content: center");
+		//rightBottomPanel->style()->set("border: 1px solid green");
+		rightPanel->add_child(rightBottomPanel);
+	}
 
 	if (mbType == cMbOkCancel || mbType == cMbOk) {
 		bOk->style()->set("width: 120px; margin-right: 30px");

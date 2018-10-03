@@ -27,6 +27,8 @@ auto cProjectTemplate = "ThemeAero/template.demi";
 
 // Строковые ресурсы
 auto cWindowsSettingsDlgCaption = "WindowsSettingsDlgCaption";		// Заголовок для диалогов.
+auto cWindowsSettingsDlgSavingModel = "WindowsSettingsDlgSavingModel";
+auto cWindowsSettingsDlgLoadingModel = "WindowsSettingsDlgLoadingModel";
 auto cMessageBoxTextFileRewrite = "WindowsSettingsFileExistDlg";	// Строка для запроса перезаписи файла.
 auto cMessageBoxTextRestartModel = "WindowsSettingsRestartModel";	// Строка для запроса рестарта модели.
 auto cButtonLabelNew = "WindowsSettingsButtonNew";
@@ -197,7 +199,7 @@ void WindowsSettings::finishInit(clan::WindowManager* windowManager)
 		try {
 			// Преобразуем путь в абсолютный, если у нас относительный.
 			std::string absPath = clan::PathHelp::make_absolute(clan::System::get_exe_path(), lastModelFilename);
-			globalWorld.loadModel(absPath);
+			loadModel(absPath);
 			set_modelFilename(lastModelFilename);
 
 			// Обновим дерево с галочками видимости элементов.
@@ -222,7 +224,7 @@ void WindowsSettings::onButtondownNew()
 {
 	// Сбросим имя модели и загрузим в модель шаблон.
 	set_modelFilename("");
-	globalWorld.loadModel(cProjectTemplate);
+	loadModel(cProjectTemplate);
 
 	// Обновим дерево с галочками видимости элементов.
 	initElemVisibilityTree();
@@ -238,7 +240,7 @@ void WindowsSettings::onButtondownOpen()
 	if (dlg->show()) {
 		// Сохраним имя модели и загрузим её.
 		set_modelFilename(dlg->filename());
-		globalWorld.loadModel(dlg->filename());
+		loadModel(dlg->filename());
 
 		// Обновим дерево с галочками видимости элементов.
 		initElemVisibilityTree();
@@ -305,26 +307,6 @@ void WindowsSettings::onButtondownSaveAs()
 		set_modelFilename(filename);
 		saveModel(filename);
 	}
-}
-
-// Сохраняет модель с показом диалогового окна.
-void WindowsSettings::saveModel(const std::string& filename)
-{
-	// Создадим диалог с информационной надписью.
-	auto pSettings = globalWorld.getSettingsStorage();
-	const std::string caption(pSettings->LocaleStr(cWindowsSettingsDlgCaption));
-	const std::string text(clan::string_format(pSettings->LocaleStr(cMessageBoxTextFileRewrite), filename));
-	auto dialog = std::make_shared<MsgBox>(pSettings, text, caption, cMbOk);
-	wManager->present_modal(this, dialog);
-	dialog->initWindow(pSettings->fileResDoc.get_file_system());
-
-	// Отрисуем вне очереди.
-	dialog->immediate_update();
-
-	globalWorld.saveModel(filename);
-
-	// Погасим диалог.
-	dialog->dismiss();
 }
 
 
@@ -540,6 +522,45 @@ std::shared_ptr<clan::LabelView> WindowsSettings::createLabelForAmount(std::stri
 	return retVal;
 }
 
+// Сохраняет модель с показом диалогового окна.
+void WindowsSettings::saveModel(const std::string& filename)
+{
+	// Создадим диалог с информационной надписью.
+	auto pSettings = globalWorld.getSettingsStorage();
+	const std::string caption(pSettings->LocaleStr(cWindowsSettingsDlgCaption));
+	const std::string text(clan::string_format(pSettings->LocaleStr(cWindowsSettingsDlgSavingModel), filename));
+	auto dialog = std::make_shared<MsgBox>(pSettings, text, caption, cMbNone);
+	wManager->present_modal(this, dialog);
+	dialog->initWindow(pSettings->fileResDoc.get_file_system());
+
+	// Отрисуем вне очереди.
+	dialog->immediate_update();
+
+	globalWorld.saveModel(filename);
+
+	// Погасим диалог.
+	dialog->dismiss();
+}
+
+// Загружает модель с показом диалогового окна.
+void WindowsSettings::loadModel(const std::string& filename)
+{
+	// Создадим диалог с информационной надписью.
+	auto pSettings = globalWorld.getSettingsStorage();
+	const std::string caption(pSettings->LocaleStr(cWindowsSettingsDlgCaption));
+	const std::string text(clan::string_format(pSettings->LocaleStr(cWindowsSettingsDlgLoadingModel), filename));
+	auto dialog = std::make_shared<MsgBox>(pSettings, text, caption, cMbNone);
+	wManager->present_modal(this, dialog);
+	dialog->initWindow(pSettings->fileResDoc.get_file_system());
+
+	// Отрисуем вне очереди.
+	dialog->immediate_update();
+
+	globalWorld.loadModel(filename);
+
+	// Погасим диалог.
+	dialog->dismiss();
+}
 
 
 // trim from beginning of string (left)

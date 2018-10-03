@@ -12,7 +12,7 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 
 #include "settings_storage.h"
 
-enum eMbType { cMbOkCancel, cMbOk, cMbCancel};
+enum eMbType { cMbNone, cMbOkCancel, cMbOk, cMbCancel};
 enum eMbResultType { cMbResultOk, cMbResultCancel };
 
 
