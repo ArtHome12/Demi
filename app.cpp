@@ -36,12 +36,6 @@ MainWindow::MainWindow()
 {
 	auto pSettings = globalWorld.getSettingsStorage();
 
-	clan::DisplayWindowDescription desc;
-	desc.set_title(pSettings->LocaleStr(cMainWindowTitle));
-	desc.set_allow_resize(true);
-	desc.set_position(pSettings->getMainWindowPosition(), false);
-	desc.set_visible(false);
-	desc.set_fullscreen(pSettings->getIsFullScreen());
 	const std::shared_ptr<clan::View> pRootView = root_view();
 
 	// Дочерние панели распологаются в столбик
@@ -167,7 +161,8 @@ void MainWindow::on_input_down(const clan::KeyEvent &e)
 {
 	if (e.key() == clan::Key::escape)
 	{
-		quit = true;
+		on_window_close();
+		dismiss();
 	}
 	else if (e.key() == clan::Key::f)
 	{
@@ -198,9 +193,6 @@ void MainWindow::on_window_close()
 	pSettings->setMainWindowSettings(displayWindow.get_geometry(),
 		state,
 		displayWindow.is_fullscreen());
-
-	// Поднимаем флаг на завершение потока.
-	quit = true;
 }
 
 void MainWindow::on_mouse_down(const clan::InputEvent &key)
@@ -290,19 +282,29 @@ App::App()
 	// Доинициализируем глобальный мир.
 	globalWorld.setSettingsStorage(pSettings.get());
 
-	// Create a window:
+	// Параметры окна.
+	clan::DisplayWindowDescription desc;
+	desc.set_main_window();
+	desc.set_title(pSettings->LocaleStr(cMainWindowTitle));
+	desc.set_allow_resize(true);
+	desc.set_position(pSettings->getMainWindowPosition(), false);
+	desc.set_visible(false);
+	desc.set_fullscreen(pSettings->getIsFullScreen());
+
+	// Create a window controller:
 	pMainWindow = std::make_shared<MainWindow>();
 
+	// To prevent auto sizing.
+	pMainWindow->set_content_size(desc.get_size());
+
 	// Показываем окно в состоянии, в котором оно было при закрытии (свёрнуто, максимизировано и т.д.)
-	windowManager.present_main(pMainWindow, pSettings->getMainWindowState());
+	windowManager.present_main(pMainWindow, &desc, pSettings->getMainWindowState());
 
 	// Доинициализируем окно для ресурсов, которым требуется оконная иерархия.
 	pMainWindow->initWindow(&windowManager);
 
 	// Инициализируем счётчик времени.
 	game_time.reset();
-
-
 }
 
 App::~App()
@@ -383,8 +385,9 @@ bool App::update()
 	pMainWindow->pWindowSettings->modelRenderNotify(size_t(game_time.get_current_time()));
 
 	// Выводим заэкранный буфер на экран.
-	displayWindow.flip();
+	//displayWindow.flip();
+	windowManager.flip();
 
-	return !pMainWindow->quit;
+	return true;
 }
 

@@ -43,9 +43,6 @@ private:
 	bool lastIlluminatedWorld = false;
 	std::shared_ptr<clan::ButtonView> pButtonIlluminatedModel;
 
-	// Флаг завершения работы программы.
-	bool quit = false;
-
 	// Флаги для переключения в оконный/полноэкранный режим.
 	bool fullscreen_requested = false;
 	bool is_fullscreen = false;

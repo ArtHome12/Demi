@@ -282,7 +282,6 @@ void WindowsSettings::onButtondownSaveAs()
 			const std::string caption(pSettings->LocaleStr(cWindowsSettingsDlgCaption));
 			const std::string text(clan::string_format(pSettings->LocaleStr(cMessageBoxTextFileRewrite), filename));
 			auto dialog = std::make_shared<MsgBox>(pSettings, text, caption, cMbOkCancel);
-			dialog->loadIcons(canvas(), pSettings->fileResDoc.get_file_system());
 
 			dialog->onProcessResult = [=](eMbResultType result)
 			{
@@ -295,7 +294,8 @@ void WindowsSettings::onButtondownSaveAs()
 				}
 			};
 			wManager->present_modal(this, dialog);
-			
+			dialog->initWindow(pSettings->fileResDoc.get_file_system());
+
 			// Перезапись будет сделана в колбек-функции.
 			return;
 		}
@@ -336,8 +336,7 @@ void WindowsSettings::onButtondownRestart()
 	auto pSettings = globalWorld.getSettingsStorage();
 	const std::string caption(pSettings->LocaleStr(cWindowsSettingsDlgCaption));
 	const std::string text(pSettings->LocaleStr(cMessageBoxTextRestartModel));
-	auto dialog = std::make_shared<MsgBox>(pSettings, text, caption, cMbOkCancel);
-	dialog->loadIcons(canvas(), pSettings->fileResDoc.get_file_system());
+	auto dialog = std::make_shared<MsgBox>(pSettings, text, caption, cMbCancel);
 
 	dialog->onProcessResult = [=](eMbResultType result)
 	{
@@ -353,6 +352,7 @@ void WindowsSettings::onButtondownRestart()
 		}
 	};
 	wManager->present_modal(this, dialog);
+	dialog->initWindow(pSettings->fileResDoc.get_file_system());
 }
 
 void WindowsSettings::onCBAutoRunToggle()

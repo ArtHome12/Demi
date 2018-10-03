@@ -12,7 +12,7 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 
 #include "settings_storage.h"
 
-enum eMbType { cMbOkCancel };
+enum eMbType { cMbOkCancel, cMbOk, cMbCancel};
 enum eMbResultType { cMbResultOk, cMbResultCancel };
 
 
@@ -22,11 +22,8 @@ public:
 	MsgBox(SettingsStorage* pSettings, const std::string& text, const std::string& caption, eMbType mbType);
 	~MsgBox();
 
-	// Для загрузки иконок, без вызова функции в диалоге будет только текст.
-	void loadIcons(clan::Canvas &canvas, const clan::FileSystem& fs);
-
-	// Обработчик закрытия диалогового окна.
-	void on_window_close();
+	// Должна быть вызвана после создания оконной структуры.
+	void initWindow(const clan::FileSystem& fs);
 
 	// Callback для события на закрытие.
 	std::function<void(eMbResultType)> onProcessResult;
@@ -38,4 +35,6 @@ private:
 	std::shared_ptr<clan::ImageView> leftIcon;
 	std::shared_ptr<clan::ButtonView> bOk;
 	std::shared_ptr<clan::ButtonView> bCancel;
+
+	void on_input_down(const clan::KeyEvent &e);
 };

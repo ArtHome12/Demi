@@ -25,9 +25,10 @@ MsgBox::MsgBox(SettingsStorage* pSettings, const std::string& text, const std::s
 	auto rootView = root_view();
 
 	set_title(caption);
-	rootView->style()->set("flex-direction: row; background: rgb(240,240,240); padding: 11px; width: 250px");
+	rootView->style()->set("flex-direction: row; background: rgb(240,240,240); padding: 11px");
 
 	// Иконка в левой части диалога (появится только если был вызов loadIcons().
+	leftIcon->style()->set("padding-right: 11px");
 	rootView->add_child(leftIcon);
 
 	// Узнаем ширину текущего окна, чтобы соотнести с размером диалога.
@@ -42,41 +43,87 @@ MsgBox::MsgBox(SettingsStorage* pSettings, const std::string& text, const std::s
 	// Рамка для текста и кнопок правее иконки.
 	auto rightPanel = std::make_shared<clan::View>();
 	rightPanel->style()->set("flex-direction: column; width: " + std::to_string(screenWidth) + "px");
-	rightPanel->style()->set("border: 1px solid red");
+	//rightPanel->style()->set("border: 1px solid red");
 	rootView->add_child(rightPanel);
 
 	// Текст.
 	auto span = Theme::create_span();
+	span->style()->set("padding: 11px; margin-bottom: 11px");
 	span->add_text(text);
 	rightPanel->add_child(span);
 
 	// Подрамка справа внизу с кнопками.
 	auto rightBottomPanel = std::make_shared<clan::View>();
-	rightBottomPanel->style()->set("flex-direction: row; height: 32px;");
-	rightBottomPanel->style()->set("border: 1px solid green");
+	rightBottomPanel->style()->set("flex-direction: row; height: 32px; justify-content: center");
+	//rightBottomPanel->style()->set("border: 1px solid green");
 	rightPanel->add_child(rightBottomPanel);
 
-	bOk->label()->set_text(pSettings->LocaleStr(cMsgBoxOk));
-	rightPanel->add_child(bOk);
+	if (mbType == cMbOkCancel || mbType == cMbOk) {
+		bOk->style()->set("width: 120px; margin-right: 30px");
+		bOk->image_view()->style()->set("padding-left: 3px");
+		bOk->label()->set_text(pSettings->LocaleStr(cMsgBoxOk));
+		rightBottomPanel->add_child(bOk);
 
-	bOk->func_clicked() = [=]()
-	{
-		result = cMbResultOk;
-		dismiss();
-	};
+		bOk->func_clicked() = [=]()
+		{
+			result = cMbResultOk;
+			dismiss();
+		};
+	}
+	else
+		// Для обработчика клавиатуры.
+		bOk->set_hidden();
+
+	if (mbType == cMbOkCancel || mbType == cMbCancel) {
+		bCancel->style()->set("width: 120px");
+		bCancel->image_view()->style()->set("padding-left: 3px");
+		bCancel->label()->set_text(pSettings->LocaleStr(cMsgBoxCancel));
+		rightBottomPanel->add_child(bCancel);
+
+		bCancel->func_clicked() = [=]()
+		{
+			dismiss();
+		};
+	}
+
+	// Уберём возможность менять размеры диалогового окна.
+	set_resizable(false);
 }
 
 MsgBox::~MsgBox()
 {
-	// Вызываем обработчик. Приходится из деструктора, так как slots.connect(sig_close()) не работает.
+	// Вызываем обработчик для уведомления о выборе пользователя.
 	if (onProcessResult)
 		onProcessResult(result);
 }
 
-void MsgBox::loadIcons(clan::Canvas &canvas, const clan::FileSystem& fs)
+void MsgBox::initWindow(const clan::FileSystem& fs)
 {
-	leftIcon->set_image(clan::Image(canvas, "Exclamation.png", fs));
-	leftIcon->style()->set("border: 1px solid red");
+	auto& rootView = root_view();
+	auto& canvas = rootView->canvas();
 
+	rootView->slots.connect(rootView->sig_key_press(), [&](clan::KeyEvent &e) { on_input_down(e); });
+	// Без вызова этой функции события клавиатуры не приходят.
+	rootView->set_focus();
+
+	// Загружаем иконки.
+	leftIcon->set_image(clan::Image(canvas, "Exclamation.png", fs));
 	bOk->image_view()->set_image(clan::Image(canvas, "Ok.png", fs));
+	bCancel->image_view()->set_image(clan::Image(canvas, "Cancel.png", fs));
+}
+
+
+void MsgBox::on_input_down(const clan::KeyEvent &e)
+{
+	switch (e.key())
+	{
+	case clan::Key::escape:
+		dismiss();
+		break;
+	case clan::Key::key_return:
+		if (!bOk->hidden())
+			result = cMbResultOk;
+		dismiss();
+		break;
+	}
 }
