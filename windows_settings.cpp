@@ -54,12 +54,15 @@ WindowsSettings::WindowsSettings()
 	// Настройки.
 	auto pSettings = globalWorld.getSettingsStorage();
 
-	style()->set("background: lightgray; height: 300px; flex-direction: column; border: 3px solid bisque");
+	style()->set("background: lightgray; flex-direction: column; border: 3px solid bisque");
 
 	// Панель с общими настройками/инструментами (кнопки новый, сохранить и т.д., а также 3 чекбокса под ними.
 	//
 	auto panelGeneral = std::make_shared<clan::View>();
-	panelGeneral->style()->set("flex-direction: column; height: 140px; border: 1px solid gray");
+	panelGeneral->style()->set("flex-direction: column; height: 140px");
+	panelGeneral->style()->set("border-top-color: gray; border-top-style: solid; border-top-width: 1px");
+	panelGeneral->style()->set("border-bottom-color: gray; border-bottom-style: solid; border-bottom-width: 1px");
+
 	add_child(panelGeneral);
 
 	// Название модели
@@ -134,19 +137,26 @@ WindowsSettings::WindowsSettings()
 
 	// Панель с информацией о модели (чекбоксы видимости элементов, а также панель с количеством элементов).
 	auto panelModelInfo = std::make_shared<clan::View>();
-	panelModelInfo->style()->set("flex-direction: row; height: 160px");
+	panelModelInfo->style()->set("flex-direction: row");
 	//panelModelInfo->style()->set("border: 1px solid red");
 	add_child(panelModelInfo);
 
 	// Дерево с галочками видимости элементов.
-	pTreeView = std::make_shared<TreeView>();
-	panelModelInfo->add_child(pTreeView);
+	pTreeViewElements = std::make_shared<TreeView>();
+	panelModelInfo->add_child(pTreeViewElements);
 
 	// Подпанель с количеством элементов правее дерева.
 	panelElemAmounts = std::make_shared<clan::View>();
-	panelElemAmounts->style()->set("flex-direction: column; background-color: lightgray; width: 210px");
-	// panelElemAmounts->style()->set("border: 1px solid red");
+	// Граница справа появится только после исправления в clanlib, issue #104
+	panelElemAmounts->style()->set("flex-direction: column; background-color: lightgray; width: 210px; border-right-width: 1px; border-right-style: solid; border-right-color: green");
+	//panelElemAmounts->style()->set("border: 1px solid red");
 	panelModelInfo->add_child(panelElemAmounts);
+
+	// Разделитель
+
+	// Дерево с галочками видимости видов.
+	pTreeViewSpecies = std::make_shared<TreeView>();
+	panelModelInfo->add_child(pTreeViewSpecies);
 }
 
 WindowsSettings::~WindowsSettings()
@@ -377,17 +387,18 @@ void WindowsSettings::onCBAutoSaveHourlyToggle()
 
 
 // Обработчик события, вызываемый после переключения галочки на элементе древовидного списка.
-void WindowsSettings::onTreeCheckChanged(TreeItem &item)
+void WindowsSettings::onTreeElementsCheckChanged(TreeItem &item)
 {
-	// Сообщим об изменении видимости элемента модели, если узел соответствует какому-либо элементу. Если первым символом идёт пробел, то это неживая природа.
-	if (item.caption.substr(0, 1) == " ")
+	// Сообщим об изменении видимости элемента модели, если узел соответствует какому-либо элементу.
+	if (item.tag != size_t(SIZE_MAX))
 		globalWorld.setResVisibility(item.tag, item.checked);
-	// Ещё это может быть техническая надпись, например "Неживая природа".
-	else if (item.tag != 0) {
-		// Считаем, что это указатель на вид организма.
-		demi::Species *spec = reinterpret_cast<demi::Species *>(item.tag);
-		spec->setVisible(item.checked);
-	}
+}
+
+void WindowsSettings::onTreeSpeciesCheckChanged(TreeItem &item)
+{
+	// Считаем, что это указатель на вид организма.
+	demi::Species *spec = reinterpret_cast<demi::Species *>(item.tag);
+	spec->setVisible(item.checked);
 }
 
 
@@ -447,15 +458,18 @@ void WindowsSettings::modelRenderNotify(size_t secondsElapsed)
 // Обновляет дерево с галочками видимости элементов.
 void WindowsSettings::initElemVisibilityTree()
 {
+	// Неживая природа.
+	//
 	// Удалим старые метки под количество элементов, если они были. Обращаемся по индексу, иначе итератор портится.
 	for (int i = panelElemAmounts->children().size(); i>0; --i) 
 		panelElemAmounts->children().at(i-1)->remove_from_parent();
 
-	auto rootNode = std::make_shared<TreeItem>("", 0);	// В tag хранится либо индекс химэлемента, если первый символ имени - пробел, либо указатель на организм. 0 - заглушка.
+	// Корневой невидимый узел, необходим для того, чтобы визуально могло быть сразу несколько узлов первого уровня.
+	auto rootNodeE = std::make_shared<TreeItem>("", size_t(SIZE_MAX));	// В tag хранится индекс химэлемента, для корневого - заглушка.
 	
 	// Первый узел - под химические элементы.
 	auto pSettings = globalWorld.getSettingsStorage();
-	auto firstNode = std::make_shared<TreeItem>(pSettings->LocaleStr(cTreeInanimate), 0);
+	auto firstNodeE = std::make_shared<TreeItem>(pSettings->LocaleStr(cTreeInanimate), size_t(SIZE_MAX));
 
 	// Добавляем сразу и метку в панель количества.
 	panelElemAmounts->add_child(createLabelForAmount(pSettings->LocaleStr(cWindowsSettingsAmountsLabel)));
@@ -463,38 +477,45 @@ void WindowsSettings::initElemVisibilityTree()
 	// Добавляем химэлементы, первым символом пробел для маркировки, что это неживой элемент.
 	for (size_t i = 0; i != globalWorld.getElemCount(); ++i) {
 		// Чекбокс с названием элемента.
-		firstNode->children.push_back(std::make_shared<TreeItem>(" " + globalWorld.getResName(i), i, globalWorld.getResVisibility(i)));
+		firstNodeE->children.push_back(std::make_shared<TreeItem>(" " + globalWorld.getResName(i), i, globalWorld.getResVisibility(i)));
 
 		// Метка под количество.
 		panelElemAmounts->add_child(createLabelForAmount("0"));
 	}
 
-	rootNode->children.push_back(firstNode);
+	rootNodeE->children.push_back(firstNodeE);
+
+	// Устанавливаем обработчик событий на переключение галочек.
+	pTreeViewElements->func_check_changed() = clan::bind_member(this, &WindowsSettings::onTreeElementsCheckChanged);
+
+	// Добавляем дерево в список.
+	pTreeViewElements->set_root_item(rootNodeE);
+
+	// Живая природа.
+	//
+	auto rootNodeS = std::make_shared<TreeItem>("", size_t(SIZE_MAX));
 
 	// Протоорганизм (вид).
 	auto luca = globalWorld.getSpecies();
 
 	// Корневой узел под организмы.
 	auto curNode = std::make_shared<TreeItem>(pSettings->LocaleStr(cTreeAnimate) + ": " + luca->getName() + " (" + luca->getAuthor() + ")", size_t(luca.get()), luca->getVisible());
-	rootNode->children.push_back(curNode);
+	rootNodeS->children.push_back(curNode);
 
 	// Добавляем виды организмов, удаляя пробелы в начале на всякий случай (чтобы не спутать с неживой природой). В качестве tag - указатель.
 
-	// Устанавливаем обработчик событий на переключение галочек.
-	pTreeView->func_check_changed() = clan::bind_member(this, &WindowsSettings::onTreeCheckChanged);
-
-	// Добавляем дерево в список.
-	pTreeView->set_root_item(rootNode);
+	pTreeViewSpecies->func_check_changed() = clan::bind_member(this, &WindowsSettings::onTreeSpeciesCheckChanged);
+	pTreeViewSpecies->set_root_item(rootNodeS);
 }
 
 // Есть особенности по сравнению с обычной загрузкой.
 void WindowsSettings::initElemVisibilityTreeAfterRestart()
 {
 	// Корневой узел.
-	std::shared_ptr<TreeItem> rootNode = pTreeView->get_root_item();
+	std::shared_ptr<TreeItem>& rootNodeE = pTreeViewElements->get_root_item();
 
 	// Для неживой природы просто обновим значения.
-	auto inanimalNode = rootNode->children.at(0);
+	auto inanimalNode = rootNodeE->children.at(0);
 	for (auto &child : inanimalNode->children) 
 		globalWorld.setResVisibility(child->tag, child->checked);
 
@@ -504,7 +525,8 @@ void WindowsSettings::initElemVisibilityTreeAfterRestart()
 	// Протоорганизм (вид).
 	auto luca = globalWorld.getSpecies();
 
-	auto firstAnimalNode = rootNode->children.at(1);
+	std::shared_ptr<TreeItem>& rootNodeS = pTreeViewSpecies->get_root_item();
+	auto firstAnimalNode = rootNodeS->children.at(1);
 	firstAnimalNode->tag = size_t(luca.get());
 
 	// Обновим видимость самого организма на основе значения чекбокса.
@@ -536,7 +558,16 @@ void WindowsSettings::saveModel(const std::string& filename)
 	// Отрисуем вне очереди.
 	dialog->immediate_update();
 
-	globalWorld.saveModel(filename);
+	try
+	{
+		globalWorld.saveModel(filename);
+	}
+	catch (...)
+	{
+		// Погасим диалог в случае ошибки.
+		dialog->dismiss();
+		throw;
+	}
 
 	// Погасим диалог.
 	dialog->dismiss();
@@ -556,7 +587,16 @@ void WindowsSettings::loadModel(const std::string& filename)
 	// Отрисуем вне очереди.
 	dialog->immediate_update();
 
-	globalWorld.loadModel(filename);
+	try
+	{
+		globalWorld.loadModel(filename);
+	}
+	catch (...)
+	{
+		// Погасим диалог в случае ошибки.
+		dialog->dismiss();
+		throw;
+	}
 
 	// Погасим диалог.
 	dialog->dismiss();

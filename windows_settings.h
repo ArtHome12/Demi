@@ -62,7 +62,8 @@ private:
 	std::shared_ptr<clan::CheckBoxView> pCBAutoSaveHourly;
 
 	// Дерево с галочками видимости элементов.
-	std::shared_ptr<TreeView> pTreeView;
+	std::shared_ptr<TreeView> pTreeViewElements;
+	std::shared_ptr<TreeView> pTreeViewSpecies;
 
 	// Панель под количества элементов.
 	std::shared_ptr<View> panelElemAmounts;
@@ -82,7 +83,8 @@ private:
 	void onCBAutoSaveHourlyToggle();
 
 	// Обработчик события, вызываемый после переключения галочки на элементе древовидного списка.
-	void onTreeCheckChanged(TreeItem &item);
+	void onTreeElementsCheckChanged(TreeItem &item);
+	void onTreeSpeciesCheckChanged(TreeItem &item);
 
 	// Сохраняет новое имя модели и обновляет надпись на экране.
 	void set_modelFilename(const std::string &newName);

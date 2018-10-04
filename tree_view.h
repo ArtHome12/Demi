@@ -18,7 +18,7 @@ class TreeItem
 {
 public:
 	//TreeItem() {};
-	TreeItem(const std::string& ItemCaption, int ATag, bool itemChecked = false) : caption(ItemCaption), tag(ATag), checked(itemChecked) {};
+	TreeItem(const std::string& ItemCaption, size_t ATag, bool itemChecked = false) : caption(ItemCaption), tag(ATag), checked(itemChecked) {};
 
 	bool collapsed = true;								// Collapsed or expanded the tree node.
 	std::weak_ptr<TreeItem> wpParent;					// Parent node.

@@ -353,7 +353,7 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 					cellFont.draw_text(canvas, float(indent), float(yLine), str, color);
 					yLine += cCompactCellResLineHeight;
 				}
-				catch (...) {}
+				catch (...) {} //-V565
 			}
 
 			// Отрисовку клеток других организмов в точке оставим на будущее.
