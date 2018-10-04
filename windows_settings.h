@@ -67,6 +67,7 @@ private:
 
 	// Панель под количества элементов.
 	std::shared_ptr<View> panelElemAmounts;
+	std::shared_ptr<View> panelOrganismAmounts;
 
 	// Количество прошедших секунд с момента старта программы.
 	size_t secondsElapsed = 0;

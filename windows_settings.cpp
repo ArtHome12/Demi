@@ -157,6 +157,9 @@ WindowsSettings::WindowsSettings()
 	// Дерево с галочками видимости видов.
 	pTreeViewSpecies = std::make_shared<TreeView>();
 	panelModelInfo->add_child(pTreeViewSpecies);
+	panelOrganismAmounts = std::make_shared<clan::View>();
+	panelOrganismAmounts->style()->set("flex-direction: column; background-color: lightgray; width: 210px; border-right-width: 1px; border-right-style: solid; border-right-color: green");
+	panelModelInfo->add_child(panelOrganismAmounts);
 }
 
 WindowsSettings::~WindowsSettings()
@@ -426,25 +429,38 @@ void WindowsSettings::set_modelFilename(const std::string &newName)
 // Для получения уведомлений об отработке основного цикла (для возможного автосохранения модели, обновления количеств).
 void WindowsSettings::modelRenderNotify(size_t secondsElapsed)
 {
-	// Обновим надписи с количествами элементов согласно информации из специального объекта.
-	// Пользуемся тем, что знаем порядок - первым идёт надпись напротив "неживая природа", далее первый элемент и т.д.
-	// Так как set_text с использованием force_no_layout не проверяет, свёрнуто ли окно, сделаем это предварительно.
 	if (!hidden()) {
+
+		// Неживая природа.
+		//
+		// Обновим надписи с количествами элементов согласно информации из специального объекта.
+		// Пользуемся тем, что знаем порядок - первым идёт надпись напротив "неживая природа", далее первый элемент и т.д.
+		// Так как set_text с использованием force_no_layout не проверяет, свёрнуто ли окно, сделаем это предварительно.
 		const size_t cnt = globalWorld.getElemCount();
-		auto child = ++panelElemAmounts->children().begin();
+		auto childE = ++panelElemAmounts->children().begin();	// сразу пропускаем надпись-оглавление.
 		for (size_t i = 0; i < cnt; i++) {
 
 			// Преобразуем указатель на базовый тип View на дочерний LabelView.
-			std::shared_ptr<clan::LabelView> label = std::dynamic_pointer_cast<clan::LabelView>(*child++);
+			std::shared_ptr<clan::LabelView> label = std::dynamic_pointer_cast<clan::LabelView>(*childE++);
 
 			// Впишем количество с делением по разрядам.
-			std::string str = IntToStrWithDigitPlaces<unsigned long long>(globalWorld.amounts.getResAmounts(i));
+			const std::string str = IntToStrWithDigitPlaces<unsigned long long>(globalWorld.amounts.getResAmounts(i));
 
 			label->set_text(str, true);
 		}
+
+		// Живая природа.
+		//
+		auto childS = panelOrganismAmounts->children().begin();
+		std::shared_ptr<clan::LabelView> label = std::dynamic_pointer_cast<clan::LabelView>(*childS);
+		const auto& luca = globalWorld.getSpecies();
+		const std::string str = IntToStrWithDigitPlaces<size_t>(luca->getAliveCount());
+		label->set_text(str, true);
 	}
 
-	// Если прошёл час и установлена галочка регулярного автосохранения модели, сделаем это.
+
+	// Автосохранение. Если прошёл час и установлена галочка регулярного автосохранения модели, сделаем это.
+	//
 	if (secondsElapsed - this->secondsElapsed > 3600) {
 		this->secondsElapsed = secondsElapsed;
 
@@ -461,7 +477,7 @@ void WindowsSettings::initElemVisibilityTree()
 	// Неживая природа.
 	//
 	// Удалим старые метки под количество элементов, если они были. Обращаемся по индексу, иначе итератор портится.
-	for (int i = panelElemAmounts->children().size(); i>0; --i) 
+	for (size_t i = panelElemAmounts->children().size(); i != 0; --i) 
 		panelElemAmounts->children().at(i-1)->remove_from_parent();
 
 	// Корневой невидимый узел, необходим для того, чтобы визуально могло быть сразу несколько узлов первого уровня.
@@ -480,7 +496,7 @@ void WindowsSettings::initElemVisibilityTree()
 		firstNodeE->children.push_back(std::make_shared<TreeItem>(" " + globalWorld.getResName(i), i, globalWorld.getResVisibility(i)));
 
 		// Метка под количество.
-		panelElemAmounts->add_child(createLabelForAmount("0"));
+		panelElemAmounts->add_child(createLabelForAmount("-"));
 	}
 
 	rootNodeE->children.push_back(firstNodeE);
@@ -493,6 +509,9 @@ void WindowsSettings::initElemVisibilityTree()
 
 	// Живая природа.
 	//
+	for (size_t i = panelOrganismAmounts->children().size(); i != 0; --i)
+		panelOrganismAmounts->children().at(i - 1)->remove_from_parent();
+
 	auto rootNodeS = std::make_shared<TreeItem>("", size_t(SIZE_MAX));
 
 	// Протоорганизм (вид).
@@ -501,8 +520,9 @@ void WindowsSettings::initElemVisibilityTree()
 	// Корневой узел под организмы.
 	auto curNode = std::make_shared<TreeItem>(pSettings->LocaleStr(cTreeAnimate) + ": " + luca->getName() + " (" + luca->getAuthor() + ")", size_t(luca.get()), luca->getVisible());
 	rootNodeS->children.push_back(curNode);
+	panelOrganismAmounts->add_child(createLabelForAmount("-"));
 
-	// Добавляем виды организмов, удаляя пробелы в начале на всякий случай (чтобы не спутать с неживой природой). В качестве tag - указатель.
+	// Добавляем виды организмов. В качестве tag - указатель.
 
 	pTreeViewSpecies->func_check_changed() = clan::bind_member(this, &WindowsSettings::onTreeSpeciesCheckChanged);
 	pTreeViewSpecies->set_root_item(rootNodeS);
@@ -515,7 +535,7 @@ void WindowsSettings::initElemVisibilityTreeAfterRestart()
 	std::shared_ptr<TreeItem>& rootNodeE = pTreeViewElements->get_root_item();
 
 	// Для неживой природы просто обновим значения.
-	auto inanimalNode = rootNodeE->children.at(0);
+	auto inanimalNode = rootNodeE->children.front();
 	for (auto &child : inanimalNode->children) 
 		globalWorld.setResVisibility(child->tag, child->checked);
 
@@ -526,7 +546,7 @@ void WindowsSettings::initElemVisibilityTreeAfterRestart()
 	auto luca = globalWorld.getSpecies();
 
 	std::shared_ptr<TreeItem>& rootNodeS = pTreeViewSpecies->get_root_item();
-	auto firstAnimalNode = rootNodeS->children.at(1);
+	auto firstAnimalNode = rootNodeS->children.front();
 	firstAnimalNode->tag = size_t(luca.get());
 
 	// Обновим видимость самого организма на основе значения чекбокса.

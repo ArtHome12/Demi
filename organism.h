@@ -102,6 +102,11 @@ public:
 	// Возвращает вид по указанному полному названию. Должна вызываться для корневого вида.
 	std::shared_ptr<Species> getSpeciesByFullName(std::string fullName);
 
+	// Для ведения простейшей статистики по количеству живых.
+	void incAliveCount() { ++aliveCount; }
+	void decAliveCount() { --aliveCount; }
+	size_t getAliveCount() const { return aliveCount; }
+
 private:
 	// Родительский организм.
 	std::weak_ptr<Species> ancestor;
@@ -132,6 +137,9 @@ private:
 
 	// Начальный порог размножения (будет меняться из-за изменчивости).
 	uint16_t fissionBarrier;
+
+	// Количество живых организмов данного вида (для статистики).
+	size_t aliveCount = 0;
 };
 
 
@@ -180,8 +188,8 @@ public:
 	// Истина, если организм уже разложился и его надо уничтожить.
 	bool needDesintegration() { return vitality < desintegrationVitalityBarrier; }
 
-	// Вычитает жизненную энергию на неактивное состояние.
-	void processInactiveVitality() { vitality -= minActiveMetabolicRate; }
+	// Вычитает жизненную энергию на неактивное состояние и обновляет статистику.
+	void processInactiveVitality();
 
 	// Считывают и сохраняют себя в файл.
 	static Organism* createFromFile(clan::File& binFile, const clan::Point& Acenter, const std::shared_ptr<Species>& Aspecies);

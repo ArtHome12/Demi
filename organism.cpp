@@ -89,6 +89,10 @@ Organism::Organism(const clan::Point &Acenter, uint8_t Aangle, uint16_t Afission
 	Dot &dot = center.get_dot(0, 0);
 	dot.cells.push_back(cells[0]);
 	dot.organism = this;
+
+	// Откорректируем статистику.
+	if (isAlive())
+		ourSpecies->incAliveCount();
 }
 
 
@@ -211,6 +215,21 @@ Organism* Organism::makeTickAndGetNewBorn()
 	}
 
 	return nullptr;
+}
+
+
+// Вычитает жизненную энергию на неактивное состояние и обновляет статистику.
+void Organism::processInactiveVitality() 
+{ 
+	// Был ли жив организм до вычитания.
+	auto oldAlive = isAlive();
+
+	// Расходуем энергию.
+	vitality -= minActiveMetabolicRate; 
+
+	// Если помер, то откорректируем статистику.
+	if (oldAlive != isAlive())
+		ourSpecies->decAliveCount(); 
 }
 
 
