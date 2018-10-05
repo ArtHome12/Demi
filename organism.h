@@ -12,6 +12,7 @@
 #include "reactions.h"
 #include "local_coord.h"
 #include "demi_time.h"
+#include "gene.h"
 
 
 namespace demi {
@@ -23,7 +24,9 @@ namespace demi {
 	typedef uint8_t organismAmount_t;
 	typedef std::vector<organismAmount_t> organismAmounts_t;
 
+	// Максимально возможная накопленная (жизненная) энергия.
 	const uint16_t cMaxVitality = UINT16_MAX - UINT8_MAX;
+
 //
 // Клетка, базовый тип.
 //
@@ -66,90 +69,12 @@ class CellAbdomen : public GenericCell
 
 
 //
-// Вид организма
-//
-class Species
-{
-public:
-	Species(const std::weak_ptr<Species>& Aancestor,
-		const std::string& Aname,
-		const std::string& Aauthor,
-		bool Avisible,
-		uint16_t AfissionBarrier,
-		const clan::Color& AaliveColor,
-		const clan::Color& AdeadColor,
-		const std::shared_ptr<ChemReaction>& Areaction
-		);
-
-	// Доступ к полям.
-	const std::weak_ptr<Species>& getAncestor() { return ancestor; }
-	const std::string& getName() { return name; }
-	const std::string& getAuthor() { return author; }
-	void setVisible(bool AVisible) { visible = AVisible; };
-	bool getVisible() { return visible; }
-	const clan::Color& getAliveColor() { return aliveColor; }
-	const clan::Color& getDeadColor() { return deadColor; }
-	uint16_t getFissionBarrier() { return fissionBarrier; }
-	const std::shared_ptr<ChemReaction>& getReaction() { return reaction; }
-
-	// Возвращаем неконстантные ссылки для возможной правки для оптимизации быстродействия.
-	std::vector<std::shared_ptr<GenericCell>>& getCellsRef() { return cells; }
-
-	// Возвращает полное название вида в формате автор/вид\автор/вид... Корневой общий для всех вид не включается.
-	std::string getAuthorAndNamePair() { return author + "\\" + name + "/"; }
-	//std::string getFullName();
-
-	// Возвращает вид по указанному полному названию. Должна вызываться для корневого вида.
-	std::shared_ptr<Species> getSpeciesByFullName(std::string fullName);
-
-	// Для ведения простейшей статистики по количеству живых.
-	void incAliveCount() { ++aliveCount; }
-	void decAliveCount() { --aliveCount; }
-	size_t getAliveCount() const { return aliveCount; }
-
-private:
-	// Родительский организм.
-	std::weak_ptr<Species> ancestor;
-
-	// Дочерние организмы. Вообще самому организму нет нужды до его производных, но сохранение древовидной структуры
-	// необходимо при записи данных на диск, поэтому информация о детях, во-избежание громоздкости, хранится прямо тут.
-	// Хотя возможно стоит создать параллельную структуру для хранения информации в дереве - текущий Species, его дети,
-	// а отсюда детей убрать.
-	std::vector<std::shared_ptr<Species>> descendants;
-
-	// Клетки организма.
-	std::vector<std::shared_ptr<GenericCell>> cells;
-
-	// Название организма.
-	std::string name;
-
-	// Автор
-	std::string author;
-
-	// Видимость вида.
-	bool visible;
-
-	// Цвет для живого и мёртвого организмов.
-	clan::Color aliveColor, deadColor;
-
-	// Метаболитическая реакция организма.
-	std::shared_ptr<ChemReaction> reaction;
-
-	// Начальный порог размножения (будет меняться из-за изменчивости).
-	uint16_t fissionBarrier;
-
-	// Количество живых организмов данного вида (для статистики).
-	size_t aliveCount = 0;
-};
-
-
-//
 // Организм.
 //
 class Organism
 {
 public:
-	Organism(const clan::Point &Acenter, uint8_t Aangle, uint16_t AfissionBarrier, int32_t Avitality, const DemiTime& Abirthday, uint64_t AancestorsCount, const std::shared_ptr<Species>& species);
+	Organism(const clan::Point &Acenter, uint8_t Aangle, int32_t Avitality, const DemiTime& Abirthday, uint64_t AancestorsCount, const std::shared_ptr<Species>& species);
 	~Organism();
 
 	// Доступ к полям.
@@ -161,8 +86,6 @@ public:
 	const std::shared_ptr<Species>& getSpecies() const { return ourSpecies; }
 	 organismAmounts_t& getLeftReagentAmounts()  { return leftReagentAmounts; }
 	int32_t getVitality() const { return vitality; }
-	uint16_t getFissionBarrier() const { return fissionBarrier; }
-
 
 	// Минимальная энергия метаболизма для активной клетки и для пассивной.
 	static uint8_t minActiveMetabolicRate, minInactiveMetabolicRate;
@@ -195,13 +118,13 @@ public:
 	static Organism* createFromFile(clan::File& binFile, const clan::Point& Acenter, const std::shared_ptr<Species>& Aspecies);
 	void saveToFile(clan::File& binFile);
 
+	// Возвращает имя вида организма.
+	std::string getSpeciesName() {	return ourSpecies->getSpeciesName(); }
+
 private:
 	// Местоположение организма в мире (первой клетки живота) и ориентация (0 - север, 1 - северо-восток, 2 - восток и т.д. до 7 - северо-запад).
 	LocalCoord center;
 	uint8_t angle;
-
-	// Порог размножения для организма (изначально совпадает со значением для вида, потом меняется из-за изменчивости).
-	uint16_t fissionBarrier;
 
 	// Текущая накопленная энергия.
 	int32_t vitality;

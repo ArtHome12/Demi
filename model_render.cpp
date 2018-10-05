@@ -333,11 +333,11 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 					if (pOrganism) {
 
 						// Ќазвание вида.
-						str += pOrganism->getSpecies()->getAuthorAndNamePair() + ", ";
+						str += pOrganism->getSpeciesName() + ", ";
 
 						// ∆изненна€ сила, порог размножени€, количество предков, дата рождени€.
 						str += IntToStrWithDigitPlaces<int32_t>(pOrganism->getVitality())
-							+ " / " + IntToStrWithDigitPlaces<uint16_t>(pOrganism->getFissionBarrier())
+//							+ " / " + IntToStrWithDigitPlaces<uint16_t>(pOrganism->getFissionBarrier())
 							+ ", " + IntToStrWithDigitPlaces<uint64_t>(pOrganism->getAncestorsCount())
 							+" / " + pOrganism->getBirthday().getDateStr();
 

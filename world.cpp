@@ -24,14 +24,16 @@ auto cResGlobalsAppearanceTop = "top";
 auto cResGlobalsAppearanceLeft = "left";
 auto cResGlobalsAppearanceScale = "scale";
 
+auto cResGlobalsMetabolicConsts = "Globals/MetabolicConsts";
+auto cResGlobalsMCminActiveMetabolicRate = "minActiveMetabolicRate";
+auto cResGlobalsMCminInactiveMetabolicRate = "minInactiveMetabolicRate";
+auto cResGlobalsMCdesintegrationVitalityBarrier = "desintegrationVitalityBarrier";
+
 auto cResGlobalsLUCA = "Globals/LUCA";
 auto cResGlobalsLUCAVisibility = "visibility";
 auto cResGlobalsLUCAFissionBarier = "fissionBarrier";
 auto cResGlobalsLUCAAliveColor = "aliveColor";
 auto cResGlobalsLUCADeadColor = "deadColor";
-auto cResGlobalsLUCAminActiveMetabolicRate = "minActiveMetabolicRate";
-auto cResGlobalsLUCAminInactiveMetabolicRate = "minInactiveMetabolicRate";
-auto cResGlobalsLUCADesintegrationVitalityBarrier = "desintegrationVitalityBarrier";
 
 auto cResGlobalsTime = "Globals/Time";
 auto cResGlobalsTimeYear = "year";
@@ -68,6 +70,7 @@ auto cEnergy = "Geothermal";	// Обозначение геотермальной энергии.
 
 // Строковые ресурсы
 auto cWrongSize = "WorldWrongSize";
+auto cWrongLUCAReaction = "WrongLUCAReaction";
 auto cWrongBinVer = "WorldWrongBinaryFileVersion";
 auto cWrongBinElemCount = "WorldWrongBinaryFileElementsCount";
 auto cWrongBinElemName = "WorldWrongBinaryFileElementsName";
@@ -209,7 +212,8 @@ void World::makeTick()
 	// Создаём экземпляр протоорганизма, если есть место.
 	Dot& protoDot = LocalCoord(LUCAPos).get_dot(0, 0);
 	if (protoDot.organism == nullptr)
-		animals.push_back(new demi::Organism(LUCAPos, 0, species->getFissionBarrier(), species->getFissionBarrier(), getModelTime(), 0, species));
+		animals.push_back(new demi::Organism(LUCAPos, 0, 1, getModelTime(), 0, species));
+		// animals.push_back(new demi::Organism(LUCAPos, 0, species->getFissionBarrier(), species->getFissionBarrier(), getModelTime(), 0, species));
 }
 
 
@@ -397,18 +401,20 @@ void World::loadModel(const std::string &filename)
 	lightRadius = size_t(0.9f * worldSize.height / 2 + 0.5f);
 	tropicHeight = size_t(0.2f * worldSize.height + 0.5f);
 
+	// Считываем константы для организмов.
+	prop = resDoc->get_resource(cResGlobalsMetabolicConsts).get_element();
+	demi::Organism::minActiveMetabolicRate = uint8_t(prop.get_attribute_int(cResGlobalsMCminActiveMetabolicRate));
+	demi::Organism::minInactiveMetabolicRate = uint8_t(prop.get_attribute_int(cResGlobalsMCminInactiveMetabolicRate));
+	demi::Organism::desintegrationVitalityBarrier = int32_t(prop.get_attribute_int(cResGlobalsMCdesintegrationVitalityBarrier));
+
 	// Считываем вид протоорганизма. Внимание - ниже он может быть переопределён из двоичного файла.
 	prop = resDoc->get_resource(cResGlobalsLUCA).get_element();
 	bool specVisible = prop.get_attribute_bool(cResGlobalsLUCAVisibility);
-	uint16_t specFissionBarrier = prop.get_attribute_int(cResGlobalsLUCAFissionBarier);
+	//uint16_t specFissionBarrier = prop.get_attribute_int(cResGlobalsLUCAFissionBarier);
 	clan::Color specAliveColor = clan::Color(clan::Colorf(prop.get_attribute(cResGlobalsLUCAAliveColor)));
 	clan::Color specDeadColor = clan::Color(clan::Colorf(prop.get_attribute(cResGlobalsLUCADeadColor)));
-
 	LUCAPos = clan::Point(prop.get_attribute_int("x"), prop.get_attribute_int("y"));
 	const std::string LUCAReactionName = prop.get_attribute("reaction");
-	demi::Organism::minActiveMetabolicRate = prop.get_attribute_int(cResGlobalsLUCAminActiveMetabolicRate);
-	demi::Organism::minInactiveMetabolicRate = prop.get_attribute_int(cResGlobalsLUCAminInactiveMetabolicRate);
-	demi::Organism::desintegrationVitalityBarrier = prop.get_attribute_int(cResGlobalsLUCADesintegrationVitalityBarrier);
 
 	// Инициализируем внешний вид проекта.
 	prop = resDoc->get_resource(cResGlobalsAppearance).get_element();
@@ -549,12 +555,27 @@ void World::loadModel(const std::string &filename)
 	}
 
 	// Создаём вид протоорганизма.
-	species = std::make_shared<demi::Species>(std::weak_ptr<demi::Species>(), "LUCA", "Demi", specVisible, specFissionBarrier, specAliveColor, specDeadColor, reactions[LUCAReactionName]);
+	//
+	
+	// Определим индекс реакции протоорганизма (учитывая что названия реакций идут с префиксом секции).
+	auto itReaction = std::find(reactionsNames.begin(), reactionsNames.end(), std::string(cResReactionsSection) + "/" + LUCAReactionName);
+	if (itReaction == reactionsNames.end())
+		throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongLUCAReaction), LUCAReactionName));
+
+	// Создаём ген реакций.
+	demi::Gene gene("Reaction", reactionsNames, uint16_t(std::distance(reactionsNames.begin(), itReaction)));
+
+	// Создаём генотип.
+	auto genotype = std::make_shared<demi::Genotype>(nullptr, gene, "LUCA", "Demi");
+
+	// Создаём вид.
+	//species = std::make_shared<demi::Species>(std::weak_ptr<demi::Species>(), "LUCA", "Demi", specVisible, specFissionBarrier, specAliveColor, specDeadColor, reactions[LUCAReactionName]);
+	species = std::make_shared<demi::Species>(genotype, specVisible, specAliveColor, specDeadColor);
 	species->getCellsRef().push_back(std::make_shared<demi::CellAbdomen>());
 
 	// Перед двоичным файлом удалим прежние организмы, если они были.
 	animals.clear();
-
+	/*
 	// Считываем двоичный файл, если он есть.
 	if (clan::FileHelp::file_exists(filename + "b")) {
 
@@ -622,7 +643,7 @@ void World::loadModel(const std::string &filename)
 		// Закроем файл.
 		binFile.close();
 	}
-
+	*/
 	// Инициализирует массим максимумов на основе имеющихся количеств в точках, используется после загрузки.
 	InitResMaxArray();
 
@@ -799,7 +820,7 @@ void World::saveModel(const std::string &filename)
 
 	// Записываем изменения на диск.
 	pResDoc->save(filename);
-
+	/*
 	// Двоичный файл под точки, организмы и т.д.
 	clan::File binFile(filename + "b",				// У двоичного файла расширение будет 'demib'.
 		clan::File::OpenMode::create_always,
@@ -854,7 +875,7 @@ void World::saveModel(const std::string &filename)
 
 	// Закроем файл.
 	binFile.close();
-
+*/
 	// Продолжим выполнение потока, если он работал.
 	if (prevRun) {
 		threadRunFlag = true;
@@ -934,7 +955,7 @@ void World::resetModel(const std::string &modelFilename, const std::string &defa
 void World::doWriteOrganism(clan::File &binFile, std::set<std::string> &dict, demi::Organism* organism)
 {
 	// Если организма нет, в качестве ключа вида запишем UINT16_MAX.
-	if (!organism) {
+/*	if (!organism) {
 		binFile.write_uint16(UINT16_MAX);
 		return;
 	}
@@ -945,12 +966,12 @@ void World::doWriteOrganism(clan::File &binFile, std::set<std::string> &dict, de
 	binFile.write_uint16(uint16_t(index));
 
 	// Записываем остальные поля организма.
-	organism->saveToFile(binFile);
+	organism->saveToFile(binFile);*/
 }
 
 demi::Organism* World::doReadOrganism(clan::File &binFile, std::set<std::string> &dict, const clan::Point &center)
 {
-	uint16_t dictKey = binFile.read_uint16();
+/*	uint16_t dictKey = binFile.read_uint16();
 
 	// Если в качестве ключа UINT16_MAX, значит организма в точке нет.
 	if (dictKey == UINT16_MAX)
@@ -972,7 +993,8 @@ demi::Organism* World::doReadOrganism(clan::File &binFile, std::set<std::string>
 	if (retVal->isAlive())
 		animals.push_back(retVal);
 
-	return retVal;
+	return retVal;*/
+	return nullptr;
 }
 
 // Инициализирует массим максимумов на основе имеющихся количеств в точках, используется после загрузки.

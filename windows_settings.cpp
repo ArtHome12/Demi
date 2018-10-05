@@ -518,7 +518,7 @@ void WindowsSettings::initElemVisibilityTree()
 	auto luca = globalWorld.getSpecies();
 
 	// Корневой узел под организмы.
-	auto curNode = std::make_shared<TreeItem>(pSettings->LocaleStr(cTreeAnimate) + ": " + luca->getName() + " (" + luca->getAuthor() + ")", size_t(luca.get()), luca->getVisible());
+	auto curNode = std::make_shared<TreeItem>(pSettings->LocaleStr(cTreeAnimate) + ": " + luca->getSpeciesName(), size_t(luca.get()), luca->getVisible());
 	rootNodeS->children.push_back(curNode);
 	panelOrganismAmounts->add_child(createLabelForAmount("-"));
 

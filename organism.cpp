@@ -22,42 +22,6 @@ using namespace demi;
 //{
 //}
 
-//
-// Вид организма
-//
-Species::Species(const std::weak_ptr<Species>& Aancestor,
-	const std::string& Aname,
-	const std::string& Aauthor,
-	bool Avisible,
-	uint16_t AfissionBarrier,
-	const clan::Color& AaliveColor,
-	const clan::Color& AdeadColor,
-	const std::shared_ptr<ChemReaction>& Areaction
-) : ancestor(Aancestor), name(Aname), author(Aauthor), visible(Avisible), fissionBarrier(AfissionBarrier), aliveColor(AaliveColor), deadColor(AdeadColor), reaction(Areaction)
-{
-	// Для векторов descendants, cells и reaction сработают конструктора по-умолчанию.
-}
-
-
-// Возвращает полное название вида в формате автор/вид\автор/вид.../ Корневой общий для всех вид не включается.
-//std::string Species::getFullName()
-//{
-//	// Если мы в корневом виде, то выходим.
-//	auto spAncestor = ancestor.lock();
-//	if (!spAncestor) return "";
-//
-//	// Если предок есть, то вернём предка и свои данные. 
-//	return spAncestor->getFullName() + getAuthorAndNamePair();
-//}
-
-
-// Возвращает вид по указанному полному названию. Должна вызываться для корневого вида.
-std::shared_ptr<Species> Species::getSpeciesByFullName(std::string fullName)
-{
-	return nullptr;
-}
-
-
 
 //
 // Организм.
@@ -66,16 +30,15 @@ uint8_t Organism::minActiveMetabolicRate = 0;
 uint8_t Organism::minInactiveMetabolicRate = 0;
 int32_t Organism::desintegrationVitalityBarrier = 0;
 
-Organism::Organism(const clan::Point &Acenter, uint8_t Aangle, uint16_t AfissionBarrier, int32_t Avitality, const DemiTime& Abirthday, uint64_t AancestorsCount, const std::shared_ptr<Species>& species) : 
+Organism::Organism(const clan::Point &Acenter, uint8_t Aangle, int32_t Avitality, const DemiTime& Abirthday, uint64_t AancestorsCount, const std::shared_ptr<Species>& species) :
 	center(Acenter),
 	angle(Aangle),
-	fissionBarrier(AfissionBarrier),
 	vitality(Avitality),
 	birthday(Abirthday),
 	ancestorsCount(AancestorsCount),
 	ourSpecies(species),
 	cells(), 
-	leftReagentAmounts(ourSpecies->getReaction()->leftReagents.size())
+	leftReagentAmounts(/*ourSpecies->getReaction()->leftReagents.size()*/)
 {
 	// Надо создать собственные клетки на основе клеток вида.
 	const std::vector<std::shared_ptr<GenericCell>>& specCells = species->getCellsRef();
@@ -109,18 +72,18 @@ Organism::~Organism()
 
 	// Возвращаем накопленные минеральные вещества в мир.
 	//
-	organismAmounts_t::iterator itAmounts = leftReagentAmounts.begin();
-	const demi::ChemReaction &reaction = *ourSpecies->getReaction();
-	for (auto &reagent : reaction.leftReagents) {
+	//organismAmounts_t::iterator itAmounts = leftReagentAmounts.begin();
+	//const demi::ChemReaction &reaction = *ourSpecies->getReaction();
+	//for (auto &reagent : reaction.leftReagents) {
 
-		// Текущее имеющееся значение, которое надо вернуть.
-		organismAmount_t amount = *itAmounts++;
+	//	// Текущее имеющееся значение, которое надо вернуть.
+	//	organismAmount_t amount = *itAmounts++;
 
-		// Получаем доступное в точке количество соответствующего минерала.
-		uint64_t amountInDot = dot.getElemAmount(reagent.elementIndex);
+	//	// Получаем доступное в точке количество соответствующего минерала.
+	//	uint64_t amountInDot = dot.getElemAmount(reagent.elementIndex);
 
-		dot.setElementAmount(reagent.elementIndex, amountInDot + amount);
-	}
+	//	dot.setElementAmount(reagent.elementIndex, amountInDot + amount);
+	//}
 }
 
 
@@ -128,7 +91,7 @@ Organism::~Organism()
 Organism* Organism::makeTickAndGetNewBorn()
 {
 	// Ссылка на точку, где находится клетка, для оптимизации.
-	Dot& dot = center.get_dot(0, 0);
+/*	Dot& dot = center.get_dot(0, 0);
 
 	// Необходимо проверить наличие пищи. Получим точку, где находимся.
 	// Итератор на вектор количеств, чтобы синхронно двигаться с вектором вида в цикле.
@@ -187,23 +150,25 @@ Organism* Organism::makeTickAndGetNewBorn()
 
 		// Самое время делиться, если есть такая возможность.
 		clan::Point freePlace;
-		if (vitality >= fissionBarrier && findFreePlace(freePlace)) {
+		if (vitality >= 2 && findFreePlace(freePlace)) {
+		//if (vitality >= fissionBarrier && findFreePlace(freePlace)) {
 			// Создаём новый экземпляр, передаём ему половину энергии, на порог деления делаем мутацию в пределах 1%.
 			vitality /= 2;
 			std::uniform_int_distribution<> rndAngle(0, 7); 
 			uint8_t childAngle = rndAngle(globalWorld.getRandomGenerator());
-			std::uniform_int_distribution<> rndFission(-1, 1);
-			uint16_t childFissionBarrier = std::max<uint16_t>(1, fissionBarrier + rndFission(globalWorld.getRandomGenerator()));
+			//std::uniform_int_distribution<> rndFission(-1, 1);
+			//uint16_t childFissionBarrier = std::max<uint16_t>(1, fissionBarrier + rndFission(globalWorld.getRandomGenerator()));
 
 			// Проверка на предельное значение.
-			if (childFissionBarrier == UINT16_MAX)
-				--childFissionBarrier;
+			//if (childFissionBarrier == UINT16_MAX)
+			//	--childFissionBarrier;
 
 			uint64_t newAncestorCount = ancestorsCount + 1;
 			if (newAncestorCount == UINT64_MAX)
 				--newAncestorCount;
 
-			return new Organism(center.getGlobalPoint(freePlace), childAngle, childFissionBarrier, vitality, globalWorld.getModelTime(), newAncestorCount, ourSpecies);
+			//return new Organism(center.getGlobalPoint(freePlace), childAngle, childFissionBarrier, vitality, globalWorld.getModelTime(), newAncestorCount, ourSpecies);
+			return new Organism(center.getGlobalPoint(freePlace), childAngle, vitality, globalWorld.getModelTime(), newAncestorCount, ourSpecies);
 		}
 	}
 	else {
@@ -213,7 +178,7 @@ Organism* Organism::makeTickAndGetNewBorn()
 		// Если жизненная энергия стала отрицательной, значит организм умер.
 		// Объект сам себя уничтожить не может, он будет удалён из списка живых при первом к нему обращении.
 	}
-
+	*/
 	return nullptr;
 }
 
@@ -303,13 +268,12 @@ void Organism::moveTo(const clan::Point &newCenter)
 Organism* Organism::createFromFile(clan::File& binFile, const clan::Point& Acenter, const std::shared_ptr<Species>& Aspecies)
 {
 	uint8_t Aangle = binFile.read_uint8();					// angle
-	uint16_t AfissionBarrier = binFile.read_uint16();		// fissionBarrier
 	int32_t Avitality = binFile.read_int32();				// vitality
 	DemiTime* Abirthday = DemiTime::createFromFile(binFile);// birthday
 	uint64_t AancestorsCount = binFile.read_uint64();		// ancestorsCount
 
 	// Создаём организм.
-	Organism* retVal = new Organism(Acenter, Aangle, AfissionBarrier, Avitality, *Abirthday, AancestorsCount, Aspecies);
+	Organism* retVal = new Organism(Acenter, Aangle, Avitality, *Abirthday, AancestorsCount, Aspecies);
 
 	delete Abirthday;
 
@@ -325,7 +289,6 @@ void Organism::saveToFile(clan::File& binFile)
 {
 	// Center и ourSpecies не записываем, этим управляет внешний код при записи точки.
 	binFile.write_uint8(angle);				// angle
-	binFile.write_uint16(fissionBarrier);	// fissionBarrier
 	binFile.write_int32(vitality);			// vitality
 	birthday.saveToFile(binFile);			// birthday
 	binFile.write_uint64(ancestorsCount);	// ancestorsCount
