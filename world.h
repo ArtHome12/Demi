@@ -91,6 +91,7 @@ public:
 	float getAppearanceScale() { return appearanceScale; }
 	void setAppearanceScale(float newScale) { appearanceScale = newScale; }
 	std::shared_ptr<demi::Species> getSpecies() { return species; }
+	const std::shared_ptr<demi::ChemReaction> getReaction(size_t index) { return reactions.at(index); }
 
 	std::mt19937 &getRandomGenerator() { return generator; }
 
@@ -165,7 +166,7 @@ private:
 	std::shared_ptr<demi::Species> species;
 
 	// Химические реакции, доступные для организмов.
-	std::map<std::string, std::shared_ptr<demi::ChemReaction>> reactions;
+	std::vector<std::shared_ptr<demi::ChemReaction>> reactions;
 
 	// Сами организмы.
 	std::vector<demi::Organism*> animals;

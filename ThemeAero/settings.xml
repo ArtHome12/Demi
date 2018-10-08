@@ -2,7 +2,7 @@
 <resources>
 	<section name="MainWindow">
 		<!--Main window position, size and state (6-maximized, 7-minimized, 10-normal)-->
-		<item name="Appearance" left="82" top="480" width="1602" height="905" state="6" is_fullscreen="false"/>
+		<item name="Appearance" left="82" top="196" width="1602" height="905" state="10" is_fullscreen="false"/>
 		<!--Top menu states-->
 		<item name="TopMenuState" SettingsWindowVisible="true" ModelIlluminated="true"/>
 		<!--Language-->

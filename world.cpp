@@ -551,7 +551,7 @@ void World::loadModel(const std::string &filename)
 		}
 
 		// Сохраняем реакцию в списке реакций.
-		reactions.insert(std::pair<std::string, std::shared_ptr<demi::ChemReaction>>(curReaction->name, curReaction));
+		reactions.push_back(curReaction);
 	}
 
 	// Создаём вид протоорганизма.
@@ -569,7 +569,6 @@ void World::loadModel(const std::string &filename)
 	auto genotype = std::make_shared<demi::Genotype>(nullptr, gene, "LUCA", "Demi");
 
 	// Создаём вид.
-	//species = std::make_shared<demi::Species>(std::weak_ptr<demi::Species>(), "LUCA", "Demi", specVisible, specFissionBarrier, specAliveColor, specDeadColor, reactions[LUCAReactionName]);
 	species = std::make_shared<demi::Species>(genotype, specVisible, specAliveColor, specDeadColor);
 	species->getCellsRef().push_back(std::make_shared<demi::CellAbdomen>());
 

@@ -141,6 +141,9 @@ private:
 	// Клетки организма.
 	std::vector<std::shared_ptr<GenericCell>> cells;
 
+	// Указатель на реакцию, извлеченный из гена, для ускорения.
+	std::shared_ptr<ChemReaction> ourReaction;
+
 	// Текущие ячейки для хранения вещества перед реакцией.
 	organismAmounts_t leftReagentAmounts;
 
@@ -149,6 +152,7 @@ private:
 
 	// Возвращает точку, лежащую относительно исходной в указанном направлении с учётом собственного направления.
 	void getPointAtDirection(uint8_t direction, clan::Point & dest);
+
 };
 
 };

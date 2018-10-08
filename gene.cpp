@@ -54,6 +54,20 @@ std::string Genotype::getSpeciesName()
 	return genotypeName + "(" + genotypeAuthor + ")";
 }
 
+// Возвращает требуемый ген.
+const Gene& Genotype::getGeneByName(const std::string& name)
+{
+	// Проверим собственный ген, если он, то выходим.
+	if (ownGene.getGeneName() == name)
+		return ownGene;
+
+	// Обращаемся к родителю.
+	if (genotypeAncestor != nullptr)
+		return genotypeAncestor->getGeneByName(name);
+
+	throw EGeneNotFound(name);
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////
 // Вид организма

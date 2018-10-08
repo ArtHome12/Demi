@@ -10,8 +10,19 @@
 #pragma once
 
 
-
 namespace demi {
+
+	// Исключение, если ген не найден.
+	class EGeneNotFound : public std::exception
+	{
+	public:
+		const std::string geneName;
+		EGeneNotFound(const std::string& aGeneName) : geneName(aGeneName) {}
+		virtual char const* what() const override
+		{
+			return std::string("Unknown gene: " + geneName).c_str();
+		}
+	};
 
 	//
 	// Класс для описания одного гена.
@@ -26,6 +37,9 @@ namespace demi {
 
 		// Временно, потом возможно надо реализовать.
 		void operator=(const Gene& sourceGene) = delete;
+
+		const std::string& getGeneName() const { return geneName; }
+		uint16_t getGeneValueIndex() const { return geneValueIndex; }
 
 	private:
 		// Название гена.
@@ -48,6 +62,9 @@ namespace demi {
 
 		// Возвращает имя вида организма.
 		std::string getSpeciesName();
+
+		// Возвращает требуемый ген.
+		const Gene& getGeneByName(const std::string& name);
 	private:
 		// Родительский генотип.
 		const std::shared_ptr<Genotype> genotypeAncestor;
@@ -81,7 +98,6 @@ namespace demi {
 		bool getVisible() { return visible; }
 		const clan::Color& getAliveColor() { return aliveColor; }
 		const clan::Color& getDeadColor() { return deadColor; }
-		//const std::shared_ptr<ChemReaction>& getReaction() { return reaction; }
 
 		// Возвращаем неконстантные ссылки для возможной правки для оптимизации быстродействия.
 		std::vector<std::shared_ptr<GenericCell>>& getCellsRef() { return cells; }
@@ -101,6 +117,9 @@ namespace demi {
 		void decAliveCount() { --aliveCount; }
 		size_t getAliveCount() const { return aliveCount; }
 
+		// Возвращает требуемый ген.
+		const Gene& getGeneByName(const std::string& name) { return speciesGenotype->getGeneByName(name); }
+
 	private:
 		// Генотип.
 		const std::shared_ptr<Genotype> speciesGenotype;
@@ -119,9 +138,6 @@ namespace demi {
 
 		// Цвет для живого и мёртвого организмов.
 		clan::Color aliveColor, deadColor;
-
-		// Метаболитическая реакция организма.
-		//std::shared_ptr<ChemReaction> reaction;
 
 		// Количество живых организмов данного вида (для статистики).
 		size_t aliveCount = 0;

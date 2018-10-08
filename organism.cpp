@@ -38,7 +38,8 @@ Organism::Organism(const clan::Point &Acenter, uint8_t Aangle, int32_t Avitality
 	ancestorsCount(AancestorsCount),
 	ourSpecies(species),
 	cells(), 
-	leftReagentAmounts(/*ourSpecies->getReaction()->leftReagents.size()*/)
+	ourReaction(globalWorld.getReaction(species->getGeneByName("Reaction").getGeneValueIndex())),
+	leftReagentAmounts(ourReaction->leftReagents.size())
 {
 	// Надо создать собственные клетки на основе клеток вида.
 	const std::vector<std::shared_ptr<GenericCell>>& specCells = species->getCellsRef();
@@ -72,18 +73,18 @@ Organism::~Organism()
 
 	// Возвращаем накопленные минеральные вещества в мир.
 	//
-	//organismAmounts_t::iterator itAmounts = leftReagentAmounts.begin();
-	//const demi::ChemReaction &reaction = *ourSpecies->getReaction();
-	//for (auto &reagent : reaction.leftReagents) {
+	organismAmounts_t::iterator itAmounts = leftReagentAmounts.begin();
+	const auto &leftReagents = ourReaction->leftReagents;
+	for (auto &reagent : leftReagents) {
 
-	//	// Текущее имеющееся значение, которое надо вернуть.
-	//	organismAmount_t amount = *itAmounts++;
+		// Текущее имеющееся значение, которое надо вернуть.
+		organismAmount_t amount = *itAmounts++;
 
-	//	// Получаем доступное в точке количество соответствующего минерала.
-	//	uint64_t amountInDot = dot.getElemAmount(reagent.elementIndex);
+		// Получаем доступное в точке количество соответствующего минерала.
+		uint64_t amountInDot = dot.getElemAmount(reagent.elementIndex);
 
-	//	dot.setElementAmount(reagent.elementIndex, amountInDot + amount);
-	//}
+		dot.setElementAmount(reagent.elementIndex, amountInDot + amount);
+	}
 }
 
 
@@ -91,14 +92,13 @@ Organism::~Organism()
 Organism* Organism::makeTickAndGetNewBorn()
 {
 	// Ссылка на точку, где находится клетка, для оптимизации.
-/*	Dot& dot = center.get_dot(0, 0);
+	Dot& dot = center.get_dot(0, 0);
 
 	// Необходимо проверить наличие пищи. Получим точку, где находимся.
 	// Итератор на вектор количеств, чтобы синхронно двигаться с вектором вида в цикле.
 	organismAmounts_t::iterator itAmounts = leftReagentAmounts.begin();
 	bool isFull = true;
-	const demi::ChemReaction &reaction = *ourSpecies->getReaction();
-	for (auto &reagent : reaction.leftReagents) {
+	for (auto &reagent : ourReaction->leftReagents) {
 
 		// Текущее имеющееся значение в клетке.
 		organismAmount_t amount = *itAmounts;
@@ -123,10 +123,10 @@ Organism* Organism::makeTickAndGetNewBorn()
 	}
 
 	// Проверка готовности к реакции - должны быть вещества и энергии.
-	if (isFull && (reaction.geoEnergy <= dot.getGeothermalEnergy()) && (reaction.solarEnergy <= dot.getSolarEnergy())) {
+	if (isFull && (ourReaction->geoEnergy <= dot.getGeothermalEnergy()) && (ourReaction->solarEnergy <= dot.getSolarEnergy())) {
 
 		// Реакция прошла, выбросим в мир результаты.
-		for (auto &reagent : reaction.rightReagents) {
+		for (auto &reagent : ourReaction->rightReagents) {
 			uint64_t dotAmount = dot.getElemAmount(reagent.elementIndex) + reagent.amount;
 			dot.setElementAmount(reagent.elementIndex, dotAmount);
 
@@ -139,12 +139,12 @@ Organism* Organism::makeTickAndGetNewBorn()
 			amountItem = 0;
 
 		// Исходные реагенты исключим из общего количества.
-		for (auto &reagent : reaction.leftReagents) 
+		for (auto &reagent : ourReaction->leftReagents)
 			globalWorld.amounts.decAmount(reagent.elementIndex, reagent.amount);
 
 
 		// Сохраним полученную энергию, если не достигли максимума.
-		vitality += reaction.vitalityProductivity;
+		vitality += ourReaction->vitalityProductivity;
 		if (vitality > cMaxVitality)
 			vitality = cMaxVitality;
 
@@ -178,7 +178,7 @@ Organism* Organism::makeTickAndGetNewBorn()
 		// Если жизненная энергия стала отрицательной, значит организм умер.
 		// Объект сам себя уничтожить не может, он будет удалён из списка живых при первом к нему обращении.
 	}
-	*/
+	
 	return nullptr;
 }
 
@@ -269,13 +269,11 @@ Organism* Organism::createFromFile(clan::File& binFile, const clan::Point& Acent
 {
 	uint8_t Aangle = binFile.read_uint8();					// angle
 	int32_t Avitality = binFile.read_int32();				// vitality
-	DemiTime* Abirthday = DemiTime::createFromFile(binFile);// birthday
+	DemiTime Abirthday(binFile);							// birthday
 	uint64_t AancestorsCount = binFile.read_uint64();		// ancestorsCount
 
 	// Создаём организм.
-	Organism* retVal = new Organism(Acenter, Aangle, Avitality, *Abirthday, AancestorsCount, Aspecies);
-
-	delete Abirthday;
+	Organism* retVal = new Organism(Acenter, Aangle, Avitality, Abirthday, AancestorsCount, Aspecies);
 
 	// Содержимое ячеек реакции.
 	const size_t numBytes = sizeof(demi::organismAmount_t) * retVal->leftReagentAmounts.size();
@@ -297,4 +295,3 @@ void Organism::saveToFile(clan::File& binFile)
 	const size_t numBytes = sizeof(demi::organismAmount_t) * leftReagentAmounts.size();
 	binFile.write(leftReagentAmounts.data(), numBytes);
 }
-
