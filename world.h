@@ -17,6 +17,7 @@
 #include "local_coord.h"
 #include "amounts.h"
 #include "demi_time.h"
+#include "genotypes_tree.h"
 
 
 // Глобальная переменная - мир.
@@ -50,7 +51,6 @@ class Geothermal {
 public:
 	clan::Point coord;
 };
-
 
 //
 // Земная поверхность, двумерный массив точек.
@@ -93,7 +93,6 @@ public:
 	void setAppearanceTopLeft(const clan::Point& newTopLeft) { appearanceTopLeft = newTopLeft; }
 	float getAppearanceScale() { return appearanceScale; }
 	void setAppearanceScale(float newScale) { appearanceScale = newScale; }
-	std::shared_ptr<demi::Species> getSpecies() { return species; }
 	const std::shared_ptr<demi::ChemReaction> getReaction(size_t index) { return reactions.at(index); }
 
 	std::mt19937 &getRandomGenerator() { return generator; }
@@ -110,6 +109,9 @@ public:
 
 	// Объект для подсчёта количества элементов. Испортить состояние объекта невозможно, поэтому выносим его в паблик для удобства.
 	Amounts amounts;
+
+	// Объект для связи между интерфейсом и генотипами/видами модели. Древовидный список, в вершине - вид протоорганизма.
+	GenotypesTree genotypesTree;
 
 private:
 
@@ -164,9 +166,6 @@ private:
 	// Настройки программы - не используем shared_ptr, так как к моменту вызова деструктора ~SettingsStorage графическая 
 	// подсистема должна ещё существовать - а объект World глобальный и может умереть позже неё.
 	SettingsStorage* pSettings;
-
-	// Известные виды организмов. Древовидный список, в вершине - вид протоорганизма.
-	std::shared_ptr<demi::Species> species;
 
 	// Химические реакции, доступные для организмов.
 	std::vector<std::shared_ptr<demi::ChemReaction>> reactions;

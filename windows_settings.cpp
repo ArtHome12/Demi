@@ -453,7 +453,7 @@ void WindowsSettings::modelRenderNotify(size_t secondsElapsed)
 		//
 		auto childS = panelOrganismAmounts->children().begin();
 		std::shared_ptr<clan::LabelView> label = std::dynamic_pointer_cast<clan::LabelView>(*childS);
-		const auto& luca = globalWorld.getSpecies();
+		const auto& luca = globalWorld.genotypesTree.species.front();
 		const std::string str = IntToStrWithDigitPlaces<size_t>(luca->getAliveCount());
 		label->set_text(str, true);
 	}
@@ -515,7 +515,7 @@ void WindowsSettings::initElemVisibilityTree()
 	auto rootNodeS = std::make_shared<TreeItem>("", size_t(SIZE_MAX));
 
 	// Протоорганизм (вид).
-	auto luca = globalWorld.getSpecies();
+	auto luca = globalWorld.genotypesTree.species.front();
 
 	// Корневой узел под организмы.
 	auto curNode = std::make_shared<TreeItem>(pSettings->LocaleStr(cTreeAnimate) + ": " + luca->getGenotypeName(), size_t(luca.get()), luca->getVisible());
@@ -543,7 +543,7 @@ void WindowsSettings::initElemVisibilityTreeAfterRestart()
 	// Пока недоделано - всего один организм.
 
 	// Протоорганизм (вид).
-	auto luca = globalWorld.getSpecies();
+	auto luca = globalWorld.genotypesTree.species.front();
 
 	std::shared_ptr<TreeItem>& rootNodeS = pTreeViewSpecies->get_root_item();
 	auto firstAnimalNode = rootNodeS->children.front();

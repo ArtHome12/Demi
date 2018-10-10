@@ -212,8 +212,7 @@ void World::makeTick()
 	// Создаём экземпляр протоорганизма, если есть место.
 	Dot& protoDot = LocalCoord(LUCAPos).get_dot(0, 0);
 	if (protoDot.organism == nullptr)
-		animals.push_back(new demi::Organism(LUCAPos, 0, 1, getModelTime(), 0, species));
-		// animals.push_back(new demi::Organism(LUCAPos, 0, species->getFissionBarrier(), species->getFissionBarrier(), getModelTime(), 0, species));
+		animals.push_back(new demi::Organism(LUCAPos, 0, 1, getModelTime(), 0, genotypesTree.species.front()));
 }
 
 
@@ -563,15 +562,21 @@ void World::loadModel(const std::string &filename)
 		throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongLUCAReaction), LUCAReactionName));
 	demi::geneValues_t geneValue = demi::geneValues_t(std::distance(reactionsNames.begin(), itReaction));
 
+	// Очистим старое дерево генотипов/видов.
+	genotypesTree.clear();
+
 	// Создаём ген реакций.
 	demi::Gene gene(LUCAGeneName, reactionsNames);
 
-	// Создаём генотип.
-	auto genotype = std::make_shared<demi::Genotype>(nullptr, gene, "LUCA", "Demi");
+	// Создаём корневой генотип.
+	genotypesTree.genotype = std::make_shared<demi::Genotype>(nullptr, gene, "LUCA", "Demi");
 
 	// Создаём вид специальным конструктором для протоорганизма.
-	species = std::make_shared<demi::Species>(genotype, geneValue, specVisible, specAliveColor, specDeadColor);
+	auto species = std::make_shared<demi::Species>(genotypesTree.genotype, geneValue, specVisible, specAliveColor, specDeadColor);
 	species->getCellsRef().push_back(std::make_shared<demi::CellAbdomen>());
+
+	// Сохраняем корневой вид в дереве.
+	genotypesTree.species.push_back(species);
 
 	// Перед двоичным файлом удалим прежние организмы, если они были.
 	animals.clear();
@@ -605,7 +610,7 @@ void World::loadModel(const std::string &filename)
 		// Создадим словарь генотипов для того, чтобы при считывании организмов использовать лишь ключ словаря, иначе бы пришлось хранить имя для каждого.
 		// Пока всего один экземпляр генотипов.
 		genotypesMap_t genotypesMap;
-		genotypesMap[genotype->getGenotypeName()] = genotype;
+		genotypesMap[genotypesTree.genotype->getGenotypeName()] = genotypesTree.genotype;
 
 		// Маркер начала массива точек.
 		auto strSecMarker = binFile.read_string_nul();
@@ -788,7 +793,7 @@ void World::saveModel(const std::string &filename)
 
 	// Запишем видимость протоорганизма.
 	prop = pResDoc->get_resource(cResGlobalsLUCA).get_element();
-	prop.set_attribute_bool(cResGlobalsLUCAVisibility, species->getVisible());
+	prop.set_attribute_bool(cResGlobalsLUCAVisibility, genotypesTree.species.front()->getVisible());
 
 	// Записываем время.
 	prop = pResDoc->get_resource(cResGlobalsTime).get_element();
@@ -829,7 +834,7 @@ void World::saveModel(const std::string &filename)
 	genotypesMap_t genotypesMap;
 
 	// Пока всего один экземпляр генотипов. Для записи указатель не нужен, используется только индекс имени.
-	genotypesMap[species->getGenotypeName()] = nullptr;
+	genotypesMap[genotypesTree.genotype->getGenotypeName()] = nullptr;
 
 	// Записываем маркер начала массива точек.
 	binFile.write_string_nul("Dots:");
@@ -968,8 +973,7 @@ demi::Organism* World::doReadOrganism(clan::File &binFile, genotypesMap_t& genot
 	curSpecies->getCellsRef().push_back(std::make_shared<demi::CellAbdomen>());
 
 	// Если новый вид отсутствует в списке ранее созданных, добавим его, иначе используем старый.
-	// надо сделать отдельный список для существующих видов для оперативного обновления статистики.
-	// Пока нет мутаций, просто игнорируем считанный вид. Недоделка!!!
+	const std::shared_ptr<demi::Species>& species = genotypesTree.findSpecies(curSpecies);
 
 	// Создадим организм из файла.
 	demi::Organism* retVal = demi::Organism::createFromFile(binFile, center, species);

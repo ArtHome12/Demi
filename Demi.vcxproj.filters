@@ -60,6 +60,9 @@
     <ClCompile Include="gene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="genotypes_tree.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="precomp.h">
@@ -108,6 +111,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="gene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="genotypes_tree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
