@@ -401,21 +401,6 @@ void World::loadModel(const std::string &filename)
 	lightRadius = size_t(0.9f * worldSize.height / 2 + 0.5f);
 	tropicHeight = size_t(0.2f * worldSize.height + 0.5f);
 
-	// Считываем константы для организмов.
-	prop = resDoc->get_resource(cResGlobalsMetabolicConsts).get_element();
-	demi::Organism::minActiveMetabolicRate = uint8_t(prop.get_attribute_int(cResGlobalsMCminActiveMetabolicRate));
-	demi::Organism::minInactiveMetabolicRate = uint8_t(prop.get_attribute_int(cResGlobalsMCminInactiveMetabolicRate));
-	demi::Organism::desintegrationVitalityBarrier = int32_t(prop.get_attribute_int(cResGlobalsMCdesintegrationVitalityBarrier));
-
-	// Считываем вид протоорганизма. Внимание - ниже он может быть переопределён из двоичного файла.
-	prop = resDoc->get_resource(cResGlobalsLUCA).get_element();
-	bool specVisible = prop.get_attribute_bool(cResGlobalsLUCAVisibility);
-	//uint16_t specFissionBarrier = prop.get_attribute_int(cResGlobalsLUCAFissionBarier);
-	clan::Color specAliveColor = clan::Color(clan::Colorf(prop.get_attribute(cResGlobalsLUCAAliveColor)));
-	clan::Color specDeadColor = clan::Color(clan::Colorf(prop.get_attribute(cResGlobalsLUCADeadColor)));
-	LUCAPos = clan::Point(prop.get_attribute_int("x"), prop.get_attribute_int("y"));
-	const std::string LUCAReactionName = prop.get_attribute("reaction");
-
 	// Инициализируем внешний вид проекта.
 	prop = resDoc->get_resource(cResGlobalsAppearance).get_element();
 	appearanceTopLeft.x = prop.get_attribute_int(cResGlobalsAppearanceLeft, appearanceTopLeft.x);
@@ -556,25 +541,41 @@ void World::loadModel(const std::string &filename)
 
 	// Создаём вид протоорганизма.
 	//
-	
+	// Считываем константы для организмов.
+	prop = resDoc->get_resource(cResGlobalsMetabolicConsts).get_element();
+	demi::Organism::minActiveMetabolicRate = uint8_t(prop.get_attribute_int(cResGlobalsMCminActiveMetabolicRate));
+	demi::Organism::minInactiveMetabolicRate = uint8_t(prop.get_attribute_int(cResGlobalsMCminInactiveMetabolicRate));
+	demi::Organism::desintegrationVitalityBarrier = int32_t(prop.get_attribute_int(cResGlobalsMCdesintegrationVitalityBarrier));
+
+	// Считываем вид протоорганизма.
+	prop = resDoc->get_resource(cResGlobalsLUCA).get_element();
+	bool specVisible = prop.get_attribute_bool(cResGlobalsLUCAVisibility);
+	//uint16_t specFissionBarrier = prop.get_attribute_int(cResGlobalsLUCAFissionBarier);
+	clan::Color specAliveColor = clan::Color(clan::Colorf(prop.get_attribute(cResGlobalsLUCAAliveColor)));
+	clan::Color specDeadColor = clan::Color(clan::Colorf(prop.get_attribute(cResGlobalsLUCADeadColor)));
+	LUCAPos = clan::Point(prop.get_attribute_int("x"), prop.get_attribute_int("y"));
+	const std::string LUCAGeneName = prop.get_attribute("geneName");
+	const std::string LUCAReactionName = prop.get_attribute("geneValue");
+
 	// Определим индекс реакции протоорганизма (учитывая что названия реакций идут с префиксом секции).
 	auto itReaction = std::find(reactionsNames.begin(), reactionsNames.end(), std::string(cResReactionsSection) + "/" + LUCAReactionName);
 	if (itReaction == reactionsNames.end())
 		throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongLUCAReaction), LUCAReactionName));
+	demi::geneValues_t geneValue = demi::geneValues_t(std::distance(reactionsNames.begin(), itReaction));
 
 	// Создаём ген реакций.
-	demi::Gene gene("Reaction", reactionsNames, uint16_t(std::distance(reactionsNames.begin(), itReaction)));
+	demi::Gene gene(LUCAGeneName, reactionsNames);
 
 	// Создаём генотип.
 	auto genotype = std::make_shared<demi::Genotype>(nullptr, gene, "LUCA", "Demi");
 
-	// Создаём вид.
-	species = std::make_shared<demi::Species>(genotype, specVisible, specAliveColor, specDeadColor);
+	// Создаём вид специальным конструктором для протоорганизма.
+	species = std::make_shared<demi::Species>(genotype, geneValue, specVisible, specAliveColor, specDeadColor);
 	species->getCellsRef().push_back(std::make_shared<demi::CellAbdomen>());
 
 	// Перед двоичным файлом удалим прежние организмы, если они были.
 	animals.clear();
-	/*
+	
 	// Считываем двоичный файл, если он есть.
 	if (clan::FileHelp::file_exists(filename + "b")) {
 
@@ -601,25 +602,13 @@ void World::loadModel(const std::string &filename)
 				throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinElemName), arResNames[i], elemName));
 		}
 
-		// Маркер начала списка видов организмов. Пока закомментируем на далёкое будущее.
-		//auto &strSecMarker = binFile.read_string_nul();
-		//if (strSecMarker != "Species:")
-		//	throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinMarker), "Species:", strSecMarker));
-
-		// Считываем виды организмов рекурсивно.
-		//species = doReadSpecies(binFile, nullptr);
-
-		// Маркер начала словаря видов организмов и сам словарь.
-		std::set<std::string> speciesNamesDict;
-		auto& strSecMarker = binFile.read_string_nul();
-		if (strSecMarker != "SpecDictionary:")
-			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinMarker), "SpecDictionary:", strSecMarker));
-		size_t dictCnt = binFile.read_uint32();
-		for (size_t i = 0; i != dictCnt; ++i)
-			speciesNamesDict.insert(binFile.read_string_nul());
+		// Создадим словарь генотипов для того, чтобы при считывании организмов использовать лишь ключ словаря, иначе бы пришлось хранить имя для каждого.
+		// Пока всего один экземпляр генотипов.
+		genotypesMap_t genotypesMap;
+		genotypesMap[genotype->getGenotypeName()] = genotype;
 
 		// Маркер начала массива точек.
-		strSecMarker = binFile.read_string_nul();
+		auto strSecMarker = binFile.read_string_nul();
 		if (strSecMarker != "Dots:")
 			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinMarker), "Dots:", strSecMarker));
 
@@ -636,13 +625,13 @@ void World::loadModel(const std::string &filename)
 				throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinCannotReadDots), i));
 
 			// Организм в точке.
-			dot.organism = doReadOrganism(binFile, speciesNamesDict, getDotXYFromIndex(i));
+			dot.organism = doReadOrganism(binFile, genotypesMap, getDotXYFromIndex(i));
 		}
 
 		// Закроем файл.
 		binFile.close();
 	}
-	*/
+	
 	// Инициализирует массим максимумов на основе имеющихся количеств в точках, используется после загрузки.
 	InitResMaxArray();
 
@@ -650,121 +639,121 @@ void World::loadModel(const std::string &filename)
 	amounts.Init();
 }
 
-// Рекурсивная функция для считывания видов организмов. Закомментируем на далёкое будущее.
-//std::shared_ptr<demi::Species> World::doReadSpecies(clan::File &binFile, std::shared_ptr<demi::Species> ancestor)
-//{
-//	// Считываем текущий вид.
-//
-//	// Создаём вид и инициализиуем основные поля.
-//	std::shared_ptr<demi::Species> retVal = std::make_shared<demi::Species>();
-//	retVal->ancestor = ancestor;
-//	retVal->name = binFile.read_string_nul();
-//	retVal->author = binFile.read_string_nul();
-//	retVal->visible = binFile.read_int8() != 0;
-//	unsigned char r = binFile.read_uint8(), g = binFile.read_uint8(), b = binFile.read_uint8();
-//	retVal->aliveColor = clan::Color(r, g, b);
-//	r = binFile.read_uint8(); g = binFile.read_uint8(); b = binFile.read_uint8();
-//	retVal->deadColor = clan::Color(r, g, b);
-//	
-//	// Метаболитическая реакция.
-//	std::string reactionName = binFile.read_string_nul();
-//	retVal->reaction = reactions[reactionName];
-//
-//	// Начальный порог размножения (будет меняться из-за изменчивости).
-//	retVal->fissionBarrier = binFile.read_uint32();
-//
-//	// Создаём и считываем клетки.
-//
-//	// Количество клеток.
-//	uint64_t cnt = binFile.read_uint64();
-//	
-//	// В цикле создаём все клетки.
-//	for (int i = 0; i < cnt; ++i) {
-//
-//		// Тип клетки.
-//		uint64_t cellType = binFile.read_uint64();
-//
-//		// Создаём клетку нужного типа.
-//		std::shared_ptr<demi::GenericCell> cell;
-//		switch (cellType) {
-//		case 0 :	// cellBrain мозг
-//			break;
-//		case 1:		// cellReceptor рецептор
-//			break;
-//		case 2:		// cellMuscle мышца
-//			break;
-//		case 3:		// cellAdipose жир
-//			break;
-//		case 4:		// cellAbdomen живот
-//			cell = std::make_shared<demi::CellAbdomen>();
-//			break;
-//		case 5:		// cellMouth рот
-//			break;
-//		case 6:		// cellArmor броня
-//			break;
-//		}
-//
-//		// Добавляем клетку в вид организма.
-//		retVal->cells.push_back(cell);
-//	}
-//
-//
-//	// Считываем дочерние виды.
-//
-//	// Количество дочерних видов.
-//	cnt = binFile.read_uint64();
-//
-//	// Считываем и сохраняем потомков рекурсивно.
-//	for (uint64_t i = 0; i != cnt; ++i)
-//		retVal->descendants.push_back(doReadSpecies(binFile, retVal));
-//	
-//	// Возвращаем считанный элемент.
-//	return retVal;
-//}
-//
-//// Рекурсивная функция для записи видов организмов, параллельно создаёт словарь названий видов.
-//void World::doWriteSpecies(clan::File &binFile, std::shared_ptr<demi::Species> aSpecies, std::set<std::string> &dict)
-//{
-//	// Записываем основные поля.
-//	binFile.write_string_nul(aSpecies->getName());
-//	binFile.write_string_nul(aSpecies->getAuthor());
-//	binFile.write_int8(aSpecies->getVisible());
-//
-//	// Цвета отображения.
-//	const clan::Color& aliveColor = aSpecies->getAliveColor();
-//	const clan::Color& deadColor = aSpecies->getDeadColor();
-//	binFile.write_uint8(aliveColor.get_red());
-//	binFile.write_uint8(aliveColor.get_green());
-//	binFile.write_uint8(aliveColor.get_blue());
-//	binFile.write_uint8(deadColor.get_red());
-//	binFile.write_uint8(deadColor.get_green());
-//	binFile.write_uint8(deadColor.get_blue());
-//
-//	binFile.write_string_nul(aSpecies->reaction->name);
-//
-//	// Сохраняем название в словаре.
-//	dict.insert(aSpecies->getAuthorAndNamePair());
-//
-//	// Начальный порог размножения.
-//	binFile.write_uint32(aSpecies->fissionBarrier);
-//
-//	// Записываем клетки.
-//	binFile.write_uint64(aSpecies->cells.size());
-//	for (auto& cell : aSpecies->cells) {
-//		// Тип клетки.
-//		uint64_t cellType = cell->getCellType();
-//		binFile.write_uint64(cellType);
-//	}
-//
-//	// Записываем дочерние виды.
-//
-//	// Количество дочерних видов.
-//	binFile.write_uint64(aSpecies->descendants.size());
-//
-//	// Сами виды рекурсивно.
-//	for (auto &spec : aSpecies->descendants)
-//		doWriteSpecies(binFile, spec, dict);
-//}
+/*// Рекурсивная функция для считывания видов организмов. 
+std::shared_ptr<demi::Species> World::doReadSpecies(clan::File &binFile, std::shared_ptr<demi::Species> ancestor)
+{
+	// Считываем текущий вид.
+
+	// Создаём вид и инициализиуем основные поля.
+	std::shared_ptr<demi::Species> retVal = std::make_shared<demi::Species>();
+	retVal->ancestor = ancestor;
+	retVal->name = binFile.read_string_nul();
+	retVal->author = binFile.read_string_nul();
+	retVal->visible = binFile.read_int8() != 0;
+	unsigned char r = binFile.read_uint8(), g = binFile.read_uint8(), b = binFile.read_uint8();
+	retVal->aliveColor = clan::Color(r, g, b);
+	r = binFile.read_uint8(); g = binFile.read_uint8(); b = binFile.read_uint8();
+	retVal->deadColor = clan::Color(r, g, b);
+	
+	// Метаболитическая реакция.
+	std::string reactionName = binFile.read_string_nul();
+	retVal->reaction = reactions[reactionName];
+
+	// Начальный порог размножения (будет меняться из-за изменчивости).
+	retVal->fissionBarrier = binFile.read_uint32();
+
+	// Создаём и считываем клетки.
+
+	// Количество клеток.
+	uint64_t cnt = binFile.read_uint64();
+	
+	// В цикле создаём все клетки.
+	for (int i = 0; i < cnt; ++i) {
+
+		// Тип клетки.
+		uint64_t cellType = binFile.read_uint64();
+
+		// Создаём клетку нужного типа.
+		std::shared_ptr<demi::GenericCell> cell;
+		switch (cellType) {
+		case 0 :	// cellBrain мозг
+			break;
+		case 1:		// cellReceptor рецептор
+			break;
+		case 2:		// cellMuscle мышца
+			break;
+		case 3:		// cellAdipose жир
+			break;
+		case 4:		// cellAbdomen живот
+			cell = std::make_shared<demi::CellAbdomen>();
+			break;
+		case 5:		// cellMouth рот
+			break;
+		case 6:		// cellArmor броня
+			break;
+		}
+
+		// Добавляем клетку в вид организма.
+		retVal->cells.push_back(cell);
+	}
+
+
+	// Считываем дочерние виды.
+
+	// Количество дочерних видов.
+	cnt = binFile.read_uint64();
+
+	// Считываем и сохраняем потомков рекурсивно.
+	for (uint64_t i = 0; i != cnt; ++i)
+		retVal->descendants.push_back(doReadSpecies(binFile, retVal));
+	
+	// Возвращаем считанный элемент.
+	return retVal;
+}
+
+// Рекурсивная функция для записи видов организмов, параллельно создаёт словарь названий видов.
+void World::doWriteSpecies(clan::File &binFile, std::shared_ptr<demi::Species> aSpecies, std::set<std::string> &dict)
+{
+	// Записываем основные поля.
+	binFile.write_string_nul(aSpecies->getName());
+	binFile.write_string_nul(aSpecies->getAuthor());
+	binFile.write_int8(aSpecies->getVisible());
+
+	// Цвета отображения.
+	const clan::Color& aliveColor = aSpecies->getAliveColor();
+	const clan::Color& deadColor = aSpecies->getDeadColor();
+	binFile.write_uint8(aliveColor.get_red());
+	binFile.write_uint8(aliveColor.get_green());
+	binFile.write_uint8(aliveColor.get_blue());
+	binFile.write_uint8(deadColor.get_red());
+	binFile.write_uint8(deadColor.get_green());
+	binFile.write_uint8(deadColor.get_blue());
+
+	binFile.write_string_nul(aSpecies->reaction->name);
+
+	// Сохраняем название в словаре.
+	dict.insert(aSpecies->getAuthorAndNamePair());
+
+	// Начальный порог размножения.
+	binFile.write_uint32(aSpecies->fissionBarrier);
+
+	// Записываем клетки.
+	binFile.write_uint64(aSpecies->cells.size());
+	for (auto& cell : aSpecies->cells) {
+		// Тип клетки.
+		uint64_t cellType = cell->getCellType();
+		binFile.write_uint64(cellType);
+	}
+
+	// Записываем дочерние виды.
+
+	// Количество дочерних видов.
+	binFile.write_uint64(aSpecies->descendants.size());
+
+	// Сами виды рекурсивно.
+	for (auto &spec : aSpecies->descendants)
+		doWriteSpecies(binFile, spec, dict);
+}*/
 
 
 void World::saveModel(const std::string &filename)
@@ -819,7 +808,7 @@ void World::saveModel(const std::string &filename)
 
 	// Записываем изменения на диск.
 	pResDoc->save(filename);
-	/*
+	
 	// Двоичный файл под точки, организмы и т.д.
 	clan::File binFile(filename + "b",				// У двоичного файла расширение будет 'demib'.
 		clan::File::OpenMode::create_always,
@@ -836,24 +825,11 @@ void World::saveModel(const std::string &filename)
 	for (size_t i = 0; i != elemCount; ++i)
 		binFile.write_string_nul(arResNames[i]);
 
-	// Записываем маркер видов организмов. Закомментируем на далёкое будущее.
-	//binFile.write_string_nul("Species:");
-	// Записываем виды организмов рекурсивно, параллельно создадим словарь названий видов.
-	//std::set<std::string> speciesNamesDict;
-	//doWriteSpecies(binFile, species, speciesNamesDict);
+	// Для того, чтобы не писать перед каждым организмом строку с его названием генотипа, сделаем словарь и будем пользоваться номером.
+	genotypesMap_t genotypesMap;
 
-	// Для того, чтобы не писать перед каждым организмом строку с его текстовым видом, сделаем словарь и будем пользоваться номером.
-	// Записываем маркер начала словаря видов организмов и сам словарь.
-	binFile.write_string_nul("SpecDictionary:");
-
-	std::set<std::string> speciesNamesDict;
-
-	// Пока словарь состоит из одного вида протоорганизма.
-	speciesNamesDict.insert(species->getAuthorAndNamePair());
-
-	binFile.write_uint32(uint32_t(speciesNamesDict.size()));
-	for each (auto & item in speciesNamesDict)
-		binFile.write_string_nul(item);
+	// Пока всего один экземпляр генотипов. Для записи указатель не нужен, используется только индекс имени.
+	genotypesMap[species->getGenotypeName()] = nullptr;
 
 	// Записываем маркер начала массива точек.
 	binFile.write_string_nul("Dots:");
@@ -869,12 +845,12 @@ void World::saveModel(const std::string &filename)
 		binFile.write(dot.res, elemArraySize);
 
 		// Организм в точке.
-		doWriteOrganism(binFile, speciesNamesDict, dot.organism);
+		doWriteOrganism(binFile, genotypesMap, dot.organism);
 	}
 
 	// Закроем файл.
 	binFile.close();
-*/
+
 	// Продолжим выполнение потока, если он работал.
 	if (prevRun) {
 		threadRunFlag = true;
@@ -951,49 +927,58 @@ void World::resetModel(const std::string &modelFilename, const std::string &defa
 }
 
 // Вынесено из SaveModel() для удобства. Запись одного организма.
-void World::doWriteOrganism(clan::File &binFile, std::set<std::string> &dict, demi::Organism* organism)
+void World::doWriteOrganism(clan::File &binFile, genotypesMap_t& genotypeMap, demi::Organism* organism)
 {
 	// Если организма нет, в качестве ключа вида запишем UINT16_MAX.
-/*	if (!organism) {
+	if (!organism) {
 		binFile.write_uint16(UINT16_MAX);
 		return;
 	}
 
-	// Находим название вида организма в словаре и записываем его индекс.
-	auto it = dict.find(organism->getSpecies()->getAuthorAndNamePair());
-	ptrdiff_t index = std::distance(dict.begin(), it);
+	// Находим название генотипа организма в словаре и записываем его индекс.
+	auto it = genotypeMap.find(organism->getGenotypeName());
+	ptrdiff_t index = std::distance(genotypeMap.begin(), it);
 	binFile.write_uint16(uint16_t(index));
 
-	// Записываем остальные поля организма.
-	organism->saveToFile(binFile);*/
+	// Записываем поля вида (значения генов, видимость и цвета).
+	organism->getSpecies()->saveToFile(binFile);
+
+	// Записываем собственные поля организма.
+	organism->saveToFile(binFile);
 }
 
-demi::Organism* World::doReadOrganism(clan::File &binFile, std::set<std::string> &dict, const clan::Point &center)
+demi::Organism* World::doReadOrganism(clan::File &binFile, genotypesMap_t& genotypeMap, const clan::Point &center)
 {
-/*	uint16_t dictKey = binFile.read_uint16();
+	uint16_t dictKey = binFile.read_uint16();
 
 	// Если в качестве ключа UINT16_MAX, значит организма в точке нет.
 	if (dictKey == UINT16_MAX)
 		return nullptr;
 
-	// Название вида в полной форме вытащим по индексу из словаря.
-	auto it = dict.begin();
+	// Название генотипа в полной форме вытащим по индексу из словаря.
+	auto it = genotypeMap.begin();
 	std::advance(it, dictKey);
-	const std::string& fullSpeciesName = *it;
+	//const std::string& genotypeName = it->first;
 
-	// По названию вида найдём ссылку на вид. Если это протоорганизм, то подставим правильный корневой shared_ptr, так как у контейнера
-	// species есть шареды только для его потомков.
-	const std::shared_ptr<demi::Species>& Aspecies = fullSpeciesName == species->getAuthorAndNamePair() ? species : species->getSpeciesByFullName(fullSpeciesName);
+	const std::shared_ptr<demi::Genotype>& genotype = it->second;
+	//const std::shared_ptr<demi::Species>& Aspecies = fullSpeciesName == species->getAuthorAndNamePair() ? species : species->getSpeciesByFullName(fullSpeciesName);
+
+	// Создаём вид из файла.
+	auto curSpecies = std::make_shared<demi::Species>(genotype, binFile);
+	curSpecies->getCellsRef().push_back(std::make_shared<demi::CellAbdomen>());
+
+	// Если новый вид отсутствует в списке ранее созданных, добавим его, иначе используем старый.
+	// надо сделать отдельный список для существующих видов для оперативного обновления статистики.
+	// Пока нет мутаций, просто игнорируем считанный вид. Недоделка!!!
 
 	// Создадим организм из файла.
-	demi::Organism* retVal = demi::Organism::createFromFile(binFile, center, Aspecies);
+	demi::Organism* retVal = demi::Organism::createFromFile(binFile, center, species);
 
 	// Если жизненная энергия положительна, поместим организм в список живых.
 	if (retVal->isAlive())
 		animals.push_back(retVal);
 
-	return retVal;*/
-	return nullptr;
+	return retVal;
 }
 
 // Инициализирует массим максимумов на основе имеющихся количеств в точках, используется после загрузки.

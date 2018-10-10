@@ -38,7 +38,7 @@ Organism::Organism(const clan::Point &Acenter, uint8_t Aangle, int32_t Avitality
 	ancestorsCount(AancestorsCount),
 	ourSpecies(species),
 	cells(), 
-	ourReaction(globalWorld.getReaction(species->getGeneByName("Reaction").getGeneValueIndex())),
+	ourReaction(globalWorld.getReaction(species->getGeneValueByName("Reaction"))),
 	leftReagentAmounts(ourReaction->leftReagents.size())
 {
 	// Надо создать собственные клетки на основе клеток вида.

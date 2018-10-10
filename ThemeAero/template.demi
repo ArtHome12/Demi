@@ -10,8 +10,9 @@
 		<!--Константы для организмов - расход энергии при движении (0..255), покое  (0..255) и граница разрушения  (-32768..32767)-->
 		<item name="MetabolicConsts" minActiveMetabolicRate="10" minInactiveMetabolicRate="1" desintegrationVitalityBarrier="-100" />
 		<!--Протоорганизм, от которого происходят все остальные. -->
-		<item name="LUCA" visibility="true" x="300" y="30" reaction="CO2+4H2=CH4+2H2O" main="if (_vitality >= fissionBarrier) _fission()" fissionBarrier="30" 
-			aliveColor="pink" deadColor="brown" 
+		<item name="LUCA" visibility="true" x="300" y="30" main="if (_vitality >= fissionBarrier) _fission()" fissionBarrier="30" 
+			aliveColor="pink" deadColor="brown"
+			geneName="Reaction" geneValue="CO2+4H2=CH4+2H2O"
 		/>
 	</section>
 	<!--Геотермальные источники энергии-->

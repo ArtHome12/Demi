@@ -9,8 +9,12 @@
 =============================================================================== */
 #pragma once
 
+#include <vector>
 
 namespace demi {
+
+	typedef uint16_t geneValues_t;
+
 
 	// Исключение, если ген не найден.
 	class EGeneNotFound : public std::exception
@@ -30,7 +34,7 @@ namespace demi {
 	class Gene {
 	public:
 		// Создание нового гена.
-		Gene(const std::string& name, const std::vector<std::string> valuesVector, uint16_t valueIndex);
+		Gene(const std::string& name, const std::vector<std::string> valuesVector);
 
 		// При использовании конструктора копирования могут быть мутации.
 		Gene(const Gene& sourceGene);
@@ -39,17 +43,13 @@ namespace demi {
 		void operator=(const Gene& sourceGene) = delete;
 
 		const std::string& getGeneName() const { return geneName; }
-		uint16_t getGeneValueIndex() const { return geneValueIndex; }
 
 	private:
 		// Название гена.
 		std::string geneName;
 
-		// Список значений, которые может принимать ген. Если список пуст, то от 0 до 65535.
+		// Список значений, которые может принимать ген. Если список пуст, то от 0 до 65535. Само значение гена хранится в виде.
 		std::vector<std::string> geneValuesVector;
-
-		// Индекс текущего значения из списка.
-		uint16_t geneValueIndex = 0;
 	};
 
 
@@ -61,10 +61,14 @@ namespace demi {
 		Genotype(const std::shared_ptr<Genotype>& aGenotypeAncestor, const Gene& gene, const std::string& aGenotypeName, const std::string& aGenotypeAuthor);
 
 		// Возвращает имя вида организма.
-		std::string getSpeciesName();
+		std::string getGenotypeName();
 
 		// Возвращает требуемый ген.
 		const Gene& getGeneByName(const std::string& name);
+
+		// Возвращает количество генов.
+		size_t getGenotypeLength() const { return cachedGenotypeLen; }
+
 	private:
 		// Родительский генотип.
 		const std::shared_ptr<Genotype> genotypeAncestor;
@@ -77,21 +81,29 @@ namespace demi {
 
 		// Автор
 		std::string genotypeAuthor;
+
+		// Для ускорения.
+		size_t cachedGenotypeLen = 0;
 	};
 
 
 
 	//
-	// Вид организма. Каждый вид содержит только один новый ген. Самый первый вид содержит только реакцию.
+	// Вид организма, то есть генотип с конкретными значениями генов. 
 	//
 	class Species
 	{
 	public:
+		// Конструктор для протоорганизма
 		Species(const std::shared_ptr<Genotype>& genotype,
+			geneValues_t geneValue,
 			bool Avisible,
 			const clan::Color& AaliveColor,
 			const clan::Color& AdeadColor
 			);
+
+		// Конструктор для считывания из файла.
+		Species(const std::shared_ptr<Genotype>& genotype, clan::File& binFile);
 
 		// Доступ к полям.
 		void setVisible(bool AVisible) { visible = AVisible; };
@@ -107,22 +119,28 @@ namespace demi {
 		//std::string getFullName();
 
 		// Возвращает вид по указанному полному названию. Должна вызываться для корневого вида.
-		std::shared_ptr<Species> getSpeciesByFullName(std::string fullName);
+		//std::shared_ptr<Species> getSpeciesByFullName(std::string fullName);
 
-		// Возвращает имя вида организма.
-		std::string getSpeciesName() { return speciesGenotype->getSpeciesName(); }
+		// Возвращает имя генотипа организма.
+		std::string getGenotypeName() { return speciesGenotype->getGenotypeName(); }
 
 		// Для ведения простейшей статистики по количеству живых.
 		void incAliveCount() { ++aliveCount; }
 		void decAliveCount() { --aliveCount; }
 		size_t getAliveCount() const { return aliveCount; }
 
-		// Возвращает требуемый ген.
-		const Gene& getGeneByName(const std::string& name) { return speciesGenotype->getGeneByName(name); }
+		// Возвращает значение требуемого гена.
+		geneValues_t getGeneValueByName(const std::string& name);
+
+		// Сохраняет себя в файл.
+		void saveToFile(clan::File& binFile);
 
 	private:
 		// Генотип.
 		const std::shared_ptr<Genotype> speciesGenotype;
+
+		// Значения генов.
+		std::vector<geneValues_t> geneValues;
 
 		// Дочерние организмы. Вообще самому организму нет нужды до его производных, но сохранение древовидной структуры
 		// необходимо при записи данных на диск, поэтому информация о детях, во-избежание громоздкости, хранится прямо тут.

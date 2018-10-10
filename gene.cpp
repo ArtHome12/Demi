@@ -18,10 +18,9 @@ using namespace demi;
 /////////////////////////////////////////////////////////////////////////////////
 // Класс для описания одного гена.
 /////////////////////////////////////////////////////////////////////////////////
-Gene::Gene(const std::string& name, const std::vector<std::string> valuesVector, uint16_t valueIndex) :
+Gene::Gene(const std::string& name, const std::vector<std::string> valuesVector) :
 	geneName(name),
-	geneValuesVector(valuesVector),
-	geneValueIndex(valueIndex)
+	geneValuesVector(valuesVector)
 {
 
 }
@@ -30,9 +29,6 @@ Gene::Gene(const Gene& sourceGene) :
 	geneName(sourceGene.geneName),
 	geneValuesVector(sourceGene.geneValuesVector)
 {
-	// Название и список значений копируем без изменений, желательно с минимальными накладными расходами.
-	// При копировании значения гена включаем механизм мутаций.
-	geneValueIndex = sourceGene.geneValueIndex;	// не реализовано ещё.
 }
 
 
@@ -45,10 +41,11 @@ Genotype::Genotype(const std::shared_ptr<Genotype>& aGenotypeAncestor, const Gen
 	genotypeName(aGenotypeName),
 	genotypeAuthor(aGenotypeAuthor)
 {
-
+	// Для ускорения рассчитаем часто используемый параметр.
+	cachedGenotypeLen = genotypeAncestor.get() != nullptr ? genotypeAncestor->getGenotypeLength() : 1;
 }
 
-std::string Genotype::getSpeciesName()
+std::string Genotype::getGenotypeName()
 {
 	// Возвращает имя вида организма.
 	return genotypeName + "(" + genotypeAuthor + ")";
@@ -73,13 +70,40 @@ const Gene& Genotype::getGeneByName(const std::string& name)
 // Вид организма
 /////////////////////////////////////////////////////////////////////////////////
 Species::Species(const std::shared_ptr<Genotype>& genotype,
+	geneValues_t geneValue,
 	bool Avisible,
 	const clan::Color& AaliveColor,
 	const clan::Color& AdeadColor
 ) : speciesGenotype(genotype), visible(Avisible), aliveColor(AaliveColor), deadColor(AdeadColor)
 {
+	// Название и список значений копируем без изменений, желательно с минимальными накладными расходами.
+	// При копировании значения гена включаем механизм мутаций.
+	//geneValueIndex = sourceGene.geneValueIndex;	// не реализовано ещё.
 	// При использовании конструктора инициализации по ссылке будет работать механизм мутаций.
+	geneValues.push_back(geneValue);
 }
+
+
+// Конструктор для считывания из файла.
+Species::Species(const std::shared_ptr<Genotype>& genotype,	clan::File& binFile) : speciesGenotype(genotype)
+{
+	// Длина ДНК.
+	size_t len = genotype->getGenotypeLength();
+
+	// Считаем и сохраним значения генов.
+	for (size_t i = 0; i != len; ++i)
+		geneValues.push_back(binFile.read_uint16());
+
+	// Видимость.
+	visible = binFile.read_int8() != 0;
+
+	// Цвета.
+	unsigned char r = binFile.read_uint8(), g = binFile.read_uint8(), b = binFile.read_uint8();
+	aliveColor = clan::Color(r, g, b);
+	r = binFile.read_uint8(); g = binFile.read_uint8(); b = binFile.read_uint8();
+	deadColor = clan::Color(r, g, b);
+}
+
 
 
 // Возвращает полное название вида в формате автор/вид\автор/вид.../ Корневой общий для всех вид не включается.
@@ -101,4 +125,27 @@ Species::Species(const std::shared_ptr<Genotype>& genotype,
 //}
 
 
+// Возвращает значение требуемого гена.
+geneValues_t Species::getGeneValueByName(const std::string& name) 
+{ 
+	return geneValues.back();
+}
 
+// Сохраняет себя в файл.
+void Species::saveToFile(clan::File& binFile)
+{
+	// Значения генов.
+	for (geneValues_t geneValue : geneValues)
+		binFile.write_uint16(geneValue);
+
+	// Видимость.
+	binFile.write_int8(visible);
+
+	// Цвета.
+	binFile.write_uint8(aliveColor.get_red());
+	binFile.write_uint8(aliveColor.get_green());
+	binFile.write_uint8(aliveColor.get_blue());
+	binFile.write_uint8(deadColor.get_red());
+	binFile.write_uint8(deadColor.get_green());
+	binFile.write_uint8(deadColor.get_blue());
+}

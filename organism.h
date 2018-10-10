@@ -86,6 +86,7 @@ public:
 	const std::shared_ptr<Species>& getSpecies() const { return ourSpecies; }
 	 organismAmounts_t& getLeftReagentAmounts()  { return leftReagentAmounts; }
 	int32_t getVitality() const { return vitality; }
+	const std::shared_ptr<ChemReaction>& getChemReaction() const { return ourReaction; }
 
 	// Минимальная энергия метаболизма для активной клетки и для пассивной.
 	static uint8_t minActiveMetabolicRate, minInactiveMetabolicRate;
@@ -119,7 +120,7 @@ public:
 	void saveToFile(clan::File& binFile);
 
 	// Возвращает имя вида организма.
-	std::string getSpeciesName() {	return ourSpecies->getSpeciesName(); }
+	std::string getGenotypeName() {	return ourSpecies->getGenotypeName(); }
 
 private:
 	// Местоположение организма в мире (первой клетки живота) и ориентация (0 - север, 1 - северо-восток, 2 - восток и т.д. до 7 - северо-запад).
