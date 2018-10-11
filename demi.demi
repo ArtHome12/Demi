@@ -4,9 +4,9 @@
 		<!--Ширина мира и пропорция для высоты, максимум 30 000. Для проекции Меркатора 24:11 или 0.4583-->
 		<item name="WorldSize" width="1000" heightRatio="0.4583"/>
 		<!--Последнее представление модели - координата левого верхнего угла, масштаб-->
-		<item name="Appearance" top="0" left="0" scale="0.381667"/>
+		<item name="Appearance" top="14" left="256" scale="0.045062"/>
 		<!--Время модели - год, день, секунда-->
-		<item name="Time" year="1" day="123" second="1221"/>
+		<item name="Time" year="1" day="249" second="2575"/>
 		<!--Константы для организмов - расход энергии при движении (0..255), покое  (0..255) и граница разрушения  (-32768..32767)-->
 		<item name="MetabolicConsts" minActiveMetabolicRate="10" minInactiveMetabolicRate="1" desintegrationVitalityBarrier="-100"/>
 		<!--Протоорганизм, от которого происходят все остальные.-->
@@ -37,10 +37,10 @@
 		<Element name="CarbonDioxide" color="yellow" volatility="0.12" visibility="false">
 			<rect left="0" top="0" right="max" bottom="max" amount="2000000"/>
 		</Element>
-		<Element name="Hydrogen" color="darkgreen" volatility="0.12" visibility="false">
+		<Element name="Hydrogen" color="darkgreen" volatility="0.12" visibility="true">
 			<rect left="0" top="0" right="max" bottom="max" amount="100000"/>
 		</Element>
-		<Element name="Methane" color="darkviolet" volatility="0.12" visibility="true">
+		<Element name="Methane" color="darkviolet" volatility="0.12" visibility="false">
 			<rect left="0" top="0" right="0" bottom="0" amount="0"/>
 		</Element>
 		<Element name="Hydrogen sulfide" color="aliceblue" volatility="0.12" visibility="false">

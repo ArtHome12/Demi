@@ -139,11 +139,10 @@ clan::Point Solar::getPos(const demi::DemiTime &timeModel)
 // =============================================================================
 // Земная поверхность, двумерный массив точек.
 // =============================================================================
-World::World() : generator(random_device()), rnd_angle(0, 7), rnd_Coord(0, 12 - 1)
+World::World() : generator(random_device()), rnd_angle(0, 7), rnd_Coord(0, 12 - 1), thread(std::thread(&World::workerThread, this))
 
 {
-	// Создадим поток. Он не стартанёт до установки флага.
-	thread = std::thread(&World::workerThread, this);
+	// Поток не стартанёт до установки флага.
 }
 
 
@@ -209,10 +208,12 @@ void World::makeTick()
 		}
 	}
 
-	// Создаём экземпляр протоорганизма, если есть место.
-	Dot& protoDot = LocalCoord(LUCAPos).get_dot(0, 0);
-	if (protoDot.organism == nullptr)
-		animals.push_back(new demi::Organism(LUCAPos, 0, 1, getModelTime(), 0, genotypesTree.species.front()));
+	// Создаём экземпляр протоорганизма, если нет жживых организмов и есть место.
+	if (!cnt) {
+		Dot& protoDot = LocalCoord(LUCAPos).get_dot(0, 0);
+		if (protoDot.organism == nullptr)
+			animals.push_back(new demi::Organism(LUCAPos, 0, 1, getModelTime(), 0, genotypesTree.species.front()));
+	}
 }
 
 

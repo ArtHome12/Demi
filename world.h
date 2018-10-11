@@ -197,15 +197,15 @@ private:
 	// Задаёт местоположение источников геотермальной энергии.
 	void addGeothermal(size_t i, const clan::Point &coord);
 
-	// Рабочий поток
-	std::thread thread;
-
 	// Флаги для управления потоком.
 	bool threadExitFlag = false;		// Если истина, поток должен завершиться.
 	bool threadRunFlag = false;		// Если истина, то поток работает и изменяет модель, иначе простаивает.
 	bool threadCrashedFlag = false;	// Если истина, значит поток завершился аварийно.
 	std::mutex threadMutex;
 	std::condition_variable threadEvent;
+
+	// Рабочий поток, объявляется после используемых в нём переменных.
+	std::thread thread;
 
 	// Рабочая функция потока, вычисляющего модель.
 	void workerThread();
