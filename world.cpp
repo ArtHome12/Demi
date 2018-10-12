@@ -208,7 +208,7 @@ void World::makeTick()
 		}
 	}
 
-	// Создаём экземпляр протоорганизма, если нет жживых организмов и есть место.
+	// Создаём экземпляр протоорганизма, если нет живых организмов и есть место.
 	if (!cnt) {
 		Dot& protoDot = LocalCoord(LUCAPos).get_dot(0, 0);
 		if (protoDot.organism == nullptr)
@@ -386,6 +386,23 @@ void World::loadModel(const std::string &filename)
 	// Откроем XML файл.
 	auto resDoc = std::make_shared<clan::XMLResourceDocument>(filename);
 
+	// Ключи в секциях для оптимизации считаем один раз.
+	const std::vector<std::string>& elementNames = resDoc->get_resource_names_of_type(cResElementsType, cResElementsSection);
+	const std::vector<std::string>& reactionNames = resDoc->get_resource_names_of_type(cResReactionsType, cResReactionsSection);
+
+	// Загрузим настройки и неживую природу.
+	doLoadInanimal(resDoc, elementNames, reactionNames);
+
+	// Загрузим живую природу.
+	doLoadAnimal(resDoc, filename, reactionNames);
+
+	// Инициализируем объект для подсчёта количества элементов неживой природы и организмов разных видов.
+	amounts.Init();
+}
+
+// Для разгрузки функций loadModel, saveModel.
+void World::doLoadInanimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, const std::vector<std::string>& elementNames, const std::vector<std::string>& reactionNames)
+{
 	// Инициализируем размеры мира.
 	clan::DomElement &prop = resDoc->get_resource(cResGlobalsWorldSize).get_element();
 
@@ -414,32 +431,29 @@ void World::loadModel(const std::string &filename)
 	timeModel.sec = prop.get_attribute_int(cResGlobalsTimeSecond, 0);
 	timeBackup = timeModel;
 
-	// Названия ресурсов.
-	const std::vector<std::string>& names = resDoc->get_resource_names_of_type(cResElementsType, cResElementsSection);
-
-	// Количество ресурсов.
-	elemCount = names.size();
-
 	// Источники энергии.
 	const std::vector<std::string>& energy = resDoc->get_resource_names_of_type(cResEnergyType, cResEnergySection);
 
 	// Количество источников.
 	energyCount = energy.size();
 
+	// Количество ресурсов.
+	elemCount = elementNames.size();
+
 	// Выделим память под массивы.
 	arDots = new Dot[worldSize.width * worldSize.height];	// точки поверхности.
 	arResColors = new clan::Color[elemCount];				// цвета элементов.
-	arResMax = new unsigned long long [elemCount];			// максимальные концентрации элементов в одной точке.
+	arResMax = new unsigned long long[elemCount];			// максимальные концентрации элементов в одной точке.
 	arResNames = new std::string[elemCount];				// названия элементов.
 	arResVisible = new bool[elemCount];						// Видимость элементов.
 	arResVolatility = new float[elemCount];					// летучесть элементов.
 	arEnergy = new Geothermal[energyCount];					// геотермальные источники.
 
-	// Считываем названия элементов.
+															// Считываем названия элементов.
 	for (size_t i = 0; i != elemCount; ++i) {
 
 		// Элемент.
-		clan::XMLResourceNode &res = resDoc->get_resource(names[i]);
+		clan::XMLResourceNode &res = resDoc->get_resource(elementNames[i]);
 
 		// Название элемента.
 		arResNames[i] = res.get_name();
@@ -496,10 +510,8 @@ void World::loadModel(const std::string &filename)
 	}
 
 	// Считываем химические реакции.
-	// Названия реакций.
 	reactions.clear();
-	const std::vector<std::string>& reactionsNames = resDoc->get_resource_names_of_type(cResReactionsType, cResReactionsSection);
-	for (auto & reactionName : reactionsNames) {
+	for (auto & reactionName : reactionNames) {
 		// Создаём реакцию.
 		auto curReaction = std::make_shared<demi::ChemReaction>();
 
@@ -518,7 +530,7 @@ void World::loadModel(const std::string &filename)
 			std::string reagentName = node.get_attribute(cResReactionsReagentName, "");
 
 			// По названию получаем индекс элемента и добавляем его в реакцию вместе с количеством.
-			auto pos = std::distance(names.begin(), find(names.begin(), names.end(), cResElementsSection + std::string("/") + reagentName));
+			auto pos = std::distance(elementNames.begin(), find(elementNames.begin(), elementNames.end(), cResElementsSection + std::string("/") + reagentName));
 			demi::ReactionReagent reagent(pos, node.get_attribute_int(cResReactionsAmount));
 			curReaction->leftReagents.push_back(reagent);
 		}
@@ -530,7 +542,7 @@ void World::loadModel(const std::string &filename)
 			std::string reagentName = node.get_attribute(cResReactionsReagentName, "");
 
 			// По названию получаем индекс элемента и добавляем его в реакцию вместе с количеством.
-			auto pos = std::distance(names.begin(), find(names.begin(), names.end(), cResElementsSection + std::string("/") + reagentName));
+			auto pos = std::distance(elementNames.begin(), find(elementNames.begin(), elementNames.end(), cResElementsSection + std::string("/") + reagentName));
 			demi::ReactionReagent reagent(pos, node.get_attribute_int(cResReactionsAmount));
 			curReaction->rightReagents.push_back(reagent);
 		}
@@ -539,10 +551,17 @@ void World::loadModel(const std::string &filename)
 		reactions.push_back(curReaction);
 	}
 
+	// Инициализирует массим максимумов на основе имеющихся количеств в точках, используется после загрузки.
+	InitResMaxArray();
+}
+
+
+void World::doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, const std::string &filename, const std::vector<std::string>& reactionNames)
+{
 	// Создаём вид протоорганизма.
 	//
 	// Считываем константы для организмов.
-	prop = resDoc->get_resource(cResGlobalsMetabolicConsts).get_element();
+	auto prop = resDoc->get_resource(cResGlobalsMetabolicConsts).get_element();
 	demi::Organism::minActiveMetabolicRate = uint8_t(prop.get_attribute_int(cResGlobalsMCminActiveMetabolicRate));
 	demi::Organism::minInactiveMetabolicRate = uint8_t(prop.get_attribute_int(cResGlobalsMCminInactiveMetabolicRate));
 	demi::Organism::desintegrationVitalityBarrier = int32_t(prop.get_attribute_int(cResGlobalsMCdesintegrationVitalityBarrier));
@@ -558,18 +577,18 @@ void World::loadModel(const std::string &filename)
 	const std::string LUCAReactionName = prop.get_attribute("geneValue");
 
 	// Определим индекс реакции протоорганизма (учитывая что названия реакций идут с префиксом секции).
-	auto itReaction = std::find(reactionsNames.begin(), reactionsNames.end(), std::string(cResReactionsSection) + "/" + LUCAReactionName);
-	if (itReaction == reactionsNames.end())
+	auto itReaction = std::find(reactionNames.begin(), reactionNames.end(), std::string(cResReactionsSection) + "/" + LUCAReactionName);
+	if (itReaction == reactionNames.end())
 		throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongLUCAReaction), LUCAReactionName));
-	demi::geneValues_t geneValue = demi::geneValues_t(std::distance(reactionsNames.begin(), itReaction));
+	demi::geneValues_t geneValue = demi::geneValues_t(std::distance(reactionNames.begin(), itReaction));
 
 	// Очистим старое дерево генотипов/видов.
 	genotypesTree.clear();
 
 	// Создаём ген реакций.
-	demi::Gene gene(LUCAGeneName, reactionsNames);
+	demi::Gene gene(LUCAGeneName, reactionNames);
 
-	// Создаём корневой генотип.
+	// Создаём корневой генотип и присваиваем ему первый индекс.
 	genotypesTree.genotype = std::make_shared<demi::Genotype>(nullptr, gene, "LUCA", "Demi");
 
 	// Создаём вид специальным конструктором для протоорганизма.
@@ -581,7 +600,7 @@ void World::loadModel(const std::string &filename)
 
 	// Перед двоичным файлом удалим прежние организмы, если они были.
 	animals.clear();
-	
+
 	// Считываем двоичный файл, если он есть.
 	if (clan::FileHelp::file_exists(filename + "b")) {
 
@@ -608,10 +627,10 @@ void World::loadModel(const std::string &filename)
 				throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinElemName), arResNames[i], elemName));
 		}
 
-		// Создадим словарь генотипов для того, чтобы при считывании организмов использовать лишь ключ словаря, иначе бы пришлось хранить имя для каждого.
+		// Создадим при помощи дерева словарь видов для того, чтобы при считывании организмов использовать лишь ключ словаря.
 		// Пока всего один экземпляр генотипов.
-		genotypesMap_t genotypesMap;
-		genotypesMap[genotypesTree.genotype->getGenotypeName()] = genotypesTree.genotype;
+		speciesDict_t speciesDict;
+		genotypesTree.generateDict(speciesDict);
 
 		// Маркер начала массива точек.
 		auto strSecMarker = binFile.read_string_nul();
@@ -631,19 +650,14 @@ void World::loadModel(const std::string &filename)
 				throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinCannotReadDots), i));
 
 			// Организм в точке.
-			dot.organism = doReadOrganism(binFile, genotypesMap, getDotXYFromIndex(i));
+			dot.organism = doReadOrganism(binFile, speciesDict, getDotXYFromIndex(i));
 		}
 
 		// Закроем файл.
 		binFile.close();
 	}
-	
-	// Инициализирует массим максимумов на основе имеющихся количеств в точках, используется после загрузки.
-	InitResMaxArray();
-
-	// Инициализируем объект для подсчёта количества элементов неживой природы и организмов разных видов.
-	amounts.Init();
 }
+
 
 /*// Рекурсивная функция для считывания видов организмов. 
 std::shared_ptr<demi::Species> World::doReadSpecies(clan::File &binFile, std::shared_ptr<demi::Species> ancestor)
@@ -832,10 +846,8 @@ void World::saveModel(const std::string &filename)
 		binFile.write_string_nul(arResNames[i]);
 
 	// Для того, чтобы не писать перед каждым организмом строку с его названием генотипа, сделаем словарь и будем пользоваться номером.
-	genotypesMap_t genotypesMap;
-
-	// Пока всего один экземпляр генотипов. Для записи указатель не нужен, используется только индекс имени.
-	genotypesMap[genotypesTree.genotype->getGenotypeName()] = nullptr;
+	speciesDict_t speciesDict;
+	genotypesTree.generateDict(speciesDict);
 
 	// Записываем маркер начала массива точек.
 	binFile.write_string_nul("Dots:");
@@ -851,7 +863,7 @@ void World::saveModel(const std::string &filename)
 		binFile.write(dot.res, elemArraySize);
 
 		// Организм в точке.
-		doWriteOrganism(binFile, genotypesMap, dot.organism);
+		doWriteOrganism(binFile, speciesDict, dot.organism);
 	}
 
 	// Закроем файл.
@@ -933,7 +945,7 @@ void World::resetModel(const std::string &modelFilename, const std::string &defa
 }
 
 // Вынесено из SaveModel() для удобства. Запись одного организма.
-void World::doWriteOrganism(clan::File &binFile, genotypesMap_t& genotypeMap, demi::Organism* organism)
+void World::doWriteOrganism(clan::File &binFile, speciesDict_t& speciesDict, demi::Organism* organism)
 {
 	// Если организма нет, в качестве ключа вида запишем UINT16_MAX.
 	if (!organism) {
@@ -941,9 +953,9 @@ void World::doWriteOrganism(clan::File &binFile, genotypesMap_t& genotypeMap, de
 		return;
 	}
 
-	// Находим название генотипа организма в словаре и записываем его индекс.
-	auto it = genotypeMap.find(organism->getGenotypeName());
-	ptrdiff_t index = std::distance(genotypeMap.begin(), it);
+	// Находим указатель на вид организма в словаре и записываем его индекс. Проверку на наличие вида в словаре не делаем.
+	auto it = std::find(speciesDict.begin(), speciesDict.end(), organism->getSpecies());
+	ptrdiff_t index = std::distance(speciesDict.begin(), it);
 	binFile.write_uint16(uint16_t(index));
 
 	// Записываем поля вида (значения генов, видимость и цвета).
@@ -953,7 +965,7 @@ void World::doWriteOrganism(clan::File &binFile, genotypesMap_t& genotypeMap, de
 	organism->saveToFile(binFile);
 }
 
-demi::Organism* World::doReadOrganism(clan::File &binFile, genotypesMap_t& genotypeMap, const clan::Point &center)
+demi::Organism* World::doReadOrganism(clan::File &binFile, speciesDict_t& speciesDict, const clan::Point &center)
 {
 	uint16_t dictKey = binFile.read_uint16();
 
@@ -961,20 +973,10 @@ demi::Organism* World::doReadOrganism(clan::File &binFile, genotypesMap_t& genot
 	if (dictKey == UINT16_MAX)
 		return nullptr;
 
-	// Название генотипа в полной форме вытащим по индексу из словаря.
-	auto it = genotypeMap.begin();
+	// Указатель на вид получим по индексу из словаря.
+	auto it = speciesDict.begin();
 	std::advance(it, dictKey);
-	//const std::string& genotypeName = it->first;
-
-	const std::shared_ptr<demi::Genotype>& genotype = it->second;
-	//const std::shared_ptr<demi::Species>& Aspecies = fullSpeciesName == species->getAuthorAndNamePair() ? species : species->getSpeciesByFullName(fullSpeciesName);
-
-	// Создаём вид из файла.
-	auto curSpecies = std::make_shared<demi::Species>(genotype, binFile);
-	curSpecies->getCellsRef().push_back(std::make_shared<demi::CellAbdomen>());
-
-	// Если новый вид отсутствует в списке ранее созданных, добавим его, иначе используем старый.
-	const std::shared_ptr<demi::Species>& species = genotypesTree.findSpecies(curSpecies);
+	const std::shared_ptr<demi::Species>& species = *it;
 
 	// Создадим организм из файла.
 	demi::Organism* retVal = demi::Organism::createFromFile(binFile, center, species);

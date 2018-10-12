@@ -11,6 +11,7 @@ Copyright (c) 2013-2018 by Artem Khomenko _mag12@yahoo.com.
 
 #include <vector>
 
+typedef std::vector<std::shared_ptr<demi::Species>> speciesDict_t;
 
 //
 // Древовидный список, в вершине - вид протоорганизма.
@@ -20,17 +21,19 @@ public:
 	// Текущий генотип узла дерева.
 	std::shared_ptr<demi::Genotype> genotype;
 
-	// Список производных генотипов.
-	std::vector<std::shared_ptr<demi::Genotype>> derivativeGenotypes;
+	// Список производных узлов.
+	std::vector<std::shared_ptr<GenotypesTree>> derivatives;
 
-	// Список производных видов от текущего генотипа.
+	// Список производных видов от текущего генотипа с индексами.
 	std::vector<std::shared_ptr<demi::Species>> species;
 
 	// Очищает векторы.
-	void clear() { derivativeGenotypes.clear(); species.clear(); }
+	void clear() { derivatives.clear(); species.clear(); }
 
-	// Ищет переданный вид среди имеющихся, если нет, то добавляет, если есть, то возвращает ссылку на существующий.
-	const std::shared_ptr<demi::Species>& findSpecies(const std::shared_ptr<demi::Species>& speciesToFindSimilar);
+	// Создаёт словарь для сопоставления видов и индексов.
+	void generateDict(speciesDict_t& dict);
 };
+
+
 
 

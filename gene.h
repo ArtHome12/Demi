@@ -69,6 +69,8 @@ namespace demi {
 		// Возвращает количество генов.
 		size_t getGenotypeLength() const { return cachedGenotypeLen; }
 
+		const std::shared_ptr<Genotype>& getAncestor() const { return genotypeAncestor; }
+
 	private:
 		// Родительский генотип.
 		const std::shared_ptr<Genotype> genotypeAncestor;
@@ -110,6 +112,7 @@ namespace demi {
 		bool getVisible() { return visible; }
 		const clan::Color& getAliveColor() { return aliveColor; }
 		const clan::Color& getDeadColor() { return deadColor; }
+		const std::shared_ptr<Genotype>& getGenotype() const { return speciesGenotype; }
 
 		// Возвращаем неконстантные ссылки для возможной правки для оптимизации быстродействия.
 		std::vector<std::shared_ptr<GenericCell>>& getCellsRef() { return cells; }

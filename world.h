@@ -24,9 +24,6 @@
 class World;
 extern World globalWorld;
 
-// Для создания словаря генотипов - название+указатель и индекс.
-typedef std::map<std::string, std::shared_ptr<demi::Genotype>> genotypesMap_t;
-
 
 //
 // Источник солнечной энергии
@@ -211,11 +208,15 @@ private:
 	void workerThread();
 
 	// Вынесено из SaveModel() для удобства. Запись одного организма.
-	void doWriteOrganism(clan::File &binFile, genotypesMap_t& genotypeMap, demi::Organism* organism);
-	demi::Organism* doReadOrganism(clan::File &binFile, genotypesMap_t& genotypeMap, const clan::Point &center);
+	void doWriteOrganism(clan::File &binFile, speciesDict_t& speciesDict, demi::Organism* organism);
+	demi::Organism* doReadOrganism(clan::File &binFile, speciesDict_t& speciesDict, const clan::Point &center);
 
 	// Инициализирует массим максимумов на основе имеющихся количеств в точках, используется после загрузки.
 	void InitResMaxArray();
+
+	// Для разгрузки функций loadModel, saveModel.
+	void doLoadInanimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, const std::vector<std::string>& elementNames, const std::vector<std::string>& reactionNames);
+	void doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, const std::string &filename, const std::vector<std::string>& reactionNames);
 };
 
 

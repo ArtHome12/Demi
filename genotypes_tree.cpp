@@ -14,9 +14,16 @@ Copyright (c) 2013-2018 by Artem Khomenko _mag12@yahoo.com.
 #include "genotypes_tree.h"
 
 
-// Ищет переданный вид среди имеющихся, если нет, то добавляет, если есть, то возвращает ссылку на существующий.
-const std::shared_ptr<demi::Species>& GenotypesTree::findSpecies(const std::shared_ptr<demi::Species>& speciesToFindSimilar) 
-{ 
-	return species.front(); 
+
+// Создаёт словарь для сопоставления видов и индексов.
+void GenotypesTree::generateDict(speciesDict_t& dict)
+{
+	// Помещаем собственные виды.
+	for (const std::shared_ptr<demi::Species> spec : species)
+		dict.push_back(spec);
+
+	// Вызываем рекурсивно для каждого производного узла.
+	for (auto derivative : derivatives)
+		derivative->generateDict(dict);
 }
 
