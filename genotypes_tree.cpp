@@ -27,3 +27,33 @@ void GenotypesTree::generateDict(speciesDict_t& dict)
 		derivative->generateDict(dict);
 }
 
+// Записывает дерево на диск.
+void GenotypesTree::saveToFile(clan::File& binFile)
+{
+	// Количество собственных видов.
+	uint32_t cnt = uint32_t(species.capacity());
+	binFile.write_uint32(cnt);
+	
+	// Сами собственные виды.
+	for (const std::shared_ptr<demi::Species> spec : species)
+		spec->saveToFile(binFile);
+
+	// Производные узлы (их количество предопределено из XML).
+	for (auto derivative : derivatives)
+		derivative->saveToFile(binFile);
+}
+
+// Счтиывает себя с диска.
+void GenotypesTree::loadFromFile(clan::File& binFile)
+{
+	// Количество собственных видов.
+	uint32_t cnt = binFile.read_uint32();
+
+	// Сами собственные виды.
+	for (uint32_t i = 0; i != cnt; ++i)
+		species.push_back(std::make_shared<demi::Species>(genotype, binFile));
+
+	// Производные узлы (их количество предопределено из XML).
+	for (auto derivative : derivatives)
+		derivative->loadFromFile(binFile);
+}

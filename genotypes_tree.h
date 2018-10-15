@@ -32,6 +32,12 @@ public:
 
 	// Создаёт словарь для сопоставления видов и индексов.
 	void generateDict(speciesDict_t& dict);
+
+	// Записывает дерево на диск.
+	void saveToFile(clan::File& binFile);
+
+	// Счтиывает себя с диска.
+	void loadFromFile(clan::File& binFile);
 };
 
 

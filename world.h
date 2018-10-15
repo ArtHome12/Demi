@@ -216,7 +216,10 @@ private:
 
 	// Для разгрузки функций loadModel, saveModel.
 	void doLoadInanimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, const std::vector<std::string>& elementNames, const std::vector<std::string>& reactionNames);
-	void doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, const std::string &filename, const std::vector<std::string>& reactionNames);
+	void doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, const std::vector<std::string>& reactionNames);
+	void doLoadBinary(const std::string &filename);
+	void doSaveSettings(std::shared_ptr<clan::XMLResourceDocument>& resDoc);
+	void doSaveBinary(const std::string &filename);
 };
 
 

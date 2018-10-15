@@ -394,7 +394,13 @@ void World::loadModel(const std::string &filename)
 	doLoadInanimal(resDoc, elementNames, reactionNames);
 
 	// Загрузим живую природу.
-	doLoadAnimal(resDoc, filename, reactionNames);
+	doLoadAnimal(resDoc, reactionNames);
+
+	// Загрузим двоичный файл.
+	doLoadBinary(filename);
+
+	// Инициализирует массим максимумов на основе имеющихся количеств в точках, используется после загрузки.
+	InitResMaxArray();
 
 	// Инициализируем объект для подсчёта количества элементов неживой природы и организмов разных видов.
 	amounts.Init();
@@ -550,13 +556,10 @@ void World::doLoadInanimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, c
 		// Сохраняем реакцию в списке реакций.
 		reactions.push_back(curReaction);
 	}
-
-	// Инициализирует массим максимумов на основе имеющихся количеств в точках, используется после загрузки.
-	InitResMaxArray();
 }
 
 
-void World::doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, const std::string &filename, const std::vector<std::string>& reactionNames)
+void World::doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, const std::vector<std::string>& reactionNames)
 {
 	// Создаём вид протоорганизма.
 	//
@@ -582,25 +585,27 @@ void World::doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, con
 		throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongLUCAReaction), LUCAReactionName));
 	demi::geneValues_t geneValue = demi::geneValues_t(std::distance(reactionNames.begin(), itReaction));
 
-	// Очистим старое дерево генотипов/видов.
+	// Очистим старое дерево генотипов/видов. Может быть переопределено при считывании двоичного файла.
 	genotypesTree.clear();
 
 	// Создаём ген реакций.
 	demi::Gene gene(LUCAGeneName, reactionNames);
 
-	// Создаём корневой генотип и присваиваем ему первый индекс.
+	// Создаём генотип протоорганизма.
 	genotypesTree.genotype = std::make_shared<demi::Genotype>(nullptr, gene, "LUCA", "Demi");
 
-	// Создаём вид специальным конструктором для протоорганизма.
+	// Создаём вид специальным конструктором для протоорганизма. Может быть переопределён при считывании двоичного файла.
 	auto species = std::make_shared<demi::Species>(genotypesTree.genotype, geneValue, specVisible, specAliveColor, specDeadColor);
-	species->getCellsRef().push_back(std::make_shared<demi::CellAbdomen>());
 
 	// Сохраняем корневой вид в дереве.
 	genotypesTree.species.push_back(species);
 
 	// Перед двоичным файлом удалим прежние организмы, если они были.
 	animals.clear();
+}
 
+void World::doLoadBinary(const std::string &filename)
+{
 	// Считываем двоичный файл, если он есть.
 	if (clan::FileHelp::file_exists(filename + "b")) {
 
@@ -627,13 +632,21 @@ void World::doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, con
 				throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinElemName), arResNames[i], elemName));
 		}
 
+		// Маркер начала видов организмов.
+		auto strSecMarker = binFile.read_string_nul();
+		if (strSecMarker != "Species:")
+			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinMarker), "Species:", strSecMarker));
+
+		// Считываем поля производных видов (значения генов, видимость и цвета), удалив вид протоорганизма.
+		genotypesTree.clear();
+		genotypesTree.loadFromFile(binFile);
+			
 		// Создадим при помощи дерева словарь видов для того, чтобы при считывании организмов использовать лишь ключ словаря.
-		// Пока всего один экземпляр генотипов.
 		speciesDict_t speciesDict;
 		genotypesTree.generateDict(speciesDict);
 
 		// Маркер начала массива точек.
-		auto strSecMarker = binFile.read_string_nul();
+		strSecMarker = binFile.read_string_nul();
 		if (strSecMarker != "Dots:")
 			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinMarker), "Dots:", strSecMarker));
 
@@ -800,18 +813,37 @@ void World::saveModel(const std::string &filename)
 	// Настройки, хранимые в XML-файле.
 	auto pResDoc = std::make_shared<clan::XMLResourceDocument>(filename);
 
+	// Сохраняем изменения в XML-структуре.
+	doSaveSettings(pResDoc);
+
+	// Записываем изменения на диск.
+	pResDoc->save(filename);
+
+	// Записываем двоичный файл.
+	doSaveBinary(filename);
+
+	// Продолжим выполнение потока, если он работал.
+	if (prevRun) {
+		threadRunFlag = true;
+		threadEvent.notify_all();
+	}
+}
+
+
+void World::doSaveSettings(std::shared_ptr<clan::XMLResourceDocument>& resDoc)
+{
 	// Сохраняем внешний вид проекта.
-	clan::DomElement &prop = pResDoc->get_resource(cResGlobalsAppearance).get_element();
+	clan::DomElement &prop = resDoc->get_resource(cResGlobalsAppearance).get_element();
 	prop.set_attribute_int(cResGlobalsAppearanceLeft, appearanceTopLeft.x);
 	prop.set_attribute_int(cResGlobalsAppearanceTop, appearanceTopLeft.y);
 	prop.set_attribute_float(cResGlobalsAppearanceScale, appearanceScale);
 
 	// Запишем видимость протоорганизма.
-	prop = pResDoc->get_resource(cResGlobalsLUCA).get_element();
+	prop = resDoc->get_resource(cResGlobalsLUCA).get_element();
 	prop.set_attribute_bool(cResGlobalsLUCAVisibility, genotypesTree.species.front()->getVisible());
 
 	// Записываем время.
-	prop = pResDoc->get_resource(cResGlobalsTime).get_element();
+	prop = resDoc->get_resource(cResGlobalsTime).get_element();
 	prop.set_attribute_int(cResGlobalsTimeYear, int(timeModel.year));
 	prop.set_attribute_int(cResGlobalsTimeDay, int(timeModel.day));
 	prop.set_attribute_int(cResGlobalsTimeSecond, int(timeModel.sec));
@@ -820,15 +852,15 @@ void World::saveModel(const std::string &filename)
 	for (size_t i = 0; i != elemCount; ++i) {
 
 		// Элемент.
-		prop = pResDoc->get_resource(cResElementsSection + std::string("/") + arResNames[i]).get_element();
+		prop = resDoc->get_resource(cResElementsSection + std::string("/") + arResNames[i]).get_element();
 
 		// Видимость элемента.
 		prop.set_attribute_bool(cResElementsVisibility, arResVisible[i]);
 	}
+}
 
-	// Записываем изменения на диск.
-	pResDoc->save(filename);
-	
+void World::doSaveBinary(const std::string &filename)
+{
 	// Двоичный файл под точки, организмы и т.д.
 	clan::File binFile(filename + "b",				// У двоичного файла расширение будет 'demib'.
 		clan::File::OpenMode::create_always,
@@ -837,13 +869,19 @@ void World::saveModel(const std::string &filename)
 
 	// Запишем версию файла.
 	binFile.write_string_nul("Ver:1");
-	
+
 	// Запишем количество элементов.
 	binFile.write_string_nul("ElementsCount:" + clan::StringHelp::int_to_text(int(elemCount)));
 
 	// Запишем названия элементов.
 	for (size_t i = 0; i != elemCount; ++i)
 		binFile.write_string_nul(arResNames[i]);
+
+	// Записываем маркер начала видов организмов и поля видов.
+	binFile.write_string_nul("Species:");
+
+	// Записываем поля видов (значения генов, видимость и цвета).
+	genotypesTree.saveToFile(binFile);
 
 	// Для того, чтобы не писать перед каждым организмом строку с его названием генотипа, сделаем словарь и будем пользоваться номером.
 	speciesDict_t speciesDict;
@@ -868,12 +906,6 @@ void World::saveModel(const std::string &filename)
 
 	// Закроем файл.
 	binFile.close();
-
-	// Продолжим выполнение потока, если он работал.
-	if (prevRun) {
-		threadRunFlag = true;
-		threadEvent.notify_all();
-	}
 }
 
 
@@ -957,9 +989,6 @@ void World::doWriteOrganism(clan::File &binFile, speciesDict_t& speciesDict, dem
 	auto it = std::find(speciesDict.begin(), speciesDict.end(), organism->getSpecies());
 	ptrdiff_t index = std::distance(speciesDict.begin(), it);
 	binFile.write_uint16(uint16_t(index));
-
-	// Записываем поля вида (значения генов, видимость и цвета).
-	organism->getSpecies()->saveToFile(binFile);
 
 	// Записываем собственные поля организма.
 	organism->saveToFile(binFile);

@@ -4,9 +4,9 @@
 		<!--Ширина мира и пропорция для высоты, максимум 30 000. Для проекции Меркатора 24:11 или 0.4583-->
 		<item name="WorldSize" width="1000" heightRatio="0.4583"/>
 		<!--Последнее представление модели - координата левого верхнего угла, масштаб-->
-		<item name="Appearance" top="14" left="256" scale="0.045062"/>
+		<item name="Appearance" top="0" left="0" scale="0.381667"/>
 		<!--Время модели - год, день, секунда-->
-		<item name="Time" year="1" day="249" second="2575"/>
+		<item name="Time" year="1" day="1" second="143"/>
 		<!--Константы для организмов - расход энергии при движении (0..255), покое  (0..255) и граница разрушения  (-32768..32767)-->
 		<item name="MetabolicConsts" minActiveMetabolicRate="10" minInactiveMetabolicRate="1" desintegrationVitalityBarrier="-100"/>
 		<!--Протоорганизм, от которого происходят все остальные.-->
@@ -27,27 +27,27 @@
 	<!--Минеральные элементы-->
 	<section name="Elements">
 		<!--Вода - основа всего, и в качестве основы её летучесть меньше чем у твёрдых веществ-->
-		<Element name="Water" color="cornflowerblue" volatility="0.01" visibility="false">
+		<Element name="Water" color="cornflowerblue" volatility="0.01" visibility="true">
 			<rect left="0" top="0" right="max" bottom="max" amount="10000000"/>
 		</Element>
 		<!--Газы-->
-		<Element name="Oxygen" color="green" volatility="0.12" visibility="false">
+		<Element name="Oxygen" color="green" volatility="0.12" visibility="true">
 			<rect left="0" top="0" right="max" bottom="max" amount="0"/>
 		</Element>
-		<Element name="CarbonDioxide" color="yellow" volatility="0.12" visibility="false">
+		<Element name="CarbonDioxide" color="yellow" volatility="0.12" visibility="true">
 			<rect left="0" top="0" right="max" bottom="max" amount="2000000"/>
 		</Element>
 		<Element name="Hydrogen" color="darkgreen" volatility="0.12" visibility="true">
 			<rect left="0" top="0" right="max" bottom="max" amount="100000"/>
 		</Element>
-		<Element name="Methane" color="darkviolet" volatility="0.12" visibility="false">
+		<Element name="Methane" color="darkviolet" volatility="0.12" visibility="true">
 			<rect left="0" top="0" right="0" bottom="0" amount="0"/>
 		</Element>
-		<Element name="Hydrogen sulfide" color="aliceblue" volatility="0.12" visibility="false">
+		<Element name="Hydrogen sulfide" color="aliceblue" volatility="0.12" visibility="true">
 			<rect left="0" top="0" right="0" bottom="0" amount="0"/>
 		</Element>
 		<!--Твёрдые вещества-->
-		<Element name="Sulphur" color="lightyellow" volatility="0.03" visibility="false">
+		<Element name="Sulphur" color="lightyellow" volatility="0.03" visibility="true">
 			<rect left="0" top="0" right="max" bottom="max" amount="10"/>
 		</Element>
 	</section>

@@ -76,6 +76,9 @@ Species::Species(const std::shared_ptr<Genotype>& genotype,
 	const clan::Color& AdeadColor
 ) : speciesGenotype(genotype), visible(Avisible), aliveColor(AaliveColor), deadColor(AdeadColor)
 {
+	// Клетка вида. Требует переработки в будущем после появления клеток разных видов.
+	cells.push_back(std::make_shared<demi::CellAbdomen>());
+
 	// Название и список значений копируем без изменений, желательно с минимальными накладными расходами.
 	// При копировании значения гена включаем механизм мутаций.
 	//geneValueIndex = sourceGene.geneValueIndex;	// не реализовано ещё.
@@ -87,6 +90,9 @@ Species::Species(const std::shared_ptr<Genotype>& genotype,
 // Конструктор для считывания из файла.
 Species::Species(const std::shared_ptr<Genotype>& genotype,	clan::File& binFile) : speciesGenotype(genotype)
 {
+	// Клетка вида. Требует переработки в будущем после появления клеток разных видов.
+	cells.push_back(std::make_shared<demi::CellAbdomen>());
+
 	// Длина ДНК.
 	size_t len = genotype->getGenotypeLength();
 
