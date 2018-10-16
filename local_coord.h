@@ -30,9 +30,13 @@ public:
 	float getGeothermalEnergy() const { return geothermalEnergy; }
 	void setGeothermalEnergy(float newVal) { geothermalEnergy = newVal; }
 
-	// Количество указанного элемента в абсолютной величине.
+	// Количество указанного элемента в абсолютной величине, не включая то, что может быть у организма в запасах.
 	uint64_t getElemAmount(size_t index) const { return res[index]; }
 	void setElementAmount(size_t index, uint64_t amount) { res[index] = amount; }
+
+	// Увеличивают и уменьшают количество элемента.
+	void incElemAmount(size_t index, uint64_t amount) { res[index] += amount; }
+	void decElemAmount(size_t index, uint64_t amount) { res[index] -= amount; }
 
 	// Количество указанного элемента в процентах.
 	float getElemAmountPercent(size_t index) const;
@@ -47,7 +51,7 @@ public:
 	void operator=(const Dot &obj) = delete;
 
 	// Возвращает цвет для точки на основе имеющихся ресурсов, передача по ссылке для оптимизации.
-	void get_color(clan::Color &aValue) const;
+	void getColor(clan::Color &aValue) const;
 
 	// Клетки организмов, размещённые в точке.
 	std::vector<std::shared_ptr<demi::GenericCell>> cells;
@@ -74,8 +78,8 @@ public:
 	Dot& get_dot(const clan::Point &coord) const { return get_dot(coord.x, coord.y); }
 
 	// Возвращает адрес точки в глобальных координатах.
-	clan::Point getGlobalPoint() { return center; }
-	clan::Point getGlobalPoint(const clan::Point &localPoint) { return center + localPoint; }
+	clan::Point getGlobalPoint() const { return center; }
+	clan::Point getGlobalPoint(const clan::Point &localPoint) const { return center + localPoint; }
 
 private:
 	// Размеры мира на момент создания, для оптимизаци.

@@ -34,13 +34,7 @@ namespace demi {
 	class Gene {
 	public:
 		// —оздание нового гена.
-		Gene(const std::string& name, const std::vector<std::string> valuesVector);
-
-		// ѕри использовании конструктора копировани€ могут быть мутации.
-		Gene(const Gene& sourceGene);
-
-		// ¬ременно, потом возможно надо реализовать.
-		void operator=(const Gene& sourceGene) = delete;
+		Gene(const std::string& name, const std::vector<std::string>& valuesVector);
 
 		const std::string& getGeneName() const { return geneName; }
 
@@ -56,9 +50,13 @@ namespace demi {
 	//
 	//  ласс дл€ описани€ генотипа - совокупности генов, организованных иерархически.
 	//
+	class GenotypesTree;
 	class Genotype {
 	public:
-		Genotype(const std::shared_ptr<Genotype>& aGenotypeAncestor, const Gene& gene, const std::string& aGenotypeName, const std::string& aGenotypeAuthor);
+		Genotype(GenotypesTree& aTreeNode, const Gene& gene, const std::string& aGenotypeName, const std::string& aGenotypeAuthor);
+
+		Genotype(const Genotype& sourceGene) = delete;
+		void operator=(const Genotype& sourceGene) = delete;
 
 		// ¬озвращает им€ вида организма.
 		std::string getGenotypeName();
@@ -69,11 +67,11 @@ namespace demi {
 		// ¬озвращает количество генов.
 		size_t getGenotypeLength() const { return cachedGenotypeLen; }
 
-		const std::shared_ptr<Genotype>& getAncestor() const { return genotypeAncestor; }
+		GenotypesTree& getTreeNode() const { return treeNode; }
 
 	private:
-		// –одительский генотип.
-		const std::shared_ptr<Genotype> genotypeAncestor;
+		// ”зел дерева генотипов, относ€щийс€ к данному генотипу.
+		GenotypesTree& treeNode;
 
 		// √ен, которым насто€щий генотип отличаетс€ от родительского.
 		Gene ownGene;

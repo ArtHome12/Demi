@@ -160,6 +160,9 @@ WindowsSettings::WindowsSettings()
 	panelOrganismAmounts = std::make_shared<clan::View>();
 	panelOrganismAmounts->style()->set("flex-direction: column; background-color: lightgray; width: 210px; border-right-width: 1px; border-right-style: solid; border-right-color: green");
 	panelModelInfo->add_child(panelOrganismAmounts);
+
+	// Кешированный префикс для надписи для живых организмов, для ускорения.
+	cachedAnimalPrefixLabel = pSettings->LocaleStr(cTreeAnimate) + ": ";
 }
 
 WindowsSettings::~WindowsSettings()
@@ -213,7 +216,7 @@ void WindowsSettings::finishInit(clan::WindowManager* windowManager)
 			// Преобразуем путь в абсолютный, если у нас относительный.
 			std::string absPath = clan::PathHelp::make_absolute(clan::System::get_exe_path(), lastModelFilename);
 			loadModel(absPath);
-			set_modelFilename(lastModelFilename);
+			setModelFilename(lastModelFilename);
 
 			// Обновим дерево с галочками видимости элементов.
 			initElemVisibilityTree();
@@ -236,7 +239,7 @@ void WindowsSettings::finishInit(clan::WindowManager* windowManager)
 void WindowsSettings::onButtondownNew()
 {
 	// Сбросим имя модели и загрузим в модель шаблон.
-	set_modelFilename("");
+	setModelFilename("");
 	loadModel(cProjectTemplate);
 
 	// Обновим дерево с галочками видимости элементов.
@@ -252,7 +255,7 @@ void WindowsSettings::onButtondownOpen()
 	dlg->add_filter(cProjectAllExtensionDesc, "*", false);
 	if (dlg->show()) {
 		// Сохраним имя модели и загрузим её.
-		set_modelFilename(dlg->filename());
+		setModelFilename(dlg->filename());
 		loadModel(dlg->filename());
 
 		// Обновим дерево с галочками видимости элементов.
@@ -303,7 +306,7 @@ void WindowsSettings::onButtondownSaveAs()
 				if (result == cMbResultOk) {
 					// Запоминаем новое имя проекта и перезаписываем XML-файл, сохраняем двоичный файл.
 					clan::FileHelp::copy_file(cProjectTemplate, filename, true);
-					set_modelFilename(filename);
+					setModelFilename(filename);
 					saveModel(filename);
 
 				}
@@ -317,7 +320,7 @@ void WindowsSettings::onButtondownSaveAs()
 
 		// Запоминаем новое имя проекта и перезаписываем XML-файл, сохраняем двоичный файл.
 		clan::FileHelp::copy_file(cProjectTemplate, filename, true);
-		set_modelFilename(filename);
+		setModelFilename(filename);
 		saveModel(filename);
 	}
 }
@@ -406,7 +409,7 @@ void WindowsSettings::onTreeSpeciesCheckChanged(TreeItem &item)
 
 
 // Сохраняет новое имя модели и обновляет надпись на экране.
-void WindowsSettings::set_modelFilename(const std::string &newName)
+void WindowsSettings::setModelFilename(const std::string &newName)
 {
 	// Преобразуем путь в абсолютный, если у нас относительный.
 	std::string absPath = clan::PathHelp::make_absolute(clan::System::get_exe_path(), newName);
@@ -438,7 +441,7 @@ void WindowsSettings::modelRenderNotify(size_t secondsElapsed)
 		// Так как set_text с использованием force_no_layout не проверяет, свёрнуто ли окно, сделаем это предварительно.
 		const size_t cnt = globalWorld.getElemCount();
 		auto childE = ++panelElemAmounts->children().begin();	// сразу пропускаем надпись-оглавление.
-		for (size_t i = 0; i < cnt; i++) {
+		for (size_t i = 0; i != cnt; ++i) {
 
 			// Преобразуем указатель на базовый тип View на дочерний LabelView.
 			std::shared_ptr<clan::LabelView> label = std::dynamic_pointer_cast<clan::LabelView>(*childE++);
@@ -451,14 +454,26 @@ void WindowsSettings::modelRenderNotify(size_t secondsElapsed)
 
 		// Живая природа.
 		//
+
+		// Если было обновление видов, переинициализируем надписи.
+		auto tree = globalWorld.genotypesTree;
+		if (tree.flagSpaciesChanged) {
+			
+			// Сбрасываем флаг.
+			tree.flagSpaciesChanged = false;
+
+			// Инициалиируем надписи.
+			initAnimalVisibility();
+		}
+
 		auto childS = panelOrganismAmounts->children().begin();
 		std::shared_ptr<clan::LabelView> label = std::dynamic_pointer_cast<clan::LabelView>(*childS);
-		const auto& luca = globalWorld.genotypesTree.species.front();
+		const auto& luca = tree.species.front();
 		const std::string str = IntToStrWithDigitPlaces<size_t>(luca->getAliveCount());
 		label->set_text(str, true);
 	}
 
-
+	
 	// Автосохранение. Если прошёл час и установлена галочка регулярного автосохранения модели, сделаем это.
 	//
 	if (secondsElapsed - this->secondsElapsed > 3600) {
@@ -477,10 +492,11 @@ void WindowsSettings::initElemVisibilityTree()
 	// Неживая природа.
 	//
 	// Удалим старые метки под количество элементов, если они были. Обращаемся по индексу, иначе итератор портится.
+	// Сам список названий очистится при присвоении корневого узла.
 	for (size_t i = panelElemAmounts->children().size(); i != 0; --i) 
 		panelElemAmounts->children().at(i-1)->remove_from_parent();
 
-	// Корневой невидимый узел, необходим для того, чтобы визуально могло быть сразу несколько узлов первого уровня.
+	// Корневой невидимый узел, дереву необходим для того, чтобы визуально могло быть сразу несколько узлов первого уровня.
 	auto rootNodeE = std::make_shared<TreeItem>("", size_t(SIZE_MAX));	// В tag хранится индекс химэлемента, для корневого - заглушка.
 	
 	// Первый узел - под химические элементы.
@@ -490,10 +506,10 @@ void WindowsSettings::initElemVisibilityTree()
 	// Добавляем сразу и метку в панель количества.
 	panelElemAmounts->add_child(createLabelForAmount(pSettings->LocaleStr(cWindowsSettingsAmountsLabel)));
 
-	// Добавляем химэлементы, первым символом пробел для маркировки, что это неживой элемент.
+	// Добавляем химэлементы.
 	for (size_t i = 0; i != globalWorld.getElemCount(); ++i) {
 		// Чекбокс с названием элемента.
-		firstNodeE->children.push_back(std::make_shared<TreeItem>(" " + globalWorld.getResName(i), i, globalWorld.getResVisibility(i)));
+		firstNodeE->children.push_back(std::make_shared<TreeItem>(globalWorld.getResName(i), i, globalWorld.getResVisibility(i)));
 
 		// Метка под количество.
 		panelElemAmounts->add_child(createLabelForAmount("-"));
@@ -506,31 +522,13 @@ void WindowsSettings::initElemVisibilityTree()
 
 	// Добавляем дерево в список.
 	pTreeViewElements->set_root_item(rootNodeE);
-
-	// Живая природа.
-	//
-	for (size_t i = panelOrganismAmounts->children().size(); i != 0; --i)
-		panelOrganismAmounts->children().at(i - 1)->remove_from_parent();
-
-	auto rootNodeS = std::make_shared<TreeItem>("", size_t(SIZE_MAX));
-
-	// Протоорганизм (вид).
-	auto luca = globalWorld.genotypesTree.species.front();
-
-	// Корневой узел под организмы.
-	auto curNode = std::make_shared<TreeItem>(pSettings->LocaleStr(cTreeAnimate) + ": " + luca->getGenotypeName(), size_t(luca.get()), luca->getVisible());
-	rootNodeS->children.push_back(curNode);
-	panelOrganismAmounts->add_child(createLabelForAmount("-"));
-
-	// Добавляем виды организмов. В качестве tag - указатель.
-
-	pTreeViewSpecies->func_check_changed() = clan::bind_member(this, &WindowsSettings::onTreeSpeciesCheckChanged);
-	pTreeViewSpecies->set_root_item(rootNodeS);
 }
 
-// Есть особенности по сравнению с обычной загрузкой.
 void WindowsSettings::initElemVisibilityTreeAfterRestart()
 {
+	// В отличие от обычной загрузки надо сохранить прежние значения видимости, то есть не у чекбоксов обновить 
+	// поля на основе значений объектов, а обновить значения у объектов на основе чекбоксов.
+
 	// Корневой узел.
 	std::shared_ptr<TreeItem>& rootNodeE = pTreeViewElements->get_root_item();
 
@@ -538,19 +536,43 @@ void WindowsSettings::initElemVisibilityTreeAfterRestart()
 	auto inanimalNode = rootNodeE->children.front();
 	for (auto &child : inanimalNode->children) 
 		globalWorld.setResVisibility(child->tag, child->checked);
+}
+
+// Обновляет отображение организмов (которые меняются в процессе расчёта).
+void WindowsSettings::initAnimalVisibility()
+{
+	// Удалим старые надписи для количеств.
+	for (size_t i = panelOrganismAmounts->children().size(); i != 0; --i)
+		panelOrganismAmounts->children().at(i - 1)->remove_from_parent();
+
+	// Корневой невидимый узел, дереву необходим для того, чтобы визуально могло быть сразу несколько узлов первого уровня.
+	auto rootNodeS = std::make_shared<TreeItem>("", size_t(SIZE_MAX));
+
+	// Протоорганизм (вид).
+	auto luca = globalWorld.genotypesTree.species.front();
+
+	// Корневой узел под организмы.
+	auto curNode = std::make_shared<TreeItem>(cachedAnimalPrefixLabel + luca->getGenotypeName(), size_t(luca.get()), luca->getVisible());
+	rootNodeS->children.push_back(curNode);
+	panelOrganismAmounts->add_child(createLabelForAmount("-"));
+
+	// Добавляем виды организмов. В качестве tag - указатель.
+
+	pTreeViewSpecies->func_check_changed() = clan::bind_member(this, &WindowsSettings::onTreeSpeciesCheckChanged);
+	pTreeViewSpecies->set_root_item(rootNodeS);
 
 	// Для организмов надо обновить указатели в поле tag.
 	// Пока недоделано - всего один организм.
 
 	// Протоорганизм (вид).
-	auto luca = globalWorld.genotypesTree.species.front();
+/*	auto luca = globalWorld.genotypesTree.species.front();
 
 	std::shared_ptr<TreeItem>& rootNodeS = pTreeViewSpecies->get_root_item();
 	auto firstAnimalNode = rootNodeS->children.front();
 	firstAnimalNode->tag = size_t(luca.get());
 
 	// Обновим видимость самого организма на основе значения чекбокса.
-	luca->setVisible(firstAnimalNode->checked);
+	luca->setVisible(firstAnimalNode->checked);*/
 }
 
 

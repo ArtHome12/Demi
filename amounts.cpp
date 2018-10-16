@@ -26,7 +26,7 @@ void Amounts::Init()
 
 	// Перебираем все точки и сохраняем количества.
 	Dot *cur = globalWorld.getDotsArray();						// Первая точка массива.
-	clan::Size worldSize = globalWorld.get_worldSize();
+	const clan::Size& worldSize = globalWorld.getWorldSize();
 	Dot *last = cur + worldSize.width * worldSize.height;		// Точка после последней точки массива.
 	while (cur < last) {
 

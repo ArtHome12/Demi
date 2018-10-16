@@ -12,22 +12,16 @@
 #include "reactions.h"
 #include "organism.h"
 #include "gene.h"
+#include "genotypes_tree.h"
 
 using namespace demi;
 
 /////////////////////////////////////////////////////////////////////////////////
 //  ласс дл€ описани€ одного гена.
 /////////////////////////////////////////////////////////////////////////////////
-Gene::Gene(const std::string& name, const std::vector<std::string> valuesVector) :
+Gene::Gene(const std::string& name, const std::vector<std::string>& valuesVector) :
 	geneName(name),
 	geneValuesVector(valuesVector)
-{
-
-}
-
-Gene::Gene(const Gene& sourceGene) : 
-	geneName(sourceGene.geneName),
-	geneValuesVector(sourceGene.geneValuesVector)
 {
 }
 
@@ -35,14 +29,15 @@ Gene::Gene(const Gene& sourceGene) :
 /////////////////////////////////////////////////////////////////////////////////
 //  ласс дл€ описани€ генотипа - совокупности генов, организованных иерархически.
 /////////////////////////////////////////////////////////////////////////////////
-Genotype::Genotype(const std::shared_ptr<Genotype>& aGenotypeAncestor, const Gene& gene, const std::string& aGenotypeName, const std::string& aGenotypeAuthor) :
-	genotypeAncestor(aGenotypeAncestor),
+Genotype::Genotype(GenotypesTree& aTreeNode, const Gene& gene, const std::string& aGenotypeName, const std::string& aGenotypeAuthor) :
+	treeNode(aTreeNode),
 	ownGene(gene),
 	genotypeName(aGenotypeName),
 	genotypeAuthor(aGenotypeAuthor)
 {
 	// ƒл€ ускорени€ рассчитаем часто используемый параметр.
-	cachedGenotypeLen = genotypeAncestor.get() != nullptr ? genotypeAncestor->getGenotypeLength() : 1;
+	const std::shared_ptr<GenotypesTree>& treeAncestor = treeNode.ancestor;
+	cachedGenotypeLen = (treeAncestor.get() != nullptr ? treeAncestor->genotype->cachedGenotypeLen : 0) + 1;
 }
 
 std::string Genotype::getGenotypeName()
@@ -59,8 +54,9 @@ const Gene& Genotype::getGeneByName(const std::string& name)
 		return ownGene;
 
 	// ќбращаемс€ к родителю.
-	if (genotypeAncestor != nullptr)
-		return genotypeAncestor->getGeneByName(name);
+	const std::shared_ptr<GenotypesTree>& treeAncestor = treeNode.ancestor;
+	if (treeAncestor.get() != nullptr)
+		return  treeAncestor->genotype->getGeneByName(name);
 
 	throw EGeneNotFound(name);
 }
@@ -79,10 +75,7 @@ Species::Species(const std::shared_ptr<Genotype>& genotype,
 	//  летка вида. “ребует переработки в будущем после по€влени€ клеток разных видов.
 	cells.push_back(std::make_shared<demi::CellAbdomen>());
 
-	// Ќазвание и список значений копируем без изменений, желательно с минимальными накладными расходами.
-	// ѕри копировании значени€ гена включаем механизм мутаций.
-	//geneValueIndex = sourceGene.geneValueIndex;	// не реализовано ещЄ.
-	// ѕри использовании конструктора инициализации по ссылке будет работать механизм мутаций.
+	// —охран€ем значение гена.
 	geneValues.push_back(geneValue);
 }
 

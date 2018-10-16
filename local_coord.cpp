@@ -28,7 +28,7 @@ Dot::~Dot()
 	delete[] res;
 }
 
-void Dot::get_color(clan::Color &aValue) const
+void Dot::getColor(clan::Color &aValue) const
 {
 	// Возвращает цвет для точки на основе имеющихся ресурсов, передача по ссылке для оптимизации.
 	//
@@ -107,8 +107,8 @@ float Dot::getElemAmountPercent(size_t index) const
 // Локальные координаты - центр всегда в точке 0, 0 и можно адресовать отрицательные координаты.
 // =============================================================================
 LocalCoord::LocalCoord(const clan::Point &coord) : center(coord),
-worldWidth(globalWorld.get_worldSize().width),
-worldHeight(globalWorld.get_worldSize().height)
+worldWidth(globalWorld.getWorldSize().width),
+worldHeight(globalWorld.getWorldSize().height)
 {
 };
 

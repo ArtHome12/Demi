@@ -72,6 +72,9 @@ private:
 	// Количество прошедших секунд с момента старта программы.
 	size_t secondsElapsed = 0;
 
+	// Кешированный префикс для надписи для живых организмов, для ускорения.
+	std::string cachedAnimalPrefixLabel;
+
 	// Обработчики событий
 	void onButtondownNew();
 	void onButtondownOpen();
@@ -88,13 +91,16 @@ private:
 	void onTreeSpeciesCheckChanged(TreeItem &item);
 
 	// Сохраняет новое имя модели и обновляет надпись на экране.
-	void set_modelFilename(const std::string &newName);
+	void setModelFilename(const std::string &newName);
 
 	// Обновляет дерево с галочками видимости элементов на основании значений в модели.
 	void initElemVisibilityTree();
 
-	// Есть особенности по сравнению с обычной загрузкой.
+	// В отличие от обычной загрузки надо сохранить прежние значения видимости.
 	void initElemVisibilityTreeAfterRestart();
+
+	// Обновляет отображение организмов (которые меняются в процессе расчёта).
+	void initAnimalVisibility();
 
 	// Создаёт надпись.
 	std::shared_ptr<clan::LabelView> createLabelForAmount(std::string text);

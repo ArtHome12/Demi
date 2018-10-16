@@ -112,8 +112,8 @@ clan::Point Solar::getPos(const demi::DemiTime &timeModel)
 	// Возвращает позицию для солнца в зависимости от времени.
 
 	// Размеры мира.
-	const clan::Size &worldSize = globalWorld.get_worldSize();
-
+	const clan::Size& worldSize = globalWorld.getWorldSize();
+	 
 	// Позиция по горизонтали зависит от времени суток.
 	// Солнце двигается с востока на запад пропорционально прошедшей доле суток.
 	int x = int(worldSize.width * (1.0f - float(timeModel.sec) / (demi::cTicksInDay - 1.0f)) + 0.5f);
@@ -140,7 +140,6 @@ clan::Point Solar::getPos(const demi::DemiTime &timeModel)
 // Земная поверхность, двумерный массив точек.
 // =============================================================================
 World::World() : generator(random_device()), rnd_angle(0, 7), rnd_Coord(0, 12 - 1), thread(std::thread(&World::workerThread, this))
-
 {
 	// Поток не стартанёт до установки флага.
 }
@@ -186,6 +185,8 @@ void World::makeTick()
 	std::shuffle(animals.begin(), animals.end(), generator);
 
 	// Используем традиционый цикл, так как иначе итераторы портятся после изменения вектора.
+	// Новые добавленные элементы получат управление только на следующий раз, cnt не увеличиваем, иначе происходит 
+	// лавинообразное размножение за один тик, что неестественно.
 	size_t cnt = animals.size();
 	for (size_t i = 0; i < cnt; ++i) {
 
@@ -200,16 +201,49 @@ void World::makeTick()
 			continue;
 		}
 
-		// Передаём ему управление. Если обратно получили не 0, надо сохранить новый организм в списке.
-		demi::Organism * newBorn = animal.makeTickAndGetNewBorn();
-		if (newBorn != nullptr) {
-			animals.push_back(newBorn);
-			++cnt;
+		// Передаём организму управление и определяем его желание размножаться.
+		if (animal.makeTick()) {
+
+			// Пытаемся найти подходящее место. Должно быть свободным!
+			clan::Point freePlace;
+			if (animal.findFreePlace(freePlace)) {
+
+				// Ополовиниваем жизненную силу у исходного организма (будет передана дочернему).
+				int32_t newVitality = animal.halveVitality();
+
+				// от 0 до 7, направление поворота нового организма.
+				uint8_t newAngle = rnd_angle(generator);						
+
+				// Вид нового организма, возможно с мутацией либо тот же самый.
+				const std::shared_ptr<demi::Species>& oldSpec = animal.getSpecies();
+				demi::GenotypesTree& treeNode = oldSpec->getGenotype()->getTreeNode();
+				const std::shared_ptr<demi::Species> newSpec = treeNode.breeding();
+
+				// Количество делений.
+				uint64_t newAncestorCount = animal.getAncestorsCount() + 1;
+
+				// Если была мутация, то сбросим счётчик предыдущих делений, а также обновим окно видов.
+				if (oldSpec != newSpec) {
+					newAncestorCount = 0;
+
+					// Поднимем флаг для обновления списка видов.
+					genotypesTree.flagSpaciesChanged = true;
+				}
+
+				// Защита от переполнения.
+				if (newAncestorCount == UINT64_MAX)
+					--newAncestorCount;
+
+				// Создаём и сохраняем в списке живых, то есть получающих управление.
+				clan::Point& newPoint = animal.getCenter().getGlobalPoint(freePlace);
+				demi::Organism* newBorn = new demi::Organism(newPoint, newAngle, newVitality, getModelTime(), newAncestorCount, newSpec);
+				animals.push_back(newBorn);
+			}
 		}
 	}
 
-	// Создаём экземпляр протоорганизма, если нет живых организмов и есть место.
-	if (!cnt) {
+	// Создаём экземпляр протоорганизма, если нет живых организмов и есть место. Заново запрашиваем .size() так как организмы могли добавиться.
+	if (!animals.size()) {
 		Dot& protoDot = LocalCoord(LUCAPos).get_dot(0, 0);
 		if (protoDot.organism == nullptr)
 			animals.push_back(new demi::Organism(LUCAPos, 0, 1, getModelTime(), 0, genotypesTree.species.front()));
@@ -249,8 +283,8 @@ void World::diffusion()
 
 	while (true) {
 
-		size_t rnd = rnd_angle(generator);			// от 0 до 7, направление движения
-		const size_t rndResIndex = rnd_Elem(generator);		// случайный элемент.
+		size_t rnd = rnd_angle(generator);						// от 0 до 7, направление движения
+		const size_t rndResIndex = rnd_Elem(generator);			// случайный элемент.
 
 		// Определяем исходную координату отдельным случайным числом.
 		cur += rnd_Coord(generator);
@@ -399,7 +433,7 @@ void World::loadModel(const std::string &filename)
 	// Загрузим двоичный файл.
 	doLoadBinary(filename);
 
-	// Инициализирует массим максимумов на основе имеющихся количеств в точках, используется после загрузки.
+	// Инициализирует массив максимумов на основе имеющихся количеств в точках, используется после загрузки.
 	InitResMaxArray();
 
 	// Инициализируем объект для подсчёта количества элементов неживой природы и организмов разных видов.
@@ -592,7 +626,7 @@ void World::doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, con
 	demi::Gene gene(LUCAGeneName, reactionNames);
 
 	// Создаём генотип протоорганизма.
-	genotypesTree.genotype = std::make_shared<demi::Genotype>(nullptr, gene, "LUCA", "Demi");
+	genotypesTree.genotype = std::make_shared<demi::Genotype>(genotypesTree, gene, "LUCA", "Demi");
 
 	// Создаём вид специальным конструктором для протоорганизма. Может быть переопределён при считывании двоичного файла.
 	auto species = std::make_shared<demi::Species>(genotypesTree.genotype, geneValue, specVisible, specAliveColor, specDeadColor);
@@ -1024,8 +1058,8 @@ void World::InitResMaxArray()
 	memset(arResMax, 0, sizeof(unsigned long long) * elemCount);
 
 	// Перебираем все точки и сохраняем количества.
-	Dot *cur = globalWorld.getDotsArray();						// Первая точка массива.
-	Dot *last = cur + worldSize.width * worldSize.height;		// Точка после последней точки массива.
+	Dot *cur = arDots;										// Первая точка массива.
+	Dot *last = cur + worldSize.width * worldSize.height;	// Точка после последней точки массива.
 	while (cur < last) {
 
 		// Перебираем все элементы в точке.

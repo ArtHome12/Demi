@@ -76,7 +76,7 @@ public:
 	const demi::DemiTime& getModelTime() { return timeBackup; }
 
 	// Доступ к свойствам.
-	clan::Size get_worldSize() { return worldSize; }
+	clan::Size getWorldSize() { return worldSize; }
 	size_t getElemCount() { return elemCount; }
 	size_t getEnergyCount() { return energyCount; }
 	size_t getLightRadius() { return lightRadius; }
@@ -108,7 +108,7 @@ public:
 	Amounts amounts;
 
 	// Объект для связи между интерфейсом и генотипами/видами модели. Древовидный список, в вершине - вид протоорганизма.
-	GenotypesTree genotypesTree;
+	demi::GenotypesTree genotypesTree;
 
 private:
 
@@ -129,7 +129,7 @@ private:
 	clan::Size worldSize;
 
 	// Поверхность земли и копия для отображения на экране.
-	Dot *arDots;
+	Dot *arDots = nullptr;
 
 	// Свойства, используемые для отображения модели - координата левого верхнего угла, масштаб.
 	clan::Point appearanceTopLeft;
@@ -162,7 +162,7 @@ private:
 
 	// Настройки программы - не используем shared_ptr, так как к моменту вызова деструктора ~SettingsStorage графическая 
 	// подсистема должна ещё существовать - а объект World глобальный и может умереть позже неё.
-	SettingsStorage* pSettings;
+	SettingsStorage* pSettings = nullptr;
 
 	// Химические реакции, доступные для организмов.
 	std::vector<std::shared_ptr<demi::ChemReaction>> reactions;

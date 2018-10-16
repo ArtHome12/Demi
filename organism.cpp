@@ -80,16 +80,13 @@ Organism::~Organism()
 		// Текущее имеющееся значение, которое надо вернуть.
 		organismAmount_t amount = *itAmounts++;
 
-		// Получаем доступное в точке количество соответствующего минерала.
-		uint64_t amountInDot = dot.getElemAmount(reagent.elementIndex);
-
-		dot.setElementAmount(reagent.elementIndex, amountInDot + amount);
+		// Возвращаем.
+		dot.incElemAmount(reagent.elementIndex, amount);
 	}
 }
 
 
-// Процессорное время организма для формирования поведения - поедания пищи, атаки, разворота, перемещения, размножения.
-Organism* Organism::makeTickAndGetNewBorn()
+bool Organism::makeTick()
 {
 	// Ссылка на точку, где находится клетка, для оптимизации.
 	Dot& dot = center.get_dot(0, 0);
@@ -135,51 +132,30 @@ Organism* Organism::makeTickAndGetNewBorn()
 		}
 
 		// Очистим входной отсек.
-		for (auto & amountItem : leftReagentAmounts) 
+		for (auto & amountItem : leftReagentAmounts)
 			amountItem = 0;
 
 		// Исходные реагенты исключим из общего количества.
 		for (auto &reagent : ourReaction->leftReagents)
 			globalWorld.amounts.decAmount(reagent.elementIndex, reagent.amount);
 
-
 		// Сохраним полученную энергию, если не достигли максимума.
 		vitality += ourReaction->vitalityProductivity;
 		if (vitality > cMaxVitality)
 			vitality = cMaxVitality;
 
-		// Самое время делиться, если есть такая возможность.
-		clan::Point freePlace;
-		if (vitality >= 2 && findFreePlace(freePlace)) {
-		//if (vitality >= fissionBarrier && findFreePlace(freePlace)) {
-			// Создаём новый экземпляр, передаём ему половину энергии, на порог деления делаем мутацию в пределах 1%.
-			vitality /= 2;
-			std::uniform_int_distribution<> rndAngle(0, 7); 
-			uint8_t childAngle = rndAngle(globalWorld.getRandomGenerator());
-			//std::uniform_int_distribution<> rndFission(-1, 1);
-			//uint16_t childFissionBarrier = std::max<uint16_t>(1, fissionBarrier + rndFission(globalWorld.getRandomGenerator()));
-
-			// Проверка на предельное значение.
-			//if (childFissionBarrier == UINT16_MAX)
-			//	--childFissionBarrier;
-
-			uint64_t newAncestorCount = ancestorsCount + 1;
-			if (newAncestorCount == UINT64_MAX)
-				--newAncestorCount;
-
-			//return new Organism(center.getGlobalPoint(freePlace), childAngle, childFissionBarrier, vitality, globalWorld.getModelTime(), newAncestorCount, ourSpecies);
-			return new Organism(center.getGlobalPoint(freePlace), childAngle, vitality, globalWorld.getModelTime(), newAncestorCount, ourSpecies);
-		}
+		// Возвратим истину, если готовы делиться.
+		return vitality >= 2;
 	}
 	else {
 		// Реакция не прошла, вычитаем энергию на метаболизм.
-		processInactiveVitality();
-
 		// Если жизненная энергия стала отрицательной, значит организм умер.
 		// Объект сам себя уничтожить не может, он будет удалён из списка живых при первом к нему обращении.
+		processInactiveVitality();
+
+		// Возвратим ложь, у организма плохое настроение, чтобы размножаться.
+		return false;
 	}
-	
-	return nullptr;
 }
 
 

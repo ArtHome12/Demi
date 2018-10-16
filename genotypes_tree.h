@@ -16,30 +16,38 @@ typedef std::vector<std::shared_ptr<demi::Species>> speciesDict_t;
 //
 // Древовидный список, в вершине - вид протоорганизма.
 //
-class GenotypesTree {
-public:
-	// Текущий генотип узла дерева.
-	std::shared_ptr<demi::Genotype> genotype;
+namespace demi {
 
-	// Список производных узлов.
-	std::vector<std::shared_ptr<GenotypesTree>> derivatives;
+	class GenotypesTree {
+	public:
+		// Родительский узел, если есть.
+		std::shared_ptr<GenotypesTree> ancestor = nullptr;
 
-	// Список производных видов от текущего генотипа с индексами.
-	std::vector<std::shared_ptr<demi::Species>> species;
+		// Текущий генотип узла дерева.
+		std::shared_ptr<demi::Genotype> genotype;
 
-	// Очищает векторы.
-	void clear() { derivatives.clear(); species.clear(); }
+		// Список производных узлов.
+		std::vector<std::shared_ptr<GenotypesTree>> derivatives;
 
-	// Создаёт словарь для сопоставления видов и индексов.
-	void generateDict(speciesDict_t& dict);
+		// Список производных видов от текущего генотипа с индексами.
+		std::vector<std::shared_ptr<demi::Species>> species;
 
-	// Записывает дерево на диск.
-	void saveToFile(clan::File& binFile);
+		// Флаг для индикации необходимости переинициализировать отображение организмов.
+		static bool flagSpaciesChanged;
 
-	// Счтиывает себя с диска.
-	void loadFromFile(clan::File& binFile);
+		// Очищает векторы.
+		void clear() { derivatives.clear(); species.clear(); }
+
+		// Создаёт словарь для сопоставления видов и индексов.
+		void generateDict(speciesDict_t& dict);
+
+		// Записывает дерево на диск.
+		void saveToFile(clan::File& binFile);
+
+		// Счтиывает себя с диска.
+		void loadFromFile(clan::File& binFile);
+
+		// Возвращает указатель на вид в рамках текущего генотипа, возможно с мутацией.
+		const std::shared_ptr<demi::Species> breeding();
+	};
 };
-
-
-
-

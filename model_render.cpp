@@ -83,7 +83,7 @@ void ModelRender::render_content(clan::Canvas &canvas)
 	const clan::Size windowSize(geometry().content_size());
 
 	// Для оптимизации.
-	const clan::Size earthSize = globalWorld.get_worldSize();
+	const clan::Size& earthSize = globalWorld.getWorldSize();
 
 	// Если некуда или нечего рисовать, выходим. Что windowSize не пуст было проверено библиотекой.
 	if (earthSize.width == 0 || earthSize.height == 0)
@@ -177,7 +177,7 @@ void ModelRender::render_content(clan::Canvas &canvas)
 				Dot& d = coordSystem.get_dot(xDotIndex, yDotIndex);
 
 				// Получим цвет точки.
-				d.get_color(color);
+				d.getColor(color);
 
 				// Если включено освещение, заменим альфа-канал.
 				if (illuminated)
@@ -488,7 +488,7 @@ void ModelRender::on_mouse_dblclk(const clan::PointerEvent &e)
 			const clan::Sizef windowSize = geometry().content_size();
 
 			// Размеры мира (для удобства).
-			const clan::Sizef worldSize(globalWorld.get_worldSize());
+			const clan::Sizef& worldSize(globalWorld.getWorldSize());
 
 			// Определим максимально-возможный масштаб.
 			const float maxScale = std::min<float>(worldSize.width / windowSize.width, worldSize.height / windowSize.height);
@@ -537,7 +537,7 @@ void ModelRender::DoScaleStep(const clan::Pointf &pos, float scaleStep, clan::Po
 	// под курсором до изменения масштаба, изменить масштаб, определить новую координату поверхности
 	// и на эту дельту сделать прокрутку. При отдалении должна отдаляться точка под курсором.
 	const clan::Sizef viewSize = geometry().content_size() * scale;
-	const clan::Sizef worldSize = globalWorld.get_worldSize();
+	const clan::Sizef& worldSize = globalWorld.getWorldSize();
 
 	// Коррекцию проводим только если не достигли минимального масштаба.
 	if (viewSize.width <= worldSize.width && viewSize.height <= worldSize.height) {
@@ -630,7 +630,7 @@ void ModelRender::workerThread()
 						// Если одна координата не меняется, не делаем медленные вычисления.
 						if (xIndex != oldXIndex) {
 							Dot& d = coordSystem.get_dot(xIndex, yIndex);
-							d.get_color(color);
+							d.getColor(color);
 							oldXIndex = xIndex;
 						}
 
@@ -666,7 +666,7 @@ void ModelRender::CorrectScale()
 	const clan::Sizef windowSize = geometry().content_size();
 
 	// Размер мира.
-	const clan::Size earthSize = globalWorld.get_worldSize();
+	const clan::Size& earthSize = globalWorld.getWorldSize();
 
 	// Если некуда или нечего рисовать, выходим.
 	if (windowSize.width == 0 || windowSize.height == 0 || earthSize.width == 0 || earthSize.height == 0)
