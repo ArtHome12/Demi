@@ -11,18 +11,29 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 #pragma once
 
 
-class TreeView_Impl;
+// Исключение, если элемент дерева не найден.
+class ETreeItemNotFound : public std::exception
+{
+public:
+	const std::string itemName;
+	ETreeItemNotFound(const std::string& aItemName) : itemName(aItemName) {}
+	virtual char const* what() const override
+	{
+		return std::string("Unknown item: " + itemName).c_str();
+	}
+};
 
+
+
+class TreeView;
 
 class TreeItem
 {
 public:
-	//TreeItem() {};
-	TreeItem(const std::string& ItemCaption, size_t ATag, bool itemChecked = false) : caption(ItemCaption), tag(ATag), checked(itemChecked) {};
+	TreeItem(const std::string& ItemCaption, bool itemChecked, size_t ATag) : caption(ItemCaption), tag(ATag), checked(itemChecked) {};
 
-	bool collapsed = true;								// Collapsed or expanded the tree node.
-	std::weak_ptr<TreeItem> wpParent;					// Parent node.
-	std::vector<std::shared_ptr<TreeItem>> children;	// Children node.
+	bool collapsed = true;		// Collapsed or expanded the tree node.
+	TreeItem* parent = nullptr;	// Parent node.
 
 	// Возвращает следующий элемент в списке children после указанного или 0
 	std::vector<std::shared_ptr<TreeItem>> getNextSibling(const std::vector<std::shared_ptr<TreeItem>> child);
@@ -30,18 +41,31 @@ public:
 	// Название элемента.
 	std::string caption;
 	
-	// Отмечен или нет.
-	bool checked = false;
-
 	// Дополнительное поле для хранения, например, индекса.
 	size_t tag;
 
-	// Обработчик переключения видимости.
-	void onStateChanged();
+	// Для взаимодействия с элементом интерфейса.
+	std::weak_ptr<clan::CheckBoxView> view;
 
 	// Callback для события на переключение галочки.
 	std::function<void(TreeItem&)> func_check_state_changed;
 
+	// Доступ к полям.
+	bool getChecked() const { return checked; }
+	void setChecked(bool aValue);
+	void addChild(std::shared_ptr<TreeItem>& child);
+
+	const std::vector<std::shared_ptr<TreeItem>>& getChildren() { return children; }
+
+	// Обработчик переключения видимости, вызывается эконным элементом.
+	void onStateChanged();
+
+private:
+	// Отмечен или нет.
+	bool checked = false;
+
+	// Children nodes.
+	std::vector<std::shared_ptr<TreeItem>> children;
 };
 
 
@@ -51,17 +75,24 @@ public:
 	TreeView();
 	~TreeView();
 
-	/// Передать иерархию элементов дереву. Корневой элемент невидим, отображение начинается с его детей.
-	void set_root_item(std::shared_ptr<TreeItem> item);
+	// Передать иерархию элементов дереву. Корневой элемент невидим, отображение начинается с его детей.
+	void setRootItem(std::shared_ptr<TreeItem> item);
 
-	/// Получить корневой элемент дерева.
-	std::shared_ptr<TreeItem> get_root_item();
+	// Получить корневой элемент дерева.
+	std::shared_ptr<TreeItem> getRootItem() { return rootItem; }
 
 	/// Обработчик изменения отметки - установки и снятия галочки.
-	std::function<void(TreeItem &item)> &func_check_changed();
+	std::function<void(TreeItem &item)> func_check_changed;
 
 	void layout_children(clan::Canvas &canvas) override;
 
 private:
-	std::unique_ptr<TreeView_Impl> impl;
+	// Корневой невидимый элемент, необходим для того, чтобы можно было сделать несколько ветвей первого уровня.
+	std::shared_ptr<TreeItem> rootItem;
+
+	// Добавляет к списку детей указанного элемента с большим отступом.
+	void addTreeNodeChildren(int margin, std::shared_ptr<TreeItem> item);
+
+	// Обработчик переключения видимости.
+	void onCheckChanged(TreeItem &item);
 };

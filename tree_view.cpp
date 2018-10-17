@@ -10,7 +10,6 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 
 #include "precomp.h"
 #include "tree_view.h"
-#include "tree_view_impl.h"
 #include "Theme/theme.h"
 
 const int cTreeMarginStep = 30;
@@ -19,25 +18,43 @@ const int cTreeMarginStep = 30;
 // Обработчик переключения видимости.
 void TreeItem::onStateChanged()
 {
-	// Переключим состояние. Надежней было бы запросить чекбокс, но это громоздко, простого способа нет.
-	checked = !checked;
-	
-	if (func_check_state_changed != NULL) 
-		func_check_state_changed(*this);
+	// Запросим чекбокс, если получится, если его не существует, используем своё значение.
+	auto cb = view.lock();
+	bool newChecked = cb ? cb->checked() : !checked;
+
+	// Переключим состояние, если есть изменения.
+	if (checked != newChecked) {
+		checked = newChecked;
+		if (func_check_state_changed != NULL)
+			func_check_state_changed(*this);
+	}
+}
+
+void TreeItem::setChecked(bool aValue)
+{
+	// Если визуального элемента нет, ничего не делаем.
+	auto cb = view.lock();
+	if (cb) {
+		cb->set_check(aValue);
+
+		// Вызываем обработчик - оконный элемент вызывает его только в ответ на действия пользователя.
+		onStateChanged();
+	}
+}
+
+void TreeItem::addChild(std::shared_ptr<TreeItem>& child)
+{
+	children.push_back(child);
+
+	// Сохраним указатель на себя.
+	child->parent = this;
 }
 
 
-
-TreeView::TreeView() : impl(new TreeView_Impl())
+TreeView::TreeView()
 {
-	impl->treeView = this;
 	content_view()->style()->set("flex-direction: column");
-
 	set_focus_policy(clan::FocusPolicy::accept);
-
-	//slots.connect(sig_key_press(), impl.get(), &ListBoxViewImpl::on_key_press);
-	//slots.connect(content_view()->sig_pointer_press(), impl.get(), &ListBoxViewImpl::on_pointer_press);
-	//slots.connect(content_view()->sig_pointer_release(), impl.get(), &ListBoxViewImpl::on_pointer_release);
 }
 
 TreeView::~TreeView()
@@ -45,15 +62,10 @@ TreeView::~TreeView()
 }
 
 
-std::function<void(TreeItem &item)> &TreeView::func_check_changed()
-{
-	return impl->func_check_changed;
-}
-
-void TreeView::set_root_item(std::shared_ptr<TreeItem> item)
+void TreeView::setRootItem(std::shared_ptr<TreeItem> item)
 {
 	// Сохраняем ссылку на корневой элемент.
-	impl->rootItem = item;
+	rootItem = item;
 
 	// Удаляем старые чекбоксы из дерева
 	auto &views = content_view()->children();
@@ -61,14 +73,42 @@ void TreeView::set_root_item(std::shared_ptr<TreeItem> item)
 		views.back()->remove_from_parent();
 
 	// Добавляем детей корневого элемента в дерево.
-	impl->addTreeNodeChildren(0, item);
+	addTreeNodeChildren(0, item);
 }
 
-/// Получить корневой элемент дерева.
-std::shared_ptr<TreeItem> TreeView::get_root_item() 
-{ 
-	return impl->rootItem; 
+
+// Добавляет к списку детей указанного элемента с большим отступом.
+void TreeView::addTreeNodeChildren(int margin, std::shared_ptr<TreeItem> item)
+{
+	for (auto &curItem : item->getChildren())
+	{
+		std::shared_ptr<clan::CheckBoxView> checkBox = Theme::create_checkbox();
+		checkBox->style()->set("margin: 0px " + std::to_string(margin) + "px");
+		checkBox->label()->set_text(curItem->caption, true);
+
+		// Если элемент выбран, передадим эту информацию.
+		checkBox->set_check(curItem->getChecked());
+
+		// Обработчик на переключение видимости.
+		checkBox->func_state_changed() = clan::bind_member(curItem.get(), &TreeItem::onStateChanged);
+
+		// Для элемента дерева устанавливаем обработчик на дерево.
+		curItem->func_check_state_changed = clan::bind_member(this, &TreeView::onCheckChanged);
+
+		// Сохраним указатель на интерфейсный элемент у самого узла.
+		curItem->view = checkBox;
+
+		content_view()->add_child(checkBox);
+
+		// Рекурсивно добавляем его детей с большим отступом.
+		addTreeNodeChildren(margin + cTreeMarginStep, curItem);
+
+		//slots.connect(item->sig_pointer_enter(), impl.get(), &ListBoxViewImpl::on_pointer_enter);
+		//slots.connect(item->sig_pointer_leave(), impl.get(), &ListBoxViewImpl::on_pointer_leave);
+	}
 }
+
+
 
 
 //void ListBoxView::set_items(const std::vector<std::shared_ptr<View>> &items)
@@ -159,41 +199,13 @@ void TreeView::layout_children(clan::Canvas &canvas)
 	}
 }
 
+
 // Обработчик переключения видимости.
-void TreeView_Impl::onCheckChanged(TreeItem &item)
+void TreeView::onCheckChanged(TreeItem &item)
 {
 	if (func_check_changed != NULL)
 		func_check_changed(item);
 }
 
 
-
-// Добавляет к списку детей указанного элемента с большим отступом.
-void TreeView_Impl::addTreeNodeChildren(int margin, std::shared_ptr<TreeItem> item)
-{
-	for (auto &curItem : item->children)
-	{
-		auto checkBox = Theme::create_checkbox();
-		checkBox->style()->set("margin: 0px " + std::to_string(margin) + "px");
-		checkBox->label()->set_text(curItem->caption, true);
-
-		// Если элемент выбран, передадим эту информацию.
-		checkBox->set_check(curItem->checked);
-
-		// Обработчик на переключение видимости.
-		checkBox->func_state_changed() = clan::bind_member(curItem.get(), &TreeItem::onStateChanged);
-
-		// Для элемента дерева устанавливаем обработчик на дерево.
-		curItem->func_check_state_changed = clan::bind_member(this, &TreeView_Impl::onCheckChanged);
-
-		treeView->content_view()->add_child(checkBox);
-
-		// Рекурсивно добавляем его детей с большим отступом.
-		addTreeNodeChildren(margin + cTreeMarginStep, curItem);
-
-		//slots.connect(item->sig_pointer_enter(), impl.get(), &ListBoxViewImpl::on_pointer_enter);
-		//slots.connect(item->sig_pointer_leave(), impl.get(), &ListBoxViewImpl::on_pointer_leave);
-	}
-
-}
 

@@ -4,9 +4,9 @@
 		<!--Ширина мира и пропорция для высоты, максимум 30 000. Для проекции Меркатора 24:11 или 0.4583-->
 		<item name="WorldSize" width="1000" heightRatio="0.4583"/>
 		<!--Последнее представление модели - координата левого верхнего угла, масштаб-->
-		<item name="Appearance" top="0" left="0" scale="0.390625"/>
+		<item name="Appearance" top="33" left="302" scale="0.003437"/>
 		<!--Время модели - год, день, секунда-->
-		<item name="Time" year="1" day="1" second="18732"/>
+		<item name="Time" year="1" day="121" second="16867"/>
 		<!--Константы для организмов - расход энергии при движении (0..255), покое  (0..255) и граница разрушения  (-32768..32767)-->
 		<item name="MetabolicConsts" minActiveMetabolicRate="10" minInactiveMetabolicRate="1" desintegrationVitalityBarrier="-100"/>
 		<!--Протоорганизм, от которого происходят все остальные.-->

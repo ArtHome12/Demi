@@ -989,6 +989,10 @@ void World::runEvolution(bool is_active)
 	std::unique_lock<std::mutex> lock(threadMutex);
 	threadRunFlag = is_active;
 	threadEvent.notify_all();
+
+	// Если это остановка, обновим массив максимумов.
+	if (!is_active) 
+		InitResMaxArray();
 }
 
 // Начинает расчёт заново.

@@ -92,9 +92,6 @@
     <ClInclude Include="tree_view.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="tree_view_impl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="reactions.h">
       <Filter>Header Files</Filter>
     </ClInclude>

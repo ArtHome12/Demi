@@ -211,7 +211,7 @@ private:
 	void doWriteOrganism(clan::File &binFile, speciesDict_t& speciesDict, demi::Organism* organism);
 	demi::Organism* doReadOrganism(clan::File &binFile, speciesDict_t& speciesDict, const clan::Point &center);
 
-	// Инициализирует массим максимумов на основе имеющихся количеств в точках, используется после загрузки.
+	// Инициализирует массим максимумов на основе имеющихся количеств в точках, используется после загрузки, а также при остановке.
 	void InitResMaxArray();
 
 	// Для разгрузки функций loadModel, saveModel.

@@ -143,6 +143,7 @@ WindowsSettings::WindowsSettings()
 
 	// Дерево с галочками видимости элементов.
 	pTreeViewElements = std::make_shared<TreeView>();
+	pTreeViewElements->func_check_changed = clan::bind_member(this, &WindowsSettings::onTreeElementsCheckChanged);	// Обработчик переключения галочек.
 	panelModelInfo->add_child(pTreeViewElements);
 
 	// Подпанель с количеством элементов правее дерева.
@@ -156,6 +157,7 @@ WindowsSettings::WindowsSettings()
 
 	// Дерево с галочками видимости видов.
 	pTreeViewSpecies = std::make_shared<TreeView>();
+	pTreeViewSpecies->func_check_changed = clan::bind_member(this, &WindowsSettings::onTreeSpeciesCheckChanged);
 	panelModelInfo->add_child(pTreeViewSpecies);
 	panelOrganismAmounts = std::make_shared<clan::View>();
 	panelOrganismAmounts->style()->set("flex-direction: column; background-color: lightgray; width: 210px; border-right-width: 1px; border-right-style: solid; border-right-color: green");
@@ -395,16 +397,21 @@ void WindowsSettings::onCBAutoSaveHourlyToggle()
 // Обработчик события, вызываемый после переключения галочки на элементе древовидного списка.
 void WindowsSettings::onTreeElementsCheckChanged(TreeItem &item)
 {
-	// Сообщим об изменении видимости элемента модели, если узел соответствует какому-либо элементу.
-	if (item.tag != size_t(SIZE_MAX))
-		globalWorld.setResVisibility(item.tag, item.checked);
+	// Если тег не задан, это корневой элемент и надо переключить дочерние.
+	if (item.tag == size_t(SIZE_MAX)) {
+		for (auto child : item.getChildren()) {
+			child->setChecked(item.getChecked());
+		}
+	} else
+		// Сообщаем об изменении видимости конкретного элемента неживой природы.
+		globalWorld.setResVisibility(item.tag, item.getChecked());
 }
 
 void WindowsSettings::onTreeSpeciesCheckChanged(TreeItem &item)
 {
 	// Считаем, что это указатель на вид организма.
 	demi::Species *spec = reinterpret_cast<demi::Species *>(item.tag);
-	spec->setVisible(item.checked);
+	spec->setVisible(item.getChecked());
 }
 
 
@@ -491,17 +498,18 @@ void WindowsSettings::initElemVisibilityTree()
 {
 	// Неживая природа.
 	//
-	// Удалим старые метки под количество элементов, если они были. Обращаемся по индексу, иначе итератор портится.
+	// Удалим старые метки под количество элементов, если они были.
 	// Сам список названий очистится при присвоении корневого узла.
-	for (size_t i = panelElemAmounts->children().size(); i != 0; --i) 
-		panelElemAmounts->children().at(i-1)->remove_from_parent();
+	auto children = panelElemAmounts->children();
+	while (!children.empty())
+		children.back()->remove_from_parent();
 
 	// Корневой невидимый узел, дереву необходим для того, чтобы визуально могло быть сразу несколько узлов первого уровня.
-	auto rootNodeE = std::make_shared<TreeItem>("", size_t(SIZE_MAX));	// В tag хранится индекс химэлемента, для корневого - заглушка.
+	auto rootNodeE = std::make_shared<TreeItem>("", false, size_t(SIZE_MAX));	// В tag хранится индекс химэлемента, для корневого - заглушка.
 	
 	// Первый узел - под химические элементы.
 	auto pSettings = globalWorld.getSettingsStorage();
-	auto firstNodeE = std::make_shared<TreeItem>(pSettings->LocaleStr(cTreeInanimate), size_t(SIZE_MAX));
+	auto firstNodeE = std::make_shared<TreeItem>(pSettings->LocaleStr(cTreeInanimate), false, size_t(SIZE_MAX));
 
 	// Добавляем сразу и метку в панель количества.
 	panelElemAmounts->add_child(createLabelForAmount(pSettings->LocaleStr(cWindowsSettingsAmountsLabel)));
@@ -509,19 +517,16 @@ void WindowsSettings::initElemVisibilityTree()
 	// Добавляем химэлементы.
 	for (size_t i = 0; i != globalWorld.getElemCount(); ++i) {
 		// Чекбокс с названием элемента.
-		firstNodeE->children.push_back(std::make_shared<TreeItem>(globalWorld.getResName(i), i, globalWorld.getResVisibility(i)));
+		firstNodeE->addChild(std::make_shared<TreeItem>(globalWorld.getResName(i), globalWorld.getResVisibility(i), i));
 
 		// Метка под количество.
 		panelElemAmounts->add_child(createLabelForAmount("-"));
 	}
 
-	rootNodeE->children.push_back(firstNodeE);
-
-	// Устанавливаем обработчик событий на переключение галочек.
-	pTreeViewElements->func_check_changed() = clan::bind_member(this, &WindowsSettings::onTreeElementsCheckChanged);
+	rootNodeE->addChild(firstNodeE);
 
 	// Добавляем дерево в список.
-	pTreeViewElements->set_root_item(rootNodeE);
+	pTreeViewElements->setRootItem(rootNodeE);
 }
 
 void WindowsSettings::initElemVisibilityTreeAfterRestart()
@@ -530,49 +535,36 @@ void WindowsSettings::initElemVisibilityTreeAfterRestart()
 	// поля на основе значений объектов, а обновить значения у объектов на основе чекбоксов.
 
 	// Корневой узел.
-	std::shared_ptr<TreeItem>& rootNodeE = pTreeViewElements->get_root_item();
+	std::shared_ptr<TreeItem>& rootNodeE = pTreeViewElements->getRootItem();
 
 	// Для неживой природы просто обновим значения.
-	auto inanimalNode = rootNodeE->children.front();
-	for (auto &child : inanimalNode->children) 
-		globalWorld.setResVisibility(child->tag, child->checked);
+	auto inanimalNode = rootNodeE->getChildren().front();
+	for (auto &child : inanimalNode->getChildren())
+		globalWorld.setResVisibility(child->tag, child->getChecked());
 }
 
 // Обновляет отображение организмов (которые меняются в процессе расчёта).
 void WindowsSettings::initAnimalVisibility()
 {
 	// Удалим старые надписи для количеств.
-	for (size_t i = panelOrganismAmounts->children().size(); i != 0; --i)
-		panelOrganismAmounts->children().at(i - 1)->remove_from_parent();
+	auto children = panelOrganismAmounts->children();
+	while (!children.empty())
+		children.back()->remove_from_parent();
 
 	// Корневой невидимый узел, дереву необходим для того, чтобы визуально могло быть сразу несколько узлов первого уровня.
-	auto rootNodeS = std::make_shared<TreeItem>("", size_t(SIZE_MAX));
+	auto rootNodeS = std::make_shared<TreeItem>("", false, size_t(SIZE_MAX));
 
 	// Протоорганизм (вид).
 	auto luca = globalWorld.genotypesTree.species.front();
 
 	// Корневой узел под организмы.
-	auto curNode = std::make_shared<TreeItem>(cachedAnimalPrefixLabel + luca->getGenotypeName(), size_t(luca.get()), luca->getVisible());
-	rootNodeS->children.push_back(curNode);
+	auto curNode = std::make_shared<TreeItem>(cachedAnimalPrefixLabel + luca->getGenotypeName(), luca->getVisible(), size_t(luca.get()));
+	rootNodeS->addChild(curNode);
 	panelOrganismAmounts->add_child(createLabelForAmount("-"));
 
-	// Добавляем виды организмов. В качестве tag - указатель.
+	// Добавляем виды организмов.
 
-	pTreeViewSpecies->func_check_changed() = clan::bind_member(this, &WindowsSettings::onTreeSpeciesCheckChanged);
-	pTreeViewSpecies->set_root_item(rootNodeS);
-
-	// Для организмов надо обновить указатели в поле tag.
-	// Пока недоделано - всего один организм.
-
-	// Протоорганизм (вид).
-/*	auto luca = globalWorld.genotypesTree.species.front();
-
-	std::shared_ptr<TreeItem>& rootNodeS = pTreeViewSpecies->get_root_item();
-	auto firstAnimalNode = rootNodeS->children.front();
-	firstAnimalNode->tag = size_t(luca.get());
-
-	// Обновим видимость самого организма на основе значения чекбокса.
-	luca->setVisible(firstAnimalNode->checked);*/
+	pTreeViewSpecies->setRootItem(rootNodeS);
 }
 
 
