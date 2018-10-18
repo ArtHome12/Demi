@@ -58,7 +58,7 @@ namespace demi {
 		Genotype(const Genotype& sourceGene) = delete;
 		void operator=(const Genotype& sourceGene) = delete;
 
-		// Возвращает имя вида организма.
+		// Возвращает имя вида организма в формате имя(автор).
 		std::string getGenotypeName();
 
 		// Возвращает требуемый ген.
@@ -66,6 +66,9 @@ namespace demi {
 
 		// Возвращает количество генов.
 		size_t getGenotypeLength() const { return cachedGenotypeLen; }
+
+		// Возвращает имя собственного гена.
+		const std::string& getOwnGeneName() const { return ownGene.getGeneName(); }
 
 		GenotypesTree& getTreeNode() const { return treeNode; }
 
@@ -115,15 +118,14 @@ namespace demi {
 		// Возвращаем неконстантные ссылки для возможной правки для оптимизации быстродействия.
 		std::vector<std::shared_ptr<GenericCell>>& getCellsRef() { return cells; }
 
-		// Возвращает полное название вида в формате автор/вид\автор/вид... Корневой общий для всех вид не включается.
-		//std::string getAuthorAndNamePair() { return author + "\\" + name + "/"; }
-		//std::string getFullName();
-
 		// Возвращает вид по указанному полному названию. Должна вызываться для корневого вида.
 		//std::shared_ptr<Species> getSpeciesByFullName(std::string fullName);
 
 		// Возвращает имя генотипа организма.
 		std::string getGenotypeName() { return speciesGenotype->getGenotypeName(); }
+
+		// Выводит имена генов и их значения, что и определяет имя вида.
+		std::string getSpeciesName();
 
 		// Для ведения простейшей статистики по количеству живых.
 		void incAliveCount() { ++aliveCount; }

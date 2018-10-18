@@ -409,9 +409,14 @@ void WindowsSettings::onTreeElementsCheckChanged(TreeItem &item)
 
 void WindowsSettings::onTreeSpeciesCheckChanged(TreeItem &item)
 {
-	// Считаем, что это указатель на вид организма.
-	demi::Species *spec = reinterpret_cast<demi::Species *>(item.tag);
-	spec->setVisible(item.getChecked());
+	if (item.tag) {
+		// Считаем, что это указатель на вид организма.
+		demi::Species *spec = reinterpret_cast<demi::Species *>(item.tag);
+		spec->setVisible(item.getChecked());
+	} else {
+		// Узел связан с генотипом, надо переключить нижележащие элементы.
+		// Отложим на потом.
+	}
 }
 
 
@@ -555,14 +560,23 @@ void WindowsSettings::initAnimalVisibility()
 	auto rootNodeS = std::make_shared<TreeItem>("", false, size_t(SIZE_MAX));
 
 	// Протоорганизм (вид).
-	auto luca = globalWorld.genotypesTree.species.front();
+	auto& tree = globalWorld.genotypesTree;
+	auto& LUCAGenotype = tree.genotype;
 
-	// Корневой узел под организмы.
-	auto curNode = std::make_shared<TreeItem>(cachedAnimalPrefixLabel + luca->getGenotypeName(), luca->getVisible(), size_t(luca.get()));
-	rootNodeS->addChild(curNode);
+	// Корневой узел под протовид.
+	auto& LUCAGenotypeNode = std::make_shared<TreeItem>(cachedAnimalPrefixLabel + LUCAGenotype->getGenotypeName(), true, size_t(0));
+	rootNodeS->addChild(LUCAGenotypeNode);
+
+	// Надпись под количество.
 	panelOrganismAmounts->add_child(createLabelForAmount("-"));
 
 	// Добавляем виды организмов.
+	for (auto& item : tree.species) {
+		// Название генотипа указано ранее, выводим имена генов и их значения.
+		auto curNode = std::make_shared<TreeItem>(item->getSpeciesName(), item->getVisible(), size_t(item.get()));
+		LUCAGenotypeNode->addChild(curNode);
+		panelOrganismAmounts->add_child(createLabelForAmount("-"));
+	}
 
 	pTreeViewSpecies->setRootItem(rootNodeS);
 }

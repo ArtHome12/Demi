@@ -126,7 +126,8 @@ Species::Species(const std::shared_ptr<Genotype>& genotype,	clan::File& binFile)
 
 // Возвращает значение требуемого гена.
 geneValues_t Species::getGeneValueByName(const std::string& name) 
-{ 
+{
+	// Доделать!
 	return geneValues.back();
 }
 
@@ -147,4 +148,19 @@ void Species::saveToFile(clan::File& binFile)
 	binFile.write_uint8(deadColor.get_red());
 	binFile.write_uint8(deadColor.get_green());
 	binFile.write_uint8(deadColor.get_blue());
+}
+
+// Выводит имена генов и их значения, что и определяет имя вида.
+std::string Species::getSpeciesName()
+{
+	// Имена генов у нас в иерархической цепочке в генотипе, а значения в векторе.
+	// Собираем всё вместе, синхранно двигаясь по вектору и по дереву.
+	std::string retVal;
+	auto& curGenotype = speciesGenotype;
+
+	for (auto it = geneValues.rbegin(); it != geneValues.rend(); ++it) {
+		retVal = " [" + curGenotype->getOwnGeneName() + ": " + IntToStrWithDigitPlaces<geneValues_t>(*it) + "]" + retVal;
+	}
+
+	return retVal;
 }
