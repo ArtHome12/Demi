@@ -246,6 +246,9 @@ void WindowsSettings::onButtondownNew()
 
 	// Обновим дерево с галочками видимости элементов.
 	initElemVisibilityTree();
+
+	// Для обновления списка видов при первой возможности.
+	globalWorld.genotypesTree.flagSpaciesChanged = true;
 }
 
 void WindowsSettings::onButtondownOpen()
@@ -262,6 +265,9 @@ void WindowsSettings::onButtondownOpen()
 
 		// Обновим дерево с галочками видимости элементов.
 		initElemVisibilityTree();
+
+		// Для обновления списка видов при первой возможности.
+		globalWorld.genotypesTree.flagSpaciesChanged = true;
 	}
 }
 
@@ -369,6 +375,9 @@ void WindowsSettings::onButtondownRestart()
 
 			// Для новой модели применяем текущие настройки видимости.
 			initElemVisibilityTreeAfterRestart();
+
+			// Для обновления списка видов при первой возможности.
+			globalWorld.genotypesTree.flagSpaciesChanged = true;
 		}
 	};
 	wManager->present_modal(this, dialog);
@@ -505,7 +514,7 @@ void WindowsSettings::initElemVisibilityTree()
 	//
 	// Удалим старые метки под количество элементов, если они были.
 	// Сам список названий очистится при присвоении корневого узла.
-	auto children = panelElemAmounts->children();
+	auto& children = panelElemAmounts->children();
 	while (!children.empty())
 		children.back()->remove_from_parent();
 
@@ -543,7 +552,7 @@ void WindowsSettings::initElemVisibilityTreeAfterRestart()
 	std::shared_ptr<TreeItem>& rootNodeE = pTreeViewElements->getRootItem();
 
 	// Для неживой природы просто обновим значения.
-	auto inanimalNode = rootNodeE->getChildren().front();
+	auto& inanimalNode = rootNodeE->getChildren().front();
 	for (auto &child : inanimalNode->getChildren())
 		globalWorld.setResVisibility(child->tag, child->getChecked());
 }
@@ -552,7 +561,7 @@ void WindowsSettings::initElemVisibilityTreeAfterRestart()
 void WindowsSettings::initAnimalVisibility()
 {
 	// Удалим старые надписи для количеств.
-	auto children = panelOrganismAmounts->children();
+	auto& children = panelOrganismAmounts->children();
 	while (!children.empty())
 		children.back()->remove_from_parent();
 
