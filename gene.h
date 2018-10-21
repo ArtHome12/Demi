@@ -72,6 +72,11 @@ namespace demi {
 
 		GenotypesTree& getTreeNode() const { return treeNode; }
 
+		// Для ведения простейшей статистики по количеству живых.
+		void incAliveCount();
+		void decAliveCount();
+		size_t getAliveCount() const { return aliveCount; }
+
 	private:
 		// Узел дерева генотипов, относящийся к данному генотипу.
 		GenotypesTree& treeNode;
@@ -87,6 +92,9 @@ namespace demi {
 
 		// Для ускорения.
 		size_t cachedGenotypeLen = 0;
+
+		// Количество живых организмов данного вида (для статистики).
+		size_t aliveCount = 0;
 	};
 
 
@@ -128,8 +136,8 @@ namespace demi {
 		std::string getSpeciesName();
 
 		// Для ведения простейшей статистики по количеству живых.
-		void incAliveCount() { ++aliveCount; }
-		void decAliveCount() { --aliveCount; }
+		void incAliveCount() { ++aliveCount; speciesGenotype->incAliveCount(); }
+		void decAliveCount() { --aliveCount; speciesGenotype->decAliveCount(); }
 		size_t getAliveCount() const { return aliveCount; }
 
 		// Возвращает значение требуемого гена.

@@ -25,7 +25,7 @@ void GenotypesTree::generateDict(speciesDict_t& dict)
 		dict.push_back(spec);
 
 	// ¬ызываем рекурсивно дл€ каждого производного узла.
-	for (auto derivative : derivatives)
+	for (auto& derivative : derivatives)
 		derivative->generateDict(dict);
 }
 
@@ -41,7 +41,7 @@ void GenotypesTree::saveToFile(clan::File& binFile)
 		spec->saveToFile(binFile);
 
 	// ѕроизводные узлы (их количество предопределено из XML).
-	for (auto derivative : derivatives)
+	for (auto& derivative : derivatives)
 		derivative->saveToFile(binFile);
 }
 
@@ -56,7 +56,7 @@ void GenotypesTree::loadFromFile(clan::File& binFile)
 		species.push_back(std::make_shared<Species>(genotype, binFile));
 
 	// ѕроизводные узлы (их количество предопределено из XML).
-	for (auto derivative : derivatives)
+	for (auto& derivative : derivatives)
 		derivative->loadFromFile(binFile);
 }
 

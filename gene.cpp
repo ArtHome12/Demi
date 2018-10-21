@@ -62,6 +62,25 @@ const Gene& Genotype::getGeneByName(const std::string& name)
 }
 
 
+// Для ведения простейшей статистики по количеству живых.
+void Genotype::incAliveCount()
+{ 
+	// Изменяем собственный счётчик.
+	++aliveCount; 
+
+	// Если есть более общий вид, уведомляем его.
+	if (treeNode.ancestor)
+		treeNode.ancestor->genotype->incAliveCount();
+}
+
+void Genotype::decAliveCount() 
+{ 
+	--aliveCount; 
+	if (treeNode.ancestor)
+		treeNode.ancestor->genotype->decAliveCount();
+}
+
+
 /////////////////////////////////////////////////////////////////////////////////
 // Вид организма
 /////////////////////////////////////////////////////////////////////////////////
@@ -127,8 +146,16 @@ Species::Species(const std::shared_ptr<Genotype>& genotype,	clan::File& binFile)
 // Возвращает значение требуемого гена.
 geneValues_t Species::getGeneValueByName(const std::string& name) 
 {
-	// Доделать!
-	return geneValues.back();
+	// Имена генов у нас в иерархической цепочке в генотипе, а значения в векторе.
+	// Собираем всё вместе, синхранно двигаясь по вектору и по дереву.
+	auto& curGenotype = speciesGenotype;
+
+	for (auto it = geneValues.rbegin(); it != geneValues.rend(); ++it) 
+		if (curGenotype->getOwnGeneName() == name)
+		return *it;
+
+	// Если не нашли названия, выбрасываем исключение.
+	throw EGeneNotFound(name);
 }
 
 // Сохраняет себя в файл.

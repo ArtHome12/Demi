@@ -419,12 +419,15 @@ void WindowsSettings::onTreeElementsCheckChanged(TreeItem &item)
 void WindowsSettings::onTreeSpeciesCheckChanged(TreeItem &item)
 {
 	if (item.tag) {
-		// Считаем, что это указатель на вид организма.
+		// Если указатель на вид организма, меняем видимость вида.
 		demi::Species *spec = reinterpret_cast<demi::Species *>(item.tag);
 		spec->setVisible(item.getChecked());
-	} else {
-		// Узел связан с генотипом, надо переключить нижележащие элементы.
-		// Отложим на потом.
+	}
+	else {
+		// Если указатель на генотип, надо поменять видимость у всех подчинённых узлов.
+		for (auto child : item.getChildren()) {
+			child->setChecked(item.getChecked());
+		}
 	}
 }
 
@@ -453,47 +456,9 @@ void WindowsSettings::setModelFilename(const std::string &newName)
 // Для получения уведомлений об отработке основного цикла (для возможного автосохранения модели, обновления количеств).
 void WindowsSettings::modelRenderNotify(size_t secondsElapsed)
 {
-	if (!hidden()) {
-
-		// Неживая природа.
-		//
-		// Обновим надписи с количествами элементов согласно информации из специального объекта.
-		// Пользуемся тем, что знаем порядок - первым идёт надпись напротив "неживая природа", далее первый элемент и т.д.
-		// Так как set_text с использованием force_no_layout не проверяет, свёрнуто ли окно, сделаем это предварительно.
-		const size_t cnt = globalWorld.getElemCount();
-		auto childE = ++panelElemAmounts->children().begin();	// сразу пропускаем надпись-оглавление.
-		for (size_t i = 0; i != cnt; ++i) {
-
-			// Преобразуем указатель на базовый тип View на дочерний LabelView.
-			std::shared_ptr<clan::LabelView> label = std::dynamic_pointer_cast<clan::LabelView>(*childE++);
-
-			// Впишем количество с делением по разрядам.
-			const std::string str = IntToStrWithDigitPlaces<unsigned long long>(globalWorld.amounts.getResAmounts(i));
-
-			label->set_text(str, true);
-		}
-
-		// Живая природа.
-		//
-
-		// Если было обновление видов, переинициализируем надписи.
-		auto tree = globalWorld.genotypesTree;
-		if (tree.flagSpaciesChanged) {
-			
-			// Сбрасываем флаг.
-			tree.flagSpaciesChanged = false;
-
-			// Инициалиируем надписи.
-			initAnimalVisibility();
-		}
-
-		auto childS = panelOrganismAmounts->children().begin();
-		std::shared_ptr<clan::LabelView> label = std::dynamic_pointer_cast<clan::LabelView>(*childS);
-		const auto& luca = tree.species.front();
-		const std::string str = IntToStrWithDigitPlaces<size_t>(luca->getAliveCount());
-		label->set_text(str, true);
-	}
-
+	// Обновим надписи с количествами, если панель не скрыта.
+	if (!hidden())
+		updateAmounts();
 	
 	// Автосохранение. Если прошёл час и установлена галочка регулярного автосохранения модели, сделаем это.
 	//
@@ -579,7 +544,7 @@ void WindowsSettings::initAnimalVisibility()
 	// Надпись под количество.
 	panelOrganismAmounts->add_child(createLabelForAmount("-"));
 
-	// Добавляем виды организмов.
+	// Добавляем виды организмов.  Для производных видов не доделано!
 	for (auto& item : tree.species) {
 		// Название генотипа указано ранее, выводим имена генов и их значения.
 		auto curNode = std::make_shared<TreeItem>(item->getSpeciesName(), item->getVisible(), size_t(item.get()));
@@ -589,6 +554,61 @@ void WindowsSettings::initAnimalVisibility()
 
 	pTreeViewSpecies->setRootItem(rootNodeS);
 }
+
+
+// Обновляет надписи с количествами.
+void WindowsSettings::updateAmounts()
+{
+	// Неживая природа.
+	//
+	// Обновим надписи с количествами элементов согласно информации из специального объекта.
+	// Пользуемся тем, что знаем порядок - первым идёт надпись напротив "неживая природа", далее первый элемент и т.д.
+	// Так как set_text с использованием force_no_layout не проверяет, свёрнуто ли окно, сделаем это предварительно.
+	const size_t cnt = globalWorld.getElemCount();
+	auto childE = ++panelElemAmounts->children().begin();	// сразу пропускаем надпись-оглавление.
+	for (size_t i = 0; i != cnt; ++i) {
+
+		// Преобразуем указатель на базовый тип View на дочерний LabelView.
+		std::shared_ptr<clan::LabelView> label = std::dynamic_pointer_cast<clan::LabelView>(*childE++);
+
+		// Впишем количество с делением по разрядам.
+		const std::string str = IntToStrWithDigitPlaces<unsigned long long>(globalWorld.amounts.getResAmounts(i));
+
+		label->set_text(str, true);
+	}
+
+
+	// Живая природа.
+	//
+
+	// Если было обновление видов, переинициализируем надписи.
+	auto& tree = globalWorld.genotypesTree;
+	if (tree.flagSpaciesChanged) {
+
+		// Сбрасываем флаг.
+		tree.flagSpaciesChanged = false;
+
+		// Инициалиируем надписи.
+		initAnimalVisibility();
+	}
+
+
+	// Первая надпись - под корневой вид.
+	//
+	// Преобразуем указатель на базовый тип View на дочерний LabelView.
+	auto& childIter = panelOrganismAmounts->children().begin();
+	std::shared_ptr<clan::LabelView> label = std::dynamic_pointer_cast<clan::LabelView>(*childIter);
+	// Впишем количество с делением по разрядам.
+	label->set_text(IntToStrWithDigitPlaces<unsigned long long>(tree.genotype->getAliveCount()), true);
+
+	// Остальные надписи под виды корневого. Для производных видов не доделано!
+	for (auto& item : tree.species) {
+		label = std::dynamic_pointer_cast<clan::LabelView>(*(++childIter));
+		label->set_text(IntToStrWithDigitPlaces<unsigned long long>(item->getAliveCount()), true);
+	}
+}
+
+
 
 
 // Создаёт надпись.

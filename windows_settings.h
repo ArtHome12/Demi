@@ -112,5 +112,8 @@ private:
 
 	// Загружает модель с показом диалогового окна.
 	void loadModel(const std::string& filename);
+
+	// Обновляет надписи с количествами.
+	void updateAmounts();
 };
 
