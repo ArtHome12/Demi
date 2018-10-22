@@ -220,6 +220,9 @@ private:
 	void doLoadBinary(const std::string &filename);
 	void doSaveSettings(std::shared_ptr<clan::XMLResourceDocument>& resDoc);
 	void doSaveBinary(const std::string &filename);
+
+	// Проверяет живость организмов и мёртвые удаляет из списка живых.
+	void updateAlives();
 };
 
 

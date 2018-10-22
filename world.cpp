@@ -251,6 +251,23 @@ void World::makeTick()
 }
 
 
+// Проверяет живость организмов и мёртвые удаляет из списка живых.
+void World::updateAlives()
+{
+	// Код продублирован из makeTick для ускорения.
+	size_t cnt = animals.size();
+	for (size_t i = 0; i < cnt; ++i) {
+		demi::Organism &animal = *animals[i];
+
+		// Проверим, если организм мертв, его надо удалить из списка.
+		if (!animal.isAlive()) {
+			// Меняем его с последним и удаляем последний.
+			animals[i] = animals.back();
+			animals.pop_back();
+		}
+	}
+}
+
 
 void World::fillRectResource(size_t resId, unsigned long long amount, const clan::Rect &rect)
 {
@@ -339,35 +356,36 @@ void World::diffusion()
 		fromDot.res[rndResIndex] -= amount;
 		toDot.res[rndResIndex] += amount;
 
+		// Обработка организма.
+		demi::Organism* curOrganism = fromDot.organism;
+		if (curOrganism) {
+
+			// Если в исходной точке есть организм и его надо удалить, сделаем это.
+			if (curOrganism->needDesintegration()) {
+				// Из текущей точки организм удалит сам себя в деструкторе.
+				delete curOrganism;
+			}
+			else {
+				// Если в конечной точке нет организма, то попытаемся перенести исходный.
+				if (toDot.organism == nullptr && curOrganism->canMove()) {
+					// Координаты новой точки.
+					curOrganism->moveTo(getDotXYFromIndex(dest - arDots));
+
+					// Уменьшаем жизненную энергию, потраченную на перенос.
+					curOrganism->processInactiveVitality();
+				}
+				else {
+					// Если организм мёртв, то уменьшаем его энергию, чтобы он распался.
+					if (!curOrganism->isAlive())
+						curOrganism->processInactiveVitality();
+				}
+			}
+		}
+
 		// Обновим максимумы.
 		//
 		if (arResMax[rndResIndex] < toDot.res[rndResIndex])
 			arResMax[rndResIndex] = toDot.res[rndResIndex];
-
-		// Обработка организма.
-		demi::Organism* curOrganism = fromDot.organism;
-		if (!curOrganism)
-			continue;
-
-		// Если в исходной точке есть организм и его надо удалить, сделаем это.
-		if (curOrganism->needDesintegration()) {
-			// Из текущей точки организм удалит сам себя в деструкторе.
-			delete curOrganism;
-		}
-		else {
-			// Если в конечной точке нет организма, то попытаемся перенести исходный.
-			if (toDot.organism == nullptr && curOrganism->canMove()) {
-				// Координаты новой точки.
-				curOrganism->moveTo(getDotXYFromIndex(dest - arDots));
-
-				// Уменьшаем жизненную энергию, потраченную на перенос.
-				curOrganism->processInactiveVitality();
-			} else {
-				// Если организм мёртв, то уменьшаем его энергию, чтобы он распался.
-				if (!curOrganism->isAlive())
-					curOrganism->processInactiveVitality();
-			}
-		}
 	}
 }
 
@@ -990,9 +1008,11 @@ void World::runEvolution(bool is_active)
 	threadRunFlag = is_active;
 	threadEvent.notify_all();
 
-	// Если это остановка, обновим массив максимумов.
-	if (!is_active) 
+	// Если это остановка, обновим состояние до точного значения, чтобы после загрузки оно не отличалось.
+	if (!is_active) {
+		updateAlives();
 		InitResMaxArray();
+	}
 }
 
 // Начинает расчёт заново.
@@ -1065,6 +1085,17 @@ void World::InitResMaxArray()
 	Dot *cur = arDots;										// Первая точка массива.
 	Dot *last = cur + worldSize.width * worldSize.height;	// Точка после последней точки массива.
 	while (cur < last) {
+
+		// Обработка организма - при его распаде он вернёт вещества.
+		demi::Organism* curOrganism = cur->organism;
+		if (curOrganism) {
+
+			// Если в исходной точке есть организм и его надо удалить, сделаем это.
+			if (curOrganism->needDesintegration()) {
+				// Из текущей точки организм удалит сам себя в деструкторе.
+				delete curOrganism;
+			}
+		}
 
 		// Перебираем все элементы в точке.
 		for (size_t j = 0; j != elemCount; ++j) {
