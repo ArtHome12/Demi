@@ -37,7 +37,7 @@ void GenotypesTree::saveToFile(clan::File& binFile)
 	binFile.write_uint32(cnt);
 	
 	// —ами собственные виды.
-	for (const std::shared_ptr<Species> spec : species)
+	for (const std::shared_ptr<Species>& spec : species)
 		spec->saveToFile(binFile);
 
 	// ѕроизводные узлы (их количество предопределено из XML).

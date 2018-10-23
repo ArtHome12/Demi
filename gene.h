@@ -36,7 +36,11 @@ namespace demi {
 		// Создание нового гена.
 		Gene(const std::string& name, const std::vector<std::string>& valuesVector);
 
+		// Возвращает имя гена.
 		const std::string& getGeneName() const { return geneName; }
+
+		// Возвращает значение гена в текстовом виде (не по ссылке, какие-то проблемы).
+		const std::string getGeneTextValue(geneValues_t numValue) const;
 
 	private:
 		// Название гена.
@@ -69,6 +73,9 @@ namespace demi {
 
 		// Возвращает имя собственного гена.
 		const std::string& getOwnGeneName() const { return ownGene.getGeneName(); }
+
+		// Возвращает текстовое значение собственного гена.
+		const std::string getOwnGeneTextValue(geneValues_t numValue) const { return ownGene.getGeneTextValue(numValue); }
 
 		GenotypesTree& getTreeNode() const { return treeNode; }
 

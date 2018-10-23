@@ -25,6 +25,12 @@ Gene::Gene(const std::string& name, const std::vector<std::string>& valuesVector
 {
 }
 
+// Возвращает значение гена в текстовом виде.
+const std::string Gene::getGeneTextValue(geneValues_t numValue) const
+{ 
+	// Если список пуст, значит текстовое представление совпадает с индексом, то есть числовое значение.
+	return geneValuesVector.empty() ? IntToStrWithDigitPlaces<geneValues_t>(numValue) : geneValuesVector.at(numValue);
+}
 
 /////////////////////////////////////////////////////////////////////////////////
 // Класс для описания генотипа - совокупности генов, организованных иерархически.
@@ -186,7 +192,7 @@ std::string Species::getSpeciesName()
 	auto& curGenotype = speciesGenotype;
 
 	for (auto it = geneValues.rbegin(); it != geneValues.rend(); ++it) {
-		retVal = " [" + curGenotype->getOwnGeneName() + ": " + IntToStrWithDigitPlaces<geneValues_t>(*it) + "]" + retVal;
+		retVal = " [" + curGenotype->getOwnGeneName() + ": " + curGenotype->getOwnGeneTextValue(*it) + "]" + retVal;
 	}
 
 	return retVal;
