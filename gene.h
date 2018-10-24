@@ -14,6 +14,7 @@
 namespace demi {
 
 	typedef uint16_t geneValues_t;
+#define geneValues_t_MAX UINT16_MAX
 
 
 	// Исключение, если ген не найден.
@@ -42,11 +43,14 @@ namespace demi {
 		// Возвращает значение гена в текстовом виде (не по ссылке, какие-то проблемы).
 		const std::string getGeneTextValue(geneValues_t numValue) const;
 
+		// Возвращает максимальное значение гена.
+		geneValues_t getGeneMaxValue() const;
+
 	private:
 		// Название гена.
 		std::string geneName;
 
-		// Список значений, которые может принимать ген. Если список пуст, то от 0 до 65535. Само значение гена хранится в виде.
+		// Список значений, которые может принимать ген. Если список пуст, то от 0 до 65535. Само значение гена хранится у вида.
 		std::vector<std::string> geneValuesVector;
 	};
 
@@ -77,7 +81,14 @@ namespace demi {
 		// Возвращает текстовое значение собственного гена.
 		const std::string getOwnGeneTextValue(geneValues_t numValue) const { return ownGene.getGeneTextValue(numValue); }
 
+		// Возвращает максимальное значение собственного гена.
+		geneValues_t getOwnGeneMaxValue() const { return ownGene.getGeneMaxValue(); }
+
+		// Ссылка на дерево.
 		GenotypesTree& getTreeNode() const { return treeNode; }
+
+		// Возвращает предшественника или nullptr.
+		std::shared_ptr<Genotype> getAncestor() const;
 
 		// Для ведения простейшей статистики по количеству живых.
 		void incAliveCount();
@@ -123,6 +134,9 @@ namespace demi {
 		// Конструктор для считывания из файла.
 		Species(const std::shared_ptr<Genotype>& genotype, clan::File& binFile);
 
+		// Конструктор для использования при мутации для создания производного вида.
+		Species(const Species& ancestor, const std::shared_ptr<std::vector<geneValues_t>>& newGeneValues);
+
 		// Доступ к полям.
 		void setVisible(bool AVisible) { visible = AVisible; };
 		bool getVisible() { return visible; }
@@ -133,14 +147,11 @@ namespace demi {
 		// Возвращаем неконстантные ссылки для возможной правки для оптимизации быстродействия.
 		std::vector<std::shared_ptr<GenericCell>>& getCellsRef() { return cells; }
 
-		// Возвращает вид по указанному полному названию. Должна вызываться для корневого вида.
-		//std::shared_ptr<Species> getSpeciesByFullName(std::string fullName);
-
 		// Возвращает имя генотипа организма.
 		std::string getGenotypeName() { return speciesGenotype->getGenotypeName(); }
 
 		// Выводит имена генов и их значения, что и определяет имя вида.
-		std::string getSpeciesName();
+		std::string getSpeciesName() const;
 
 		// Для ведения простейшей статистики по количеству живых.
 		void incAliveCount() { ++aliveCount; speciesGenotype->incAliveCount(); }
@@ -148,17 +159,27 @@ namespace demi {
 		size_t getAliveCount() const { return aliveCount; }
 
 		// Возвращает значение требуемого гена.
-		geneValues_t getGeneValueByName(const std::string& name);
+		geneValues_t getGeneValueByName(const std::string& name) const;
 
 		// Сохраняет себя в файл.
 		void saveToFile(clan::File& binFile);
+
+		// Запускает механизм мутации и если она случилась, возвращает новые значения генов, а если нет, то nullptr.
+		std::shared_ptr<std::vector<geneValues_t>> breeding();
+
+		// Возващает истину, если значения генов совпадают.
+		bool isTheSameGeneValues(const std::shared_ptr<std::vector<geneValues_t>>& otherValues) const { return geneValues == *otherValues.get(); }
 
 	private:
 		// Генотип.
 		const std::shared_ptr<Genotype> speciesGenotype;
 
-		// Значения генов.
+		// Значения генов. Первым идёт текущий ген, последним ген протоорганизма.
 		std::vector<geneValues_t> geneValues;
+
+		// Копия значений генов и их максимальных значений для оптимизации при вызове breeding().
+		std::shared_ptr<std::vector<geneValues_t>> geneValuesCopy;
+		std::vector<geneValues_t> geneValuesMax;
 
 		// Клетки организма.
 		std::vector<std::shared_ptr<GenericCell>> cells;
@@ -171,5 +192,8 @@ namespace demi {
 
 		// Количество живых организмов данного вида (для статистики).
 		size_t aliveCount = 0;
+
+		// Инициализирует geneValuesMax.
+		void initGeneValuesMax();
 	};
 };

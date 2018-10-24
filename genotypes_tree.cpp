@@ -62,8 +62,28 @@ void GenotypesTree::loadFromFile(clan::File& binFile)
 
 
 // ¬озвращает указатель на вид в рамках текущего генотипа, возможно с мутацией.
-const std::shared_ptr<Species> GenotypesTree::breeding()
+const std::shared_ptr<Species> GenotypesTree::breeding(const std::shared_ptr<demi::Species>& oldSpec)
 {
-	// «десь должна быть реализаци€ механизма мутации.
-	return species.front();
+	// ѕолучаем новые (мутировавшие) значени€ генов или nullptr, если мутаций не случилось.
+	std::shared_ptr<std::vector<geneValues_t>> newGeneValues = oldSpec->breeding();
+
+	// ћутации не произошло, возвращаем исходный вид.
+	if (!newGeneValues)
+		return oldSpec;
+
+	// ѕровер€ем, нет ли уже вида с подобными генами, иначе будет дублирование видов с одинаковыми мутаци€ми.
+	for (auto& spec : species) {
+		// ≈сли уже есть такой вид, возвращаем его. »сходный вид дл€ оптимизации не провер€ем, он по-определению не совпадает.
+		if (spec != oldSpec && spec->isTheSameGeneValues(newGeneValues))
+			return spec;
+	}
+
+	// —оздаЄм и сохран€ем новый вид.
+	std::shared_ptr<demi::Species> newSpec = std::make_shared<demi::Species>(*oldSpec.get(), newGeneValues);
+	species.push_back(newSpec);
+
+	// ѕоднимаем флаг дл€ внешнего кода, что есть изменени€.
+	flagSpaciesChanged = true;
+
+	return newSpec;
 }

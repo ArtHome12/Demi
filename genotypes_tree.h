@@ -48,6 +48,6 @@ namespace demi {
 		void loadFromFile(clan::File& binFile);
 
 		// ¬озвращает указатель на вид в рамках текущего генотипа, возможно с мутацией.
-		const std::shared_ptr<demi::Species> breeding();
+		const std::shared_ptr<demi::Species> breeding(const std::shared_ptr<demi::Species>& oldSpec);
 	};
 };

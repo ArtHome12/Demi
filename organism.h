@@ -122,8 +122,11 @@ public:
 	static Organism* createFromFile(clan::File& binFile, const clan::Point& Acenter, const std::shared_ptr<Species>& Aspecies);
 	void saveToFile(clan::File& binFile);
 
+	// ¬озвращает им€ генотипа организма.
+	std::string getGenotypeName() { return ourSpecies->getGenotypeName(); }
+
 	// ¬озвращает им€ вида организма.
-	std::string getGenotypeName() {	return ourSpecies->getGenotypeName(); }
+	std::string getSpeciesName() { return ourSpecies->getSpeciesName(); }
 
 	// ¬озвращает свободную клетку из окрестностей, если така€ есть и истину, иначе ложь.
 	bool findFreePlace(clan::Point &point);

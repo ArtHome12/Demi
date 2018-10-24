@@ -30,6 +30,7 @@ auto cResGlobalsMCminInactiveMetabolicRate = "minInactiveMetabolicRate";
 auto cResGlobalsMCdesintegrationVitalityBarrier = "desintegrationVitalityBarrier";
 
 auto cResGlobalsLUCA = "Globals/LUCA";
+auto cResGlobalsLUCAMutationChance = "mutationChance";
 auto cResGlobalsLUCAVisibility = "visibility";
 auto cResGlobalsLUCAFissionBarier = "fissionBarrier";
 auto cResGlobalsLUCAAliveColor = "aliveColor";
@@ -217,7 +218,7 @@ void World::makeTick()
 				// Вид нового организма, возможно с мутацией либо тот же самый.
 				const std::shared_ptr<demi::Species>& oldSpec = animal.getSpecies();
 				demi::GenotypesTree& treeNode = oldSpec->getGenotype()->getTreeNode();
-				const std::shared_ptr<demi::Species> newSpec = treeNode.breeding();
+				const std::shared_ptr<demi::Species> newSpec = treeNode.breeding(oldSpec);
 
 				// Количество делений.
 				uint64_t newAncestorCount = animal.getAncestorsCount() + 1;
@@ -264,6 +265,7 @@ void World::updateAlives()
 			// Меняем его с последним и удаляем последний.
 			animals[i] = animals.back();
 			animals.pop_back();
+			--cnt;
 		}
 	}
 }
@@ -628,20 +630,33 @@ void World::doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, con
 	clan::Color specAliveColor = clan::Color(clan::Colorf(prop.get_attribute(cResGlobalsLUCAAliveColor)));
 	clan::Color specDeadColor = clan::Color(clan::Colorf(prop.get_attribute(cResGlobalsLUCADeadColor)));
 	LUCAPos = clan::Point(prop.get_attribute_int("x"), prop.get_attribute_int("y"));
+	
+	// Константа с вероятностью мутации, доля единицы.
+	float mutationChance = prop.get_attribute_float(cResGlobalsLUCAMutationChance);
+
+	// Создадим такой генератор, чтобы в нём было количество значений, определёных разрядом mutationChance.
+	rnd_Mutation = std::uniform_int_distribution<>(0, int(1.0 / mutationChance));
+
 	const std::string LUCAGeneName = prop.get_attribute("geneName");
 	const std::string LUCAReactionName = prop.get_attribute("geneValue");
 
-	// Определим индекс реакции протоорганизма (учитывая что названия реакций идут с префиксом секции).
-	auto itReaction = std::find(reactionNames.begin(), reactionNames.end(), std::string(cResReactionsSection) + "/" + LUCAReactionName);
-	if (itReaction == reactionNames.end())
+	// Создадим новый список реакций без префикса, попадающего из XML-файла.
+	std::vector<std::string> clearReactions;
+	const size_t prefixLen = std::string(cResReactionsSection).length() + 1; // Плюс место под косую черту.
+	for (auto& item : reactionNames)
+		clearReactions.push_back(item.substr(prefixLen));
+
+	// Определим индекс реакции протоорганизма.
+	auto itReaction = std::find(clearReactions.begin(), clearReactions.end(), LUCAReactionName);
+	if (itReaction == clearReactions.end())
 		throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongLUCAReaction), LUCAReactionName));
-	demi::geneValues_t geneValue = demi::geneValues_t(std::distance(reactionNames.begin(), itReaction));
+	demi::geneValues_t geneValue = demi::geneValues_t(std::distance(clearReactions.begin(), itReaction));
 
 	// Очистим старое дерево генотипов/видов. Может быть переопределено при считывании двоичного файла.
 	genotypesTree.clear();
 
 	// Создаём ген реакций.
-	demi::Gene gene(LUCAGeneName, reactionNames);
+	demi::Gene gene(LUCAGeneName, clearReactions);
 
 	// Создаём генотип протоорганизма.
 	genotypesTree.genotype = std::make_shared<demi::Genotype>(genotypesTree, gene, "LUCA", "Demi");
@@ -1110,4 +1125,11 @@ void World::InitResMaxArray()
 
 		++cur;
 	}
+}
+
+// Вычисляет вероятность мутации и возвращает истину, если она должна состояться.
+bool World::activateMutation()
+{
+	// Если выпал ноль, значит шанс сработал.
+	return rnd_Mutation(generator) == 0;
 }

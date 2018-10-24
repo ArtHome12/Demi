@@ -40,7 +40,6 @@ const float yWorldInc = xWorldInc;
 // Строковые ресурсы
 const std::string cSolarTitle = "ModelRenderSolar";			// Подпись для солнечной энергии.
 const std::string cEnergyTitle = "ModelRenderGeothermal";	// Подпись для геотермальной энергии.
-const std::string cOrganismTitle = "ModelRenderOrganism";		// Подпись для организма.
 
 
 
@@ -325,15 +324,13 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 			// Продолжаем только если осталось место.
 			if (yLine < h) {
 
-				// Выводим информацию об организме либо прочерк если такого нет.
-				//
+				// Выводим информацию об организме, если есть.
 				try {
-					std::string str = pSettings->LocaleStr(cOrganismTitle);
 					demi::Organism* pOrganism = d.organism;
 					if (pOrganism) {
 
-						// Название вида.
-						str += pOrganism->getGenotypeName() + ", ";
+						// Название генотипа плюс название вида.
+						std::string str = pOrganism->getGenotypeName() + pOrganism->getSpeciesName();
 
 						// Жизненная сила, порог размножения, количество предков, дата рождения.
 						str += IntToStrWithDigitPlaces<int32_t>(pOrganism->getVitality())
@@ -344,14 +341,11 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 						// Проверим ограничение на максимальную длину строки.
 						if (str.length() > maxStrLen)
 							str.resize(maxStrLen);
-					}
-					else {
-						str += ": ---";
-					}
 
-					// Выводим строку.
-					cellFont.draw_text(canvas, float(indent), float(yLine), str, color);
-					yLine += cCompactCellResLineHeight;
+						// Выводим строку.
+						cellFont.draw_text(canvas, float(indent), float(yLine), str, color);
+						yLine += cCompactCellResLineHeight;
+					}
 				}
 				catch (...) {} //-V565
 			}

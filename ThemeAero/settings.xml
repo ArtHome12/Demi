@@ -31,7 +31,6 @@
 		<!--User message in module: model_render-->
 		<lang name="ModelRenderSolar" eng="Solar      : " rus="Солнце  : "/>
 		<lang name="ModelRenderGeothermal" eng="Geothermal : " rus="Геотерм : "/>
-		<lang name="ModelRenderOrganism" eng="Organism   : " rus="Организм: "/>
 		<!--User message in module: windows_settings-->
 		<lang name="WindowsSettingsDlgCaption" eng="Attention!" rus="Внимание!"/>
 		<lang name="WindowsSettingsDlgSavingModel" eng="Saving model to %1, please wait. It usually takes a few seconds." rus="Идет сохранение модели в %1, пожалуйста подождите. Обычно это занимает несколько секунд."/>
