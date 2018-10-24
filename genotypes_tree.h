@@ -42,10 +42,10 @@ namespace demi {
 		void generateDict(speciesDict_t& dict);
 
 		// Записывает дерево на диск.
-		void saveToFile(clan::File& binFile);
+		void saveToFile(clan::IODevice& binFile);
 
 		// Счтиывает себя с диска.
-		void loadFromFile(clan::File& binFile);
+		void loadFromFile(clan::IODevice& binFile);
 
 		// Возвращает указатель на вид в рамках текущего генотипа, возможно с мутацией.
 		const std::shared_ptr<demi::Species> breeding(const std::shared_ptr<demi::Species>& oldSpec);

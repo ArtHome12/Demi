@@ -676,10 +676,9 @@ void World::doLoadBinary(const std::string &filename)
 	// Считываем двоичный файл, если он есть.
 	if (clan::FileHelp::file_exists(filename + "b")) {
 
-		clan::File binFile(filename + "b",				// У двоичного файла расширение будет 'demib'.
-			clan::File::OpenMode::open_existing,
-			clan::File::AccessFlags::access_read,
-			clan::File::ShareFlags::share_read);
+		// Файл с диска считываем в память для ускорения разбора. У двоичного файла расширение будет 'demib'.
+		clan::DataBuffer data = clan::File::read_bytes(filename + "b");
+		clan::MemoryDevice binFile(data);
 
 		// Версия файла.
 		auto &strVer = binFile.read_string_nul();
@@ -732,128 +731,8 @@ void World::doLoadBinary(const std::string &filename)
 			// Организм в точке.
 			dot.organism = doReadOrganism(binFile, speciesDict, getDotXYFromIndex(i));
 		}
-
-		// Закроем файл.
-		binFile.close();
 	}
 }
-
-
-/*// Рекурсивная функция для считывания видов организмов. 
-std::shared_ptr<demi::Species> World::doReadSpecies(clan::File &binFile, std::shared_ptr<demi::Species> ancestor)
-{
-	// Считываем текущий вид.
-
-	// Создаём вид и инициализиуем основные поля.
-	std::shared_ptr<demi::Species> retVal = std::make_shared<demi::Species>();
-	retVal->ancestor = ancestor;
-	retVal->name = binFile.read_string_nul();
-	retVal->author = binFile.read_string_nul();
-	retVal->visible = binFile.read_int8() != 0;
-	unsigned char r = binFile.read_uint8(), g = binFile.read_uint8(), b = binFile.read_uint8();
-	retVal->aliveColor = clan::Color(r, g, b);
-	r = binFile.read_uint8(); g = binFile.read_uint8(); b = binFile.read_uint8();
-	retVal->deadColor = clan::Color(r, g, b);
-	
-	// Метаболитическая реакция.
-	std::string reactionName = binFile.read_string_nul();
-	retVal->reaction = reactions[reactionName];
-
-	// Начальный порог размножения (будет меняться из-за изменчивости).
-	retVal->fissionBarrier = binFile.read_uint32();
-
-	// Создаём и считываем клетки.
-
-	// Количество клеток.
-	uint64_t cnt = binFile.read_uint64();
-	
-	// В цикле создаём все клетки.
-	for (int i = 0; i < cnt; ++i) {
-
-		// Тип клетки.
-		uint64_t cellType = binFile.read_uint64();
-
-		// Создаём клетку нужного типа.
-		std::shared_ptr<demi::GenericCell> cell;
-		switch (cellType) {
-		case 0 :	// cellBrain мозг
-			break;
-		case 1:		// cellReceptor рецептор
-			break;
-		case 2:		// cellMuscle мышца
-			break;
-		case 3:		// cellAdipose жир
-			break;
-		case 4:		// cellAbdomen живот
-			cell = std::make_shared<demi::CellAbdomen>();
-			break;
-		case 5:		// cellMouth рот
-			break;
-		case 6:		// cellArmor броня
-			break;
-		}
-
-		// Добавляем клетку в вид организма.
-		retVal->cells.push_back(cell);
-	}
-
-
-	// Считываем дочерние виды.
-
-	// Количество дочерних видов.
-	cnt = binFile.read_uint64();
-
-	// Считываем и сохраняем потомков рекурсивно.
-	for (uint64_t i = 0; i != cnt; ++i)
-		retVal->descendants.push_back(doReadSpecies(binFile, retVal));
-	
-	// Возвращаем считанный элемент.
-	return retVal;
-}
-
-// Рекурсивная функция для записи видов организмов, параллельно создаёт словарь названий видов.
-void World::doWriteSpecies(clan::File &binFile, std::shared_ptr<demi::Species> aSpecies, std::set<std::string> &dict)
-{
-	// Записываем основные поля.
-	binFile.write_string_nul(aSpecies->getName());
-	binFile.write_string_nul(aSpecies->getAuthor());
-	binFile.write_int8(aSpecies->getVisible());
-
-	// Цвета отображения.
-	const clan::Color& aliveColor = aSpecies->getAliveColor();
-	const clan::Color& deadColor = aSpecies->getDeadColor();
-	binFile.write_uint8(aliveColor.get_red());
-	binFile.write_uint8(aliveColor.get_green());
-	binFile.write_uint8(aliveColor.get_blue());
-	binFile.write_uint8(deadColor.get_red());
-	binFile.write_uint8(deadColor.get_green());
-	binFile.write_uint8(deadColor.get_blue());
-
-	binFile.write_string_nul(aSpecies->reaction->name);
-
-	// Сохраняем название в словаре.
-	dict.insert(aSpecies->getAuthorAndNamePair());
-
-	// Начальный порог размножения.
-	binFile.write_uint32(aSpecies->fissionBarrier);
-
-	// Записываем клетки.
-	binFile.write_uint64(aSpecies->cells.size());
-	for (auto& cell : aSpecies->cells) {
-		// Тип клетки.
-		uint64_t cellType = cell->getCellType();
-		binFile.write_uint64(cellType);
-	}
-
-	// Записываем дочерние виды.
-
-	// Количество дочерних видов.
-	binFile.write_uint64(aSpecies->descendants.size());
-
-	// Сами виды рекурсивно.
-	for (auto &spec : aSpecies->descendants)
-		doWriteSpecies(binFile, spec, dict);
-}*/
 
 
 void World::saveModel(const std::string &filename)
@@ -928,11 +807,8 @@ void World::doSaveSettings(std::shared_ptr<clan::XMLResourceDocument>& resDoc)
 
 void World::doSaveBinary(const std::string &filename)
 {
-	// Двоичный файл под точки, организмы и т.д.
-	clan::File binFile(filename + "b",				// У двоичного файла расширение будет 'demib'.
-		clan::File::OpenMode::create_always,
-		clan::File::AccessFlags::access_write,
-		clan::File::ShareFlags::share_read);
+	// Создаём буфер в памяти для ускорения сохранения.
+	clan::MemoryDevice binFile;
 
 	// Запишем версию файла.
 	binFile.write_string_nul("Ver:1");
@@ -971,8 +847,8 @@ void World::doSaveBinary(const std::string &filename)
 		doWriteOrganism(binFile, speciesDict, dot.organism);
 	}
 
-	// Закроем файл.
-	binFile.close();
+	// Записываем буфер в файл. У двоичного файла расширение будет 'demib'.
+	clan::File::write_bytes(filename + "b", binFile.get_data());
 }
 
 
@@ -1050,7 +926,7 @@ void World::resetModel(const std::string &modelFilename, const std::string &defa
 }
 
 // Вынесено из SaveModel() для удобства. Запись одного организма.
-void World::doWriteOrganism(clan::File &binFile, speciesDict_t& speciesDict, demi::Organism* organism)
+void World::doWriteOrganism(clan::IODevice &binFile, speciesDict_t& speciesDict, demi::Organism* organism)
 {
 	// Если организма нет, в качестве ключа вида запишем UINT16_MAX.
 	if (!organism) {
@@ -1067,7 +943,7 @@ void World::doWriteOrganism(clan::File &binFile, speciesDict_t& speciesDict, dem
 	organism->saveToFile(binFile);
 }
 
-demi::Organism* World::doReadOrganism(clan::File &binFile, speciesDict_t& speciesDict, const clan::Point &center)
+demi::Organism* World::doReadOrganism(clan::IODevice &binFile, speciesDict_t& speciesDict, const clan::Point &center)
 {
 	uint16_t dictKey = binFile.read_uint16();
 

@@ -241,7 +241,7 @@ void Organism::moveTo(const clan::Point &newCenter)
 }
 
 // —читывают и сохран€ют себ€ в файл.
-Organism* Organism::createFromFile(clan::File& binFile, const clan::Point& Acenter, const std::shared_ptr<Species>& Aspecies)
+Organism* Organism::createFromFile(clan::IODevice& binFile, const clan::Point& Acenter, const std::shared_ptr<Species>& Aspecies)
 {
 	uint8_t Aangle = binFile.read_uint8();					// angle
 	int32_t Avitality = binFile.read_int32();				// vitality
@@ -259,7 +259,7 @@ Organism* Organism::createFromFile(clan::File& binFile, const clan::Point& Acent
 }
 
 // —охран€ет себ€ в файл дл€ последующего считывани€ в конструкторе.
-void Organism::saveToFile(clan::File& binFile)
+void Organism::saveToFile(clan::IODevice& binFile)
 {
 	// Center и ourSpecies не записываем, этим управл€ет внешний код при записи точки.
 	binFile.write_uint8(angle);				// angle

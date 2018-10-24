@@ -119,8 +119,8 @@ public:
 	void processInactiveVitality();
 
 	// Считывают и сохраняют себя в файл.
-	static Organism* createFromFile(clan::File& binFile, const clan::Point& Acenter, const std::shared_ptr<Species>& Aspecies);
-	void saveToFile(clan::File& binFile);
+	static Organism* createFromFile(clan::IODevice& binFile, const clan::Point& Acenter, const std::shared_ptr<Species>& Aspecies);
+	void saveToFile(clan::IODevice& binFile);
 
 	// Возвращает имя генотипа организма.
 	std::string getGenotypeName() { return ourSpecies->getGenotypeName(); }

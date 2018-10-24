@@ -38,7 +38,7 @@ namespace demi {
 
 		DemiTime() {};
 		DemiTime(uint16_t ASec, uint16_t ADay, uint32_t AYear) : sec(ASec), day(ADay), year(AYear){};
-		DemiTime(clan::File& binFile);
+		DemiTime(clan::IODevice& binFile);
 
 		// Прибавляет один тик.
 		void MakeTick();
@@ -51,7 +51,7 @@ namespace demi {
 		}
 
 		// Сохраняeт себя в файл. Порядок считывания определяется порядоком объявления полей.
-		void saveToFile(clan::File& binFile);
+		void saveToFile(clan::IODevice& binFile);
 	};
 
 }

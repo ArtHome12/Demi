@@ -30,10 +30,10 @@ void GenotypesTree::generateDict(speciesDict_t& dict)
 }
 
 // Записывает дерево на диск.
-void GenotypesTree::saveToFile(clan::File& binFile)
+void GenotypesTree::saveToFile(clan::IODevice& binFile)
 {
 	// Количество собственных видов.
-	uint32_t cnt = uint32_t(species.capacity());
+	uint32_t cnt = uint32_t(species.size());
 	binFile.write_uint32(cnt);
 	
 	// Сами собственные виды.
@@ -46,7 +46,7 @@ void GenotypesTree::saveToFile(clan::File& binFile)
 }
 
 // Счтиывает себя с диска.
-void GenotypesTree::loadFromFile(clan::File& binFile)
+void GenotypesTree::loadFromFile(clan::IODevice& binFile)
 {
 	// Количество собственных видов.
 	uint32_t cnt = binFile.read_uint32();

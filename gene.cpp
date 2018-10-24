@@ -131,7 +131,7 @@ Species::Species(const std::shared_ptr<Genotype>& genotype,
 
 
 // Конструктор для считывания из файла.
-Species::Species(const std::shared_ptr<Genotype>& genotype,	clan::File& binFile) : speciesGenotype(genotype)
+Species::Species(const std::shared_ptr<Genotype>& genotype,	clan::IODevice& binFile) : speciesGenotype(genotype)
 {
 	// Клетка вида. Требует переработки в будущем после появления клеток разных видов.
 	cells.push_back(std::make_shared<demi::CellAbdomen>());
@@ -210,7 +210,7 @@ std::string Species::getSpeciesName() const
 }
 
 // Сохраняет себя в файл.
-void Species::saveToFile(clan::File& binFile)
+void Species::saveToFile(clan::IODevice& binFile)
 {
 	// Значения генов.
 	for (geneValues_t geneValue : geneValues)

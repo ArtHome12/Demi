@@ -635,6 +635,10 @@ void WindowsSettings::saveModel(const std::string& filename)
 	// Отрисуем вне очереди.
 	dialog->immediate_update();
 
+	// Переключим указатель мыши для индикации занятости.
+	auto& disp = view_tree()->display_window();
+	disp.set_cursor(clan::StandardCursor::wait);
+
 	try
 	{
 		globalWorld.saveModel(filename);
@@ -643,11 +647,13 @@ void WindowsSettings::saveModel(const std::string& filename)
 	{
 		// Погасим диалог в случае ошибки.
 		dialog->dismiss();
+		disp.set_cursor(clan::StandardCursor::arrow);
 		throw;
 	}
 
 	// Погасим диалог.
 	dialog->dismiss();
+	disp.set_cursor(clan::StandardCursor::arrow);
 }
 
 // Загружает модель с показом диалогового окна.
@@ -664,6 +670,10 @@ void WindowsSettings::loadModel(const std::string& filename)
 	// Отрисуем вне очереди.
 	dialog->immediate_update();
 
+	// Переключим указатель мыши для индикации занятости.
+	auto& disp = view_tree()->display_window();
+	disp.set_cursor(clan::StandardCursor::wait);
+
 	try
 	{
 		globalWorld.loadModel(filename);
@@ -672,11 +682,13 @@ void WindowsSettings::loadModel(const std::string& filename)
 	{
 		// Погасим диалог в случае ошибки.
 		dialog->dismiss();
+		disp.set_cursor(clan::StandardCursor::arrow);
 		throw;
 	}
 
 	// Погасим диалог.
 	dialog->dismiss();
+	disp.set_cursor(clan::StandardCursor::arrow);
 }
 
 

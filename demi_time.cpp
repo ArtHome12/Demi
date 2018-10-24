@@ -40,7 +40,7 @@ std::string DemiTime::getDateStr() const
 
 
 // —читывают и сохран€ют себ€ в файл дл€ последующего считывани€ в конструкторе.
-DemiTime::DemiTime(clan::File& binFile)	:
+DemiTime::DemiTime(clan::IODevice& binFile)	:
 	sec(binFile.read_uint16()),
 	day(binFile.read_uint16()),
 	year(binFile.read_uint32())
@@ -49,7 +49,7 @@ DemiTime::DemiTime(clan::File& binFile)	:
 
 
 // —охран€ет себ€ в файл дл€ последующего считывани€ в конструкторе.
-void DemiTime::saveToFile(clan::File& binFile)
+void DemiTime::saveToFile(clan::IODevice& binFile)
 {
 	binFile.write_uint16(sec);
 	binFile.write_uint16(day);

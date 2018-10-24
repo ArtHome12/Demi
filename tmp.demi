@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources>
+	<section name="Globals">
+		<!--Ширина мира и пропорция для высоты, максимум 30 000. Для проекции Меркатора 24:11 или 0.4583-->
+		<item name="WorldSize" width="1000" heightRatio="0.4583"/>
+		<!--Последнее представление модели - координата левого верхнего угла, масштаб-->
+		<item name="Appearance" top="0" left="0" scale="0.381667"/>
+		<!--Время модели - год, день, секунда-->
+		<item name="Time" year="1" day="1" second="0"/>
+		<!--Константы для организмов - расход энергии при движении (0..255), покое  (0..255) и граница разрушения  (-32768..32767)-->
+		<item name="MetabolicConsts" minActiveMetabolicRate="10" minInactiveMetabolicRate="1" desintegrationVitalityBarrier="-100"/>
+		<!--Протоорганизм, от которого происходят все остальные. Шанс мутации не меньше чем 0.000000001-->
+		<!--main="if (_vitality >= fissionBarrier) _fission()" fissionBarrier="30"-->
+		<item name="LUCA" visibility="true" x="300" y="30" mutationChance="0.0001" aliveColor="pink" deadColor="brown" geneName="Reaction" geneValue="CO2+4H2=CH4+2H2O"/>
+	</section>
+	<!--Геотермальные источники энергии-->
+	<section name="Energy">
+		<Geothermal name="Point0">
+			<point x="300" y="30"/>
+		</Geothermal>
+		<Geothermal name="Point1">
+			<point x="500" y="21"/>
+		</Geothermal>
+		<Geothermal name="Point2">
+			<point x="700" y="39"/>
+		</Geothermal>
+	</section>
+	<!--Минеральные элементы-->
+	<section name="Elements">
+		<!--Вода - основа всего, и в качестве основы её летучесть меньше чем у твёрдых веществ-->
+		<Element name="Water" color="cornflowerblue" volatility="0.01" visibility="true">
+			<rect left="0" top="0" right="max" bottom="max" amount="10000000"/>
+		</Element>
+		<!--Газы-->
+		<Element name="Oxygen" color="green" volatility="0.12" visibility="true">
+			<rect left="0" top="0" right="max" bottom="max" amount="0"/>
+		</Element>
+		<Element name="CarbonDioxide" color="yellow" volatility="0.12" visibility="true">
+			<rect left="0" top="0" right="max" bottom="max" amount="2000000"/>
+		</Element>
+		<Element name="Hydrogen" color="darkgreen" volatility="0.12" visibility="true">
+			<rect left="0" top="0" right="max" bottom="max" amount="100000"/>
+		</Element>
+		<Element name="Methane" color="darkviolet" volatility="0.12" visibility="true">
+			<rect left="0" top="0" right="0" bottom="0" amount="0"/>
+		</Element>
+		<Element name="Hydrogen sulfide" color="aliceblue" volatility="0.12" visibility="true">
+			<rect left="0" top="0" right="0" bottom="0" amount="0"/>
+		</Element>
+		<!--Твёрдые вещества-->
+		<Element name="Sulphur" color="lightyellow" volatility="0.03" visibility="true">
+			<rect left="0" top="0" right="max" bottom="max" amount="10"/>
+		</Element>
+	</section>
+	<!--Метаболические реакции-->
+	<section name="Reactions">
+		<!--Из углекислого газа и водорода CO2+4H2->CH4+2H2O - получаем метан и воду. Кол-во реагентов, Amount и Productivity должны быть от 1 до 255.-->
+		<Reaction name="CO2+4H2=CH4+2H2O" geothermalEnergy="0.0001" solarEnergy="0" vitalityProductivity="5">
+			<LeftReagent name="CarbonDioxide" amount="1"/>
+			<LeftReagent name="Hydrogen" amount="4"/>
+			<RightReagent name="Methane" amount="1"/>
+			<RightReagent name="Water" amount="2"/>
+		</Reaction>
+		<Reaction name="CH4+2H2O=CO2+4H2" geothermalEnergy="0" solarEnergy="0" vitalityProductivity="3">
+			<LeftReagent name="Methane" amount="1"/>
+			<LeftReagent name="Water" amount="2"/>
+			<RightReagent name="CarbonDioxide" amount="1"/>
+			<RightReagent name="Hydrogen" amount="4"/>
+		</Reaction>
+	</section>
+	<!--Живая природа-->
+	<section name="Organisms">
+		<!--Организм с обратной реакцией относительно протоорганизма-->
+		<item name="LUCA2" ancestor="LUCA" author="DEMI" visibility="true" reaction="CH4+2H2O=CO2+4H2"/>
+	</section>
+</resources>
+<!--Цвета C:\Development\Environment\ClanLib\Documentation\img\colors 
+
+	static Color aliceblue;			Hydrogen sulfide
+	static Color antiquewhite;
+	static Color aqua;
+	static Color aquamarine;
+	static Color azure;
+	static Color beige;
+	static Color bisque;
+	static Color black;
+	static Color blanchedalmond;
+	static Color blue;
+	static Color blueviolet;
+	static Color brown;
+	static Color burlywood;
+	static Color cadetblue;
+	static Color chartreuse;
+	static Color chocolate;
+	static Color coral;
+	static Color cornflowerblue;		Water
+	static Color cornsilk;
+	static Color crimson;
+	static Color cyan;
+	static Color darkblue;
+	static Color darkcyan;
+	static Color darkgoldenrod;
+	static Color darkgray;
+	static Color darkgreen;			Hydrogen
+	static Color darkgrey;
+	static Color darkkhaki;
+	static Color darkmagenta;
+	static Color darkolivegreen;
+	static Color darkorange;
+	static Color darkorchid;
+	static Color darkred;
+	static Color darksalmon;
+	static Color darkseagreen;
+	static Color darkslateblue;
+	static Color darkslategray;
+	static Color darkslategrey;
+	static Color darkturquoise;
+	static Color darkviolet;		Methane
+	static Color deeppink;
+	static Color deepskyblue;
+	static Color dimgray;
+	static Color dimgrey;
+	static Color dodgerblue;
+	static Color firebrick;
+	static Color floralwhite;
+	static Color forestgreen;
+	static Color fuchsia;
+	static Color gainsboro;
+	static Color ghostwhite;
+	static Color gold;
+	static Color goldenrod;
+	static Color gray;
+	static Color grey;
+	static Color green;			Oxygen
+	static Color greenyellow;
+	static Color honeydew;
+	static Color hotpink;
+	static Color indianred;
+	static Color indigo;
+	static Color ivory;
+	static Color khaki;
+	static Color lavender;
+	static Color lavenderblush;
+	static Color lawngreen;
+	static Color lemonchiffon;
+	static Color lightblue;
+	static Color lightcoral;
+	static Color lightcyan;
+	static Color lightgoldenrodyellow;
+	static Color lightgray;
+	static Color lightgreen;
+	static Color lightgrey;
+	static Color lightpink;
+	static Color lightsalmon;
+	static Color lightseagreen;
+	static Color lightskyblue;
+	static Color lightslategray;
+	static Color lightslategrey;
+	static Color lightsteelblue;
+	static Color lightyellow;		Sulphur
+	static Color lime;
+	static Color limegreen;
+	static Color linen;
+	static Color magenta;
+	static Color maroon;
+	static Color mediumaquamarine;
+	static Color mediumblue;
+	static Color mediumorchid;
+	static Color mediumpurple;
+	static Color mediumseagreen;
+	static Color mediumslateblue;
+	static Color mediumspringgreen;
+	static Color mediumturquoise;
+	static Color mediumvioletred;
+	static Color midnightblue;
+	static Color mintcream;
+	static Color mistyrose;
+	static Color moccasin;
+	static Color navajowhite;
+	static Color navy;
+	static Color oldlace;
+	static Color olive;
+	static Color olivedrab;
+	static Color orange;
+	static Color orangered;
+	static Color orchid;
+	static Color palegoldenrod;
+	static Color palegreen;
+	static Color paleturquoise;
+	static Color palevioletred;
+	static Color papayawhip;
+	static Color peachpuff;
+	static Color peru;
+	static Color pink;
+	static Color plum;
+	static Color powderblue;
+	static Color purple;
+	static Color red;
+	static Color rosybrown;
+	static Color royalblue;
+	static Color saddlebrown;
+	static Color salmon;
+	static Color sandybrown;
+	static Color seagreen;
+	static Color seashell;
+	static Color sienna;
+	static Color silver;
+	static Color skyblue;
+	static Color slateblue;
+	static Color slategray;
+	static Color slategrey;
+	static Color snow;
+	static Color springgreen;
+	static Color steelblue;
+	static Color tan;
+	static Color teal;
+	static Color thistle;
+	static Color tomato;
+	static Color turquoise;
+	static Color violet;
+	static Color wheat;
+	static Color white;
+	static Color whitesmoke;
+	static Color yellow;		CarbonDioxide
+	static Color yellowgreen;
+	static Color transparent;
+	static Color gray20;
+	static Color gray30;
+	static Color gray40;
+	static Color gray50;
+	static Color gray60;
+	static Color gray70;
+	static Color gray80;
+	static Color gray90;-->

@@ -132,7 +132,7 @@ namespace demi {
 			);
 
 		//  онструктор дл€ считывани€ из файла.
-		Species(const std::shared_ptr<Genotype>& genotype, clan::File& binFile);
+		Species(const std::shared_ptr<Genotype>& genotype, clan::IODevice& binFile);
 
 		//  онструктор дл€ использовани€ при мутации дл€ создани€ производного вида.
 		Species(const Species& ancestor, const std::shared_ptr<std::vector<geneValues_t>>& newGeneValues);
@@ -162,7 +162,7 @@ namespace demi {
 		geneValues_t getGeneValueByName(const std::string& name) const;
 
 		// —охран€ет себ€ в файл.
-		void saveToFile(clan::File& binFile);
+		void saveToFile(clan::IODevice& binFile);
 
 		// «апускает механизм мутации и если она случилась, возвращает новые значени€ генов, а если нет, то nullptr.
 		std::shared_ptr<std::vector<geneValues_t>> breeding();
