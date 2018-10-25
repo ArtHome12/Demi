@@ -4,13 +4,17 @@
 		<!--Ширина мира и пропорция для высоты, максимум 30 000. Для проекции Меркатора 24:11 или 0.4583-->
 		<item name="WorldSize" width="1000" heightRatio="0.4583"/>
 		<!--Последнее представление модели - координата левого верхнего угла, масштаб-->
-		<item name="Appearance" top="32" left="296" scale="0.003125"/>
+		<item name="Appearance" top="0" left="0" scale="0.520833"/>
 		<!--Время модели - год, день, секунда-->
-		<item name="Time" year="3" day="201" second="17314"/>
+		<item name="Time" year="3" day="224" second="19275"/>
 		<!--Константы для организмов - расход энергии при движении (0..255), покое  (0..255) и граница разрушения  (-32768..32767)-->
-		<item name="MetabolicConsts" minActiveMetabolicRate="10" minInactiveMetabolicRate="1" desintegrationVitalityBarrier="-100"/>
-		<!--Протоорганизм, от которого происходят все остальные.-->
-		<item name="LUCA" visibility="true" x="300" y="30" mutationChance="0.001" main="if (_vitality &gt;= fissionBarrier) _fission()" fissionBarrier="30" aliveColor="pink" deadColor="brown" geneName="Reaction" geneValue="CO2+4H2=CH4+2H2O"/>
+		<item name="MetabolicConsts" minActiveMetabolicRate="10" minInactiveMetabolicRate="1" desintegrationVitalityBarrier="-100" />
+		<!--Протоорганизм, от которого происходят все остальные. Шанс мутации не меньше чем 0.000000001-->         
+		<!-- main="if (_vitality >= fissionBarrier) _fission()" fissionBarrier="30" -->
+		<item name="LUCA" visibility="true" x="300" y="30" mutationChance="0.0001"
+			aliveColor="pink" deadColor="brown"
+			geneName="Reaction" geneValue="CO2+4H2=CH4+2H2O"
+		/>
 	</section>
 	<!--Геотермальные источники энергии-->
 	<section name="Energy">
@@ -27,50 +31,58 @@
 	<!--Минеральные элементы-->
 	<section name="Elements">
 		<!--Вода - основа всего, и в качестве основы её летучесть меньше чем у твёрдых веществ-->
-		<Element name="Water" color="cornflowerblue" volatility="0.01" visibility="false">
+		<Element name="Water" color="cornflowerblue" volatility="0.01" visibility="true">
 			<rect left="0" top="0" right="max" bottom="max" amount="10000000"/>
 		</Element>
 		<!--Газы-->
-		<Element name="Oxygen" color="green" volatility="0.12" visibility="false">
+		<Element name="Oxygen" color="green" volatility="0.12" visibility="true">
 			<rect left="0" top="0" right="max" bottom="max" amount="0"/>
 		</Element>
-		<Element name="CarbonDioxide" color="yellow" volatility="0.12" visibility="false">
+		<Element name="CarbonDioxide" color="yellow" volatility="0.12" visibility="true">
 			<rect left="0" top="0" right="max" bottom="max" amount="2000000"/>
 		</Element>
-		<Element name="Hydrogen" color="darkgreen" volatility="0.12" visibility="false">
+		<Element name="Hydrogen" color="darkgreen" volatility="0.12" visibility="true">
 			<rect left="0" top="0" right="max" bottom="max" amount="100000"/>
 		</Element>
-		<Element name="Methane" color="darkviolet" volatility="0.12" visibility="false">
+		<Element name="Methane" color="darkviolet" volatility="0.12" visibility="true">
 			<rect left="0" top="0" right="0" bottom="0" amount="0"/>
 		</Element>
-		<Element name="Hydrogen sulfide" color="aliceblue" volatility="0.12" visibility="false">
+		<Element name="Hydrogen sulfide" color="aliceblue" volatility="0.12" visibility="true">
 			<rect left="0" top="0" right="0" bottom="0" amount="0"/>
 		</Element>
 		<!--Твёрдые вещества-->
-		<Element name="Sulphur" color="lightyellow" volatility="0.03" visibility="false">
+		<Element name="Sulphur" color="lightyellow" volatility="0.03" visibility="true">
 			<rect left="0" top="0" right="max" bottom="max" amount="10"/>
 		</Element>
 	</section>
-	<!--Метаболические реакции-->
-	<section name="Reactions">
-		<!--Из углекислого газа и водорода CO2+4H2->CH4+2H2O - получаем метан и воду. Кол-во реагентов, Amount и Productivity должны быть от 1 до 255.-->
-		<Reaction name="CO2+4H2=CH4+2H2O" geothermalEnergy="0.0001" solarEnergy="0" vitalityProductivity="5">
-			<LeftReagent name="CarbonDioxide" amount="1"/>
-			<LeftReagent name="Hydrogen" amount="4"/>
-			<RightReagent name="Methane" amount="1"/>
-			<RightReagent name="Water" amount="2"/>
-		</Reaction>
-		<Reaction name="CH4+2H2O=CO2+4H2" geothermalEnergy="0" solarEnergy="0" vitalityProductivity="3">
-			<LeftReagent name="Methane" amount="1"/>
-			<LeftReagent name="Water" amount="2"/>
-			<RightReagent name="CarbonDioxide" amount="1"/>
-			<RightReagent name="Hydrogen" amount="4"/>
-		</Reaction>
+	<!--Гены-->
+	<section name="Genes">
+		<!--Реакция организма.-->
+		<Gene name="Reaction">
+			<!--Из углекислого газа и водорода CO2+4H2->CH4+2H2O - получаем метан и воду. Кол-во реагентов, Amount и Productivity должны быть от 1 до 255. -->
+			<Value name="CO2+4H2=CH4+2H2O" geothermalEnergy="0.0001" solarEnergy="0" vitalityProductivity="5">
+				<LeftReagent name="CarbonDioxide" amount="1"/>
+				<LeftReagent name="Hydrogen" amount="4"/>
+				<RightReagent name="Methane" amount="1"/>
+				<RightReagent name="Water" amount="2"/>
+			</Value>
+			<Value name="CH4+2H2O=CO2+4H2" geothermalEnergy="0" solarEnergy="0" vitalityProductivity="3">
+				<LeftReagent name="Methane" amount="1"/>
+				<LeftReagent name="Water" amount="2"/>
+				<RightReagent name="CarbonDioxide" amount="1"/>
+				<RightReagent name="Hydrogen" amount="4"/>
+			</Value>
+		</Gene>
+
+		<!--Необходимый накопленный запас энергии перед размножением-->
+		<Gene name="BreedingReserve">
+			<!--Варианты значений не перечислены, значит 0..65535-->
+		</Gene>
 	</section>
 	<!--Живая природа-->
-	<section name="Organisms">
-		<!--Организм с обратной реакцией относительно протоорганизма-->
-		<item name="LUCA2" ancestor="LUCA" author="DEMI" visibility="true" reaction="CH4+2H2O=CO2+4H2"/>
+	<section name="Genotypes">
+		<!--Организм с геном для накопления запаса энергии перед размножением-->
+		<item name="LUCA2" ancestor="LUCA" author="DEMI" visibility="true" geneName="BreedingReserve" geneValue="0"/>
 	</section>
 </resources>
 <!--Цвета C:\Development\Environment\ClanLib\Documentation\img\colors 

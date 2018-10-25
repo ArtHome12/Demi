@@ -229,8 +229,9 @@ private:
 	void InitResMaxArray();
 
 	// Для разгрузки функций loadModel, saveModel.
-	void doLoadInanimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, const std::vector<std::string>& elementNames, const std::vector<std::string>& reactionNames);
-	void doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, const std::vector<std::string>& reactionNames);
+	void doLoadInanimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc);
+	void doLoadReactions(std::shared_ptr<clan::XMLResourceDocument>& resDoc);
+	void doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc);
 	void doLoadBinary(const std::string &filename);
 	void doSaveSettings(std::shared_ptr<clan::XMLResourceDocument>& resDoc);
 	void doSaveBinary(const std::string &filename);
@@ -240,6 +241,9 @@ private:
 
 	// Вычисляет скорость расчёта модели, количество тиков в секунду.
 	void calculateTPS();
+
+	// Возвращает индекс элемента по названию. Когда элементов или реакций станет много, надо будет оптимизировать.
+	size_t findElemIndex(const std::string& elemName);
 };
 
 

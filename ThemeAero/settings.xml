@@ -22,6 +22,7 @@
 		<!--User message in module: world-->
 		<lang name="WorldLoadModelErrorNeedToStop" eng="Need to stop the evolution prior to load!" rus="Необходимо остановить расчёт перед загрузкой!"/>
 		<lang name="WorldWrongSize" eng="Invalid world size, must be less 30 000 (width=%1, height=%2)" rus="Неверный размер мира, должен быть менее 30 000 (width=%1, height=%2)"/>
+		<lang name="WrongReaction" eng="Reference to unknown element (%1)" rus="Ссылка на неизвестный элемент (%1)"/>
 		<lang name="WrongLUCAReaction" eng="Incorrect reaction (% 1) for LUCA, could not find one in the Reactions section" rus="Неверная реакция (%1) для LUCA, не удалось найти такую в секции Reactions"/>
 		<lang name="WorldWrongBinaryFileVersion" eng="Incorrect version binary file: need Ver:1, read %1" rus="Неверная версия двоичного файла: ожидается Ver:1, прочитано %1"/>
 		<lang name="WorldWrongBinaryFileElementsCount" eng="Error reading binary file elements count: need %1, read %2" rus="Ошибка чтения количества элементов из двоичного файла: ожидается %1, прочитано %2"/>

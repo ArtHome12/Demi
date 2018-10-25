@@ -49,8 +49,12 @@ auto cResElementsVisibility = "visibility";
 auto cResEnergySection = "Energy";
 auto cResEnergyType = "Geothermal";
 
-auto cResReactionsSection = "Reactions";
-auto cResReactionsType = "Reaction";
+auto cResGenesSection = "Genes";				// Синхронно с cResReactionsSection!
+auto cResGenesType = "Gene";
+auto cResGenesValue = "Value";
+auto cResGenesValueName = "name";
+
+auto cResReactionsSection = "Genes/Reaction";	// Синхронно с cResGenesSection!
 auto cResReactionsGeoEnergy = "geothermalEnergy";
 auto cResReactionsSolarEnergy = "solarEnergy";
 auto cResReactionsVitalityProductivity = "vitalityProductivity";
@@ -70,6 +74,7 @@ auto cEnergy = "Geothermal";	// Обозначение геотермальной энергии.
 
 // Строковые ресурсы
 auto cWrongSize = "WorldWrongSize";
+auto cWrongReaction = "WrongReaction";
 auto cWrongLUCAReaction = "WrongLUCAReaction";
 auto cWrongBinVer = "WorldWrongBinaryFileVersion";
 auto cWrongBinElemCount = "WorldWrongBinaryFileElementsCount";
@@ -439,15 +444,14 @@ void World::loadModel(const std::string &filename)
 	// Откроем XML файл.
 	auto resDoc = std::make_shared<clan::XMLResourceDocument>(filename);
 
-	// Ключи в секциях для оптимизации считаем один раз.
-	const std::vector<std::string>& elementNames = resDoc->get_resource_names_of_type(cResElementsType, cResElementsSection);
-	const std::vector<std::string>& reactionNames = resDoc->get_resource_names_of_type(cResReactionsType, cResReactionsSection);
-
 	// Загрузим настройки и неживую природу.
-	doLoadInanimal(resDoc, elementNames, reactionNames);
+	doLoadInanimal(resDoc);
+
+	// Загрузим реакции.
+	doLoadReactions(resDoc);
 
 	// Загрузим живую природу.
-	doLoadAnimal(resDoc, reactionNames);
+	doLoadAnimal(resDoc);
 
 	// Загрузим двоичный файл.
 	doLoadBinary(filename);
@@ -460,7 +464,7 @@ void World::loadModel(const std::string &filename)
 }
 
 // Для разгрузки функций loadModel, saveModel.
-void World::doLoadInanimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, const std::vector<std::string>& elementNames, const std::vector<std::string>& reactionNames)
+void World::doLoadInanimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc)
 {
 	// Инициализируем размеры мира.
 	clan::DomElement &prop = resDoc->get_resource(cResGlobalsWorldSize).get_element();
@@ -492,11 +496,10 @@ void World::doLoadInanimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, c
 
 	// Источники энергии.
 	const std::vector<std::string>& energy = resDoc->get_resource_names_of_type(cResEnergyType, cResEnergySection);
-
-	// Количество источников.
 	energyCount = energy.size();
 
-	// Количество ресурсов.
+	// Элементы.
+	const std::vector<std::string>& elementNames = resDoc->get_resource_names_of_type(cResElementsType, cResElementsSection);
 	elemCount = elementNames.size();
 
 	// Выделим память под массивы.
@@ -567,42 +570,53 @@ void World::doLoadInanimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, c
 			addGeothermal(i, clan::Point(pointItem.get_attribute_int("x"), pointItem.get_attribute_int("y")));
 		}
 	}
+}
 
+void World::doLoadReactions(std::shared_ptr<clan::XMLResourceDocument>& resDoc)
+{
 	// Считываем химические реакции.
 	reactions.clear();
-	for (auto & reactionName : reactionNames) {
+
+	// Получим нужный узел с реакциями.
+	clan::XMLResourceNode &res = resDoc->get_resource(cResReactionsSection);
+
+	// Перебираем все значения, то есть все реакции.
+	clan::DomNodeList& reactionNodes = res.get_element().get_elements_by_tag_name(cResGenesValue);
+	for (int i = reactionNodes.get_length() - 1; i >= 0; --i) {
+
+		// Текущий узел с информацией о реакции.
+		clan::DomElement &reactionNode = reactionNodes.item(i).to_element();
+
 		// Создаём реакцию.
 		auto curReaction = std::make_shared<demi::ChemReaction>();
 
-		// Количество необходимой энергии и выхлоп жизненной энергии.
-		clan::XMLResourceNode &res = resDoc->get_resource(reactionName);
-		clan::DomElement &prop = res.get_element();
-		curReaction->name = res.get_name();
-		curReaction->geoEnergy = prop.get_attribute_float(cResReactionsGeoEnergy);
-		curReaction->solarEnergy = prop.get_attribute_float(cResReactionsSolarEnergy);
-		curReaction->vitalityProductivity = prop.get_attribute_int(cResReactionsVitalityProductivity);
+		// Поля реакции - название, количество необходимой гео и солнечной энергии и выхлоп жизненной энергии.
+		curReaction->name = reactionNode.get_attribute(cResGenesValueName);
+		curReaction->geoEnergy = reactionNode.get_attribute_float(cResReactionsGeoEnergy);
+		curReaction->solarEnergy = reactionNode.get_attribute_float(cResReactionsSolarEnergy);
+		curReaction->vitalityProductivity = reactionNode.get_attribute_int(cResReactionsVitalityProductivity);
 
 		// Реагенты слева.
-		clan::DomNodeList nodes = prop.get_elements_by_tag_name(cResReactionsLeftReagent);
-		for (int i = nodes.get_length() - 1; i >= 0; --i) {
-			clan::DomElement &node = nodes.item(i).to_element();
+		clan::DomNodeList& leftNodes = reactionNode.get_elements_by_tag_name(cResReactionsLeftReagent);
+		for (int i = leftNodes.get_length() - 1; i >= 0; --i) {
+			clan::DomElement &node = leftNodes.item(i).to_element();
+
+			// Название (элемента) реагента.
 			std::string reagentName = node.get_attribute(cResReactionsReagentName, "");
 
-			// По названию получаем индекс элемента и добавляем его в реакцию вместе с количеством.
-			auto pos = std::distance(elementNames.begin(), find(elementNames.begin(), elementNames.end(), cResElementsSection + std::string("/") + reagentName));
-			demi::ReactionReagent reagent(pos, node.get_attribute_int(cResReactionsAmount));
+			// Создаём реагент с индексом вместо названия и количеством.
+			demi::ReactionReagent reagent((uint8_t)findElemIndex(reagentName), node.get_attribute_int(cResReactionsAmount));
+
+			// Добавляем реагент в реакцию.
 			curReaction->leftReagents.push_back(reagent);
 		}
 
 		// Реагенты справа.
-		nodes = prop.get_elements_by_tag_name(cResReactionsRightReagent);
-		for (int i = nodes.get_length() - 1; i >= 0; --i) {
-			clan::DomElement &node = nodes.item(i).to_element();
+		clan::DomNodeList& rightNodes = reactionNode.get_elements_by_tag_name(cResReactionsRightReagent);
+		for (int i = rightNodes.get_length() - 1; i >= 0; --i) {
+			clan::DomElement &node = rightNodes.item(i).to_element();
 			std::string reagentName = node.get_attribute(cResReactionsReagentName, "");
-
-			// По названию получаем индекс элемента и добавляем его в реакцию вместе с количеством.
-			auto pos = std::distance(elementNames.begin(), find(elementNames.begin(), elementNames.end(), cResElementsSection + std::string("/") + reagentName));
-			demi::ReactionReagent reagent(pos, node.get_attribute_int(cResReactionsAmount));
+			demi::ReactionReagent reagent((uint8_t)findElemIndex(reagentName), node.get_attribute_int(cResReactionsAmount));
 			curReaction->rightReagents.push_back(reagent);
 		}
 
@@ -612,7 +626,7 @@ void World::doLoadInanimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, c
 }
 
 
-void World::doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, const std::vector<std::string>& reactionNames)
+void World::doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc)
 {
 	// Создаём вид протоорганизма.
 	//
@@ -639,26 +653,55 @@ void World::doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, con
 	const std::string LUCAGeneName = prop.get_attribute("geneName");
 	const std::string LUCAReactionName = prop.get_attribute("geneValue");
 
-	// Создадим новый список реакций без префикса, попадающего из XML-файла.
-	std::vector<std::string> clearReactions;
-	const size_t prefixLen = std::string(cResReactionsSection).length() + 1; // Плюс место под косую черту.
-	for (auto& item : reactionNames)
-		clearReactions.push_back(item.substr(prefixLen));
-
-	// Определим индекс реакции протоорганизма.
-	auto itReaction = std::find(clearReactions.begin(), clearReactions.end(), LUCAReactionName);
-	if (itReaction == clearReactions.end())
-		throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongLUCAReaction), LUCAReactionName));
-	demi::geneValues_t geneValue = demi::geneValues_t(std::distance(clearReactions.begin(), itReaction));
-
 	// Очистим старое дерево генотипов/видов. Может быть переопределено при считывании двоичного файла.
 	genotypesTree.clear();
 
-	// Создаём ген реакций.
-	demi::Gene gene(LUCAGeneName, clearReactions);
+	// Создадим гены, определённые в XML-файле.
+	//
+	// Список всех названий генов.
+	const std::vector<std::string>& geneNames = resDoc->get_resource_names_of_type(cResGenesType, cResGenesSection);
+
+	// Временное хранилище под данные генов (востребованные будут скопированы в генотипы).
+	std::map<std::string, std::vector<std::string>> geneDatas;
+
+	// Перебираем все разделы с генами
+	for (auto& geneName : geneNames) {
+
+		// Структуры для разбора XML-файла.
+		clan::XMLResourceNode &resGene = resDoc->get_resource(geneName);
+		clan::DomElement &propGene = resGene.get_element();
+
+		// Вектор под варианты значений.
+		std::vector<std::string> tmpVect;
+
+		// Содержимое подразделов - перечень значений.
+		clan::DomNodeList& nodes = propGene.get_elements_by_tag_name(cResGenesValue);
+		for (int i = nodes.get_length() - 1; i >= 0; --i) {
+			clan::DomElement &node = nodes.item(i).to_element();
+			// Сохраняем название в векторе.
+			tmpVect.push_back(node.get_attribute(cResGenesValueName, ""));
+		}
+
+		// Сохраняем ген в хранилище, в том числе имя без префикса.
+		geneDatas.insert(std::pair<std::string, std::vector<std::string>>(resGene.get_name(), tmpVect));
+	}
+
+	// Создаём ген протоорганизма (ген реакций) по данным из карты. Текущий временный объект будет скопирован в генотипе, оверхедом пренебрегаем.
+	demi::Gene gene(LUCAGeneName, geneDatas.at(LUCAGeneName));
 
 	// Создаём генотип протоорганизма.
 	genotypesTree.genotype = std::make_shared<demi::Genotype>(genotypesTree, gene, "LUCA", "Demi");
+
+	// Определим индекс реакции протоорганизма, то есть значение его гена.
+	// Для этого переберём все реакции в поисках нужной. По мере увеличения количества можно переделать на map.
+	demi::geneValues_t geneValue = geneValues_t_MAX;
+	for (size_t i = 0; i != reactions.size(); ++i)
+		if (reactions[i]->name == LUCAReactionName) {
+			geneValue = (demi::geneValues_t)i;
+			break;
+		}
+	if (geneValue == geneValues_t_MAX)
+		throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongLUCAReaction), LUCAReactionName));
 
 	// Создаём вид специальным конструктором для протоорганизма. Может быть переопределён при считывании двоичного файла.
 	auto species = std::make_shared<demi::Species>(genotypesTree.genotype, geneValue, specVisible, specAliveColor, specDeadColor);
@@ -669,6 +712,7 @@ void World::doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc, con
 	// Перед двоичным файлом удалим прежние организмы, если они были.
 	animals.clear();
 }
+
 
 void World::doLoadBinary(const std::string &filename)
 {
@@ -1020,16 +1064,26 @@ void World::calculateTPS()
 	uint64_t current_time = clan::System::get_microseconds();
 
 	num_updates_in_2_seconds++;
-	float delta_time_ms = (current_time - update_frame_start_time) / 1000.0;
+	float delta_time_ms = (current_time - update_frame_start_time) / 1000.0f;
 
 	if ((delta_time_ms < 0) || (delta_time_ms > 2000))		// Sample FPS every 2 seconds
 	{
 		if (delta_time_ms > 0)
 		{
-			current_tps = (int)(num_updates_in_2_seconds*1000.0f) / delta_time_ms;
+			current_tps = (int)((num_updates_in_2_seconds*1000.0f) / delta_time_ms);
 		}
 		num_updates_in_2_seconds = 0;
 		update_frame_start_time = current_time;
 	}
 }
 
+// Возвращает индекс элемента по названию. Когда элементов или реакций станет много, надо будет оптимизировать.
+size_t World::findElemIndex(const std::string& elemName)
+{
+	// Перебираем все названия и возвращаем индекс.
+	for (size_t i = 0; i != elemCount; ++i)
+		if (arResNames[i] == elemName)
+			return i;
+
+	throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongReaction), elemName));
+}

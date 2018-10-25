@@ -55,7 +55,7 @@ MainWindow::MainWindow()
 
 	// Надпись для отображения FPS/TPS
 	pLabelFPS = std::make_shared<clan::LabelView>();
-	pLabelFPS->style()->set("color: white; flex: none; margin: 8px; width: 30px; font: 12px 'tahoma'");
+	pLabelFPS->style()->set("color: white; flex: none; margin: 8px; width: 40px; font: 12px 'tahoma'");
 	//pLabelFPS->style()->set("border: 1px solid #DD3B2A");
 	pTopPanel->add_child(pLabelFPS);
 

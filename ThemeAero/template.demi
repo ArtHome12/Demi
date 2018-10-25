@@ -55,26 +55,34 @@
 			<rect left="0" top="0" right="max" bottom="max" amount="10"/>
 		</Element>
 	</section>
-	<!--Метаболические реакции-->
-	<section name="Reactions">
-		<!--Из углекислого газа и водорода CO2+4H2->CH4+2H2O - получаем метан и воду. Кол-во реагентов, Amount и Productivity должны быть от 1 до 255. -->
-		<Reaction name="CO2+4H2=CH4+2H2O" geothermalEnergy="0.0001" solarEnergy="0" vitalityProductivity="5">
-			<LeftReagent name="CarbonDioxide" amount="1"/>
-			<LeftReagent name="Hydrogen" amount="4"/>
-			<RightReagent name="Methane" amount="1"/>
-			<RightReagent name="Water" amount="2"/>
-		</Reaction>
-		<Reaction name="CH4+2H2O=CO2+4H2" geothermalEnergy="0" solarEnergy="0" vitalityProductivity="3">
-			<LeftReagent name="Methane" amount="1"/>
-			<LeftReagent name="Water" amount="2"/>
-			<RightReagent name="CarbonDioxide" amount="1"/>
-			<RightReagent name="Hydrogen" amount="4"/>
-		</Reaction>
+	<!--Гены-->
+	<section name="Genes">
+		<!--Реакция организма.-->
+		<Gene name="Reaction">
+			<!--Из углекислого газа и водорода CO2+4H2->CH4+2H2O - получаем метан и воду. Кол-во реагентов, Amount и Productivity должны быть от 1 до 255. -->
+			<Value name="CO2+4H2=CH4+2H2O" geothermalEnergy="0.0001" solarEnergy="0" vitalityProductivity="5">
+				<LeftReagent name="CarbonDioxide" amount="1"/>
+				<LeftReagent name="Hydrogen" amount="4"/>
+				<RightReagent name="Methane" amount="1"/>
+				<RightReagent name="Water" amount="2"/>
+			</Value>
+			<Value name="CH4+2H2O=CO2+4H2" geothermalEnergy="0" solarEnergy="0" vitalityProductivity="3">
+				<LeftReagent name="Methane" amount="1"/>
+				<LeftReagent name="Water" amount="2"/>
+				<RightReagent name="CarbonDioxide" amount="1"/>
+				<RightReagent name="Hydrogen" amount="4"/>
+			</Value>
+		</Gene>
+
+		<!--Необходимый накопленный запас энергии перед размножением-->
+		<Gene name="BreedingReserve">
+			<!--Варианты значений не перечислены, значит 0..65535-->
+		</Gene>
 	</section>
 	<!--Живая природа-->
-	<section name="Organisms">
-		<!--Организм с обратной реакцией относительно протоорганизма-->
-		<item name="LUCA2" ancestor="LUCA" author="DEMI" visibility="true" reaction="CH4+2H2O=CO2+4H2"/>
+	<section name="Genotypes">
+		<!--Организм с геном для накопления запаса энергии перед размножением-->
+		<item name="LUCA2" ancestor="LUCA" author="DEMI" visibility="true" geneName="BreedingReserve" geneValue="0"/>
 	</section>
 </resources>
 <!--Цвета C:\Development\Environment\ClanLib\Documentation\img\colors 
