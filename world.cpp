@@ -11,7 +11,6 @@
 #include "precomp.h"
 #include "world.h"
 
-
 const size_t cGeothermRadius = 12;
 
 // Константы для чтения XML-файла модели
@@ -870,6 +869,9 @@ void World::workerThread()
 			// Разблокируем основной поток.
 			lock.unlock();
 
+			// Вычисляем скорость расчёта модели, количество тиков в секунду.
+			calculateTPS();
+
 			// Выполняем расчёт модели.
 			makeTick();
 
@@ -1009,3 +1011,25 @@ bool World::activateMutation()
 	// Если выпал ноль, значит шанс сработал.
 	return rnd_Mutation(generator) == 0;
 }
+
+
+// Вычисляет скорость расчёта модели, количество тиков в секунду.
+void World::calculateTPS()
+{
+	// Код по-аналогии с game_time.cpp
+	uint64_t current_time = clan::System::get_microseconds();
+
+	num_updates_in_2_seconds++;
+	float delta_time_ms = (current_time - update_frame_start_time) / 1000.0;
+
+	if ((delta_time_ms < 0) || (delta_time_ms > 2000))		// Sample FPS every 2 seconds
+	{
+		if (delta_time_ms > 0)
+		{
+			current_tps = (int)(num_updates_in_2_seconds*1000.0f) / delta_time_ms;
+		}
+		num_updates_in_2_seconds = 0;
+		update_frame_start_time = current_time;
+	}
+}
+

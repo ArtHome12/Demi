@@ -23,7 +23,6 @@ private:
 	friend class App;
 
 	// Надпись для отображения FPS
-	int lastFPS;
 	std::shared_ptr<clan::LabelView> pLabelFPS;
 
 	// Надпись для отображения времени модели.

@@ -6,11 +6,11 @@
 		<!--Последнее представление модели - координата левого верхнего угла, масштаб-->
 		<item name="Appearance" top="32" left="296" scale="0.003125"/>
 		<!--Время модели - год, день, секунда-->
-		<item name="Time" year="3" day="201" second="17289"/>
+		<item name="Time" year="3" day="201" second="17314"/>
 		<!--Константы для организмов - расход энергии при движении (0..255), покое  (0..255) и граница разрушения  (-32768..32767)-->
 		<item name="MetabolicConsts" minActiveMetabolicRate="10" minInactiveMetabolicRate="1" desintegrationVitalityBarrier="-100"/>
 		<!--Протоорганизм, от которого происходят все остальные.-->
-		<item name="LUCA" visibility="true" x="300" y="30" mutationChance="0.01" main="if (_vitality &gt;= fissionBarrier) _fission()" fissionBarrier="30" aliveColor="pink" deadColor="brown" geneName="Reaction" geneValue="CO2+4H2=CH4+2H2O"/>
+		<item name="LUCA" visibility="true" x="300" y="30" mutationChance="0.001" main="if (_vitality &gt;= fissionBarrier) _fission()" fissionBarrier="30" aliveColor="pink" deadColor="brown" geneName="Reaction" geneValue="CO2+4H2=CH4+2H2O"/>
 	</section>
 	<!--Геотермальные источники энергии-->
 	<section name="Energy">

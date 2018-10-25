@@ -53,11 +53,17 @@ MainWindow::MainWindow()
 	pMenuButton->image_view()->style()->set("padding: 0 3px");
 	pTopPanel->add_child(pMenuButton);
 
-	// Надпись для отображения FPS
+	// Надпись для отображения FPS/TPS
 	pLabelFPS = std::make_shared<clan::LabelView>();
-	pLabelFPS->style()->set("color: white; flex: none; margin: 8px; width: 60px; font: 12px 'tahoma'");
+	pLabelFPS->style()->set("color: white; flex: none; margin: 8px; width: 30px; font: 12px 'tahoma'");
 	//pLabelFPS->style()->set("border: 1px solid #DD3B2A");
 	pTopPanel->add_child(pLabelFPS);
+
+	// Подпись для отображения FPS/TPS
+	auto pLabelFPSTitle = std::make_shared<clan::LabelView>();
+	pLabelFPSTitle->style()->set("color: white; flex: none; margin: 8px; font: 12px 'tahoma'");
+	pLabelFPSTitle->set_text("fps/tps");
+	pTopPanel->add_child(pLabelFPSTitle);
 
 	// Подпись для отображения времени модели
 	auto pLabelModelTimeTitle = std::make_shared<clan::LabelView>();
@@ -257,6 +263,7 @@ void MainWindow::on_menuIlluminatedModelButton_down()
 	pModelRender->setIlluminatedWorld(pButtonIlluminatedModel->pressed());
 }
 
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Application
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -326,13 +333,11 @@ bool App::update()
 	// Если окно свёрнуто, ничего не делаем.
 	if (!displayWindow.is_minimized()) {
 
-		// Выведем скорость обновления экрана, но только если она изменилась, так как операция медленная.
+		// Выведем скорость обновления экрана и модели.
 		int fps = int(game_time.get_updates_per_second());
-		if (pMainWindow->lastFPS != fps) {
-			pMainWindow->lastFPS = fps;
-			std::string fpsStr = clan::StringHelp::int_to_text(fps) + " fps";
-			pMainWindow->pLabelFPS->set_text(fpsStr, true);
-		}
+		int tps = globalWorld.getUpdatesPerSecond();
+		std::string fpsStr = clan::StringHelp::int_to_text(fps) + "/" + clan::StringHelp::int_to_text(tps);
+		pMainWindow->pLabelFPS->set_text(fpsStr, true);
 
 		// Выведем координаты левого верхнего угла мира.
 		const clan::Point &topLeftWorld = globalWorld.getAppearanceTopLeft();
