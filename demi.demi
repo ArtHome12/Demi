@@ -2,7 +2,7 @@
 <resources>
 	<section name="Globals">
 		<!--Ширина мира и пропорция для высоты, максимум 30 000. Для проекции Меркатора 24:11 или 0.4583-->
-		<item name="WorldSize" width="1000" heightRatio="0.4583"/>
+		<item name="WorldSize" width="1000" heightRatio="0.4583" resolution="0%" />
 		<!--Последнее представление модели - координата левого верхнего угла, масштаб-->
 		<item name="Appearance" top="20" left="499" scale="0.002196"/>
 		<!--Время модели - год, день, секунда-->

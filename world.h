@@ -173,16 +173,13 @@ private:
 	// Химические реакции, доступные для организмов.
 	std::vector<std::shared_ptr<demi::ChemReaction>> reactions;
 
-	// Сами организмы.
-	std::vector<demi::Organism*> animals;
-
 	std::random_device random_device; // Источник энтропии.
 	std::mt19937 generator; // Генератор случайных чисел.
 	
-	// Для генерации случайного числа. Направление движения при диффузии
+	// Для генерации случайного числа. Направление движения.
 	std::uniform_int_distribution<> rnd_angle;
 
-	// Для генерации случайного числа. Приращение координаты при диффузии.
+	// Для генерации случайного числа. Приращение координаты.
 	std::uniform_int_distribution<> rnd_Coord;
 
 	// Для генерации случайного числа. Вероятность мутации.
@@ -199,8 +196,8 @@ private:
 	// Обновить состояние.
 	void makeTick();
 
-	// Диффузия ресурсов.
-	void diffusion();
+	// Перебор всех точек и вычисления.
+	void processDots();
 
 	// Задаёт распределение ресурсов по указанной прямоугольной области в указанном количестве.
 	void fillRectResource(size_t resId, unsigned long long amount, const clan::Rect &rect);
@@ -235,9 +232,6 @@ private:
 	void doLoadBinary(const std::string &filename);
 	void doSaveSettings(std::shared_ptr<clan::XMLResourceDocument>& resDoc);
 	void doSaveBinary(const std::string &filename);
-
-	// Проверяет живость организмов и мёртвые удаляет из списка живых.
-	void updateAlives();
 
 	// Вычисляет скорость расчёта модели, количество тиков в секунду.
 	void calculateTPS();
