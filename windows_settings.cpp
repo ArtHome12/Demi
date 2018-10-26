@@ -47,6 +47,7 @@ auto cTreeInanimate = "WindowsSettingsTreeInanimateSubTree";
 auto cTreeAnimate = "WindowsSettingsTreeAnimateSubTree";
 auto cWindowsSettingsAmountsLabel = "WindowsSettingsAmountsLabel";
 
+auto cErrorDlgCaption = "WindowsSettingsErrorDlgCaption";
 
 
 WindowsSettings::WindowsSettings()
@@ -261,7 +262,14 @@ void WindowsSettings::onButtondownOpen()
 	if (dlg->show()) {
 		// Сохраним имя модели и загрузим её.
 		setModelFilename(dlg->filename());
-		loadModel(dlg->filename());
+
+		try {
+			loadModel(dlg->filename());
+		}
+		catch (const clan::Exception &e) {
+			showError(e.message);
+			onButtondownNew();
+		}
 
 		// Обновим дерево с галочками видимости элементов.
 		initElemVisibilityTree();
@@ -279,7 +287,13 @@ void WindowsSettings::onButtondownSave()
 	else {
 		// Преобразуем путь в абсолютный, если у нас относительный.
 		std::string absPath = clan::PathHelp::make_absolute(clan::System::get_exe_path(), modelFilename);
-		saveModel(absPath);
+
+		try {
+			saveModel(absPath);
+		}
+		catch (const clan::Exception &e) {
+			showError(e.message);
+		}
 	}
 }
 
@@ -307,15 +321,21 @@ void WindowsSettings::onButtondownSaveAs()
 			auto pSettings = globalWorld.getSettingsStorage();
 			const std::string caption(pSettings->LocaleStr(cWindowsSettingsDlgCaption));
 			const std::string text(clan::string_format(pSettings->LocaleStr(cMessageBoxTextFileRewrite), filename));
-			auto dialog = std::make_shared<MsgBox>(pSettings, text, caption, cMbOkCancel);
+			auto dialog = std::make_shared<MsgBox>(pSettings, text, caption, MsgBox::eMbType::cMbOkCancel);
 
-			dialog->onProcessResult = [=](eMbResultType result)
+			dialog->onProcessResult = [=](MsgBox::eMbResultType result)
 			{
-				if (result == cMbResultOk) {
+				if (result == MsgBox::eMbResultType::cMbResultOk) {
 					// Запоминаем новое имя проекта и перезаписываем XML-файл, сохраняем двоичный файл.
 					clan::FileHelp::copy_file(cProjectTemplate, filename, true);
 					setModelFilename(filename);
-					saveModel(filename);
+			
+					try {
+						saveModel(filename);
+					}
+					catch (const clan::Exception &e) {
+						showError(e.message);
+					}
 
 				}
 			};
@@ -362,11 +382,11 @@ void WindowsSettings::onButtondownRestart()
 	auto pSettings = globalWorld.getSettingsStorage();
 	const std::string caption(pSettings->LocaleStr(cWindowsSettingsDlgCaption));
 	const std::string text(pSettings->LocaleStr(cMessageBoxTextRestartModel));
-	auto dialog = std::make_shared<MsgBox>(pSettings, text, caption, cMbOkCancel);
+	auto dialog = std::make_shared<MsgBox>(pSettings, text, caption, MsgBox::eMbType::cMbOkCancel);
 
-	dialog->onProcessResult = [=](eMbResultType result)
+	dialog->onProcessResult = [=](MsgBox::eMbResultType result)
 	{
-		if (result == cMbResultOk) {
+		if (result == MsgBox::eMbResultType::cMbResultOk) {
 			// Преобразуем путь в абсолютный, если у нас относительный.
 			std::string absPath = clan::PathHelp::make_absolute(clan::System::get_exe_path(), modelFilename);
 
@@ -465,8 +485,8 @@ void WindowsSettings::modelRenderNotify(size_t secondsElapsed)
 	if (secondsElapsed - this->secondsElapsed > 3600) {
 		this->secondsElapsed = secondsElapsed;
 
-		// Если стоит галочка, сохраним модель.
-		if (pCBAutoSaveHourly->checked())
+		// Если стоит галочка, сохраним модель, но только если есть куда, с диалогом "Сохранить как" не зависаем.
+		if (pCBAutoSaveHourly->checked() && !modelFilename.empty())
 			onButtondownSave();
 	}
 }
@@ -628,7 +648,7 @@ void WindowsSettings::saveModel(const std::string& filename)
 	auto pSettings = globalWorld.getSettingsStorage();
 	const std::string caption(pSettings->LocaleStr(cWindowsSettingsDlgCaption));
 	const std::string text(clan::string_format(pSettings->LocaleStr(cWindowsSettingsDlgSavingModel), filename));
-	auto dialog = std::make_shared<MsgBox>(pSettings, text, caption, cMbNone);
+	auto dialog = std::make_shared<MsgBox>(pSettings, text, caption, MsgBox::eMbType::cMbNone);
 	wManager->present_modal(this, dialog);
 	dialog->initWindow(pSettings->fileResDoc.get_file_system());
 
@@ -663,7 +683,7 @@ void WindowsSettings::loadModel(const std::string& filename)
 	auto pSettings = globalWorld.getSettingsStorage();
 	const std::string caption(pSettings->LocaleStr(cWindowsSettingsDlgCaption));
 	const std::string text(clan::string_format(pSettings->LocaleStr(cWindowsSettingsDlgLoadingModel), filename));
-	auto dialog = std::make_shared<MsgBox>(pSettings, text, caption, cMbNone);
+	auto dialog = std::make_shared<MsgBox>(pSettings, text, caption, MsgBox::eMbType::cMbNone);
 	wManager->present_modal(this, dialog);
 	dialog->initWindow(pSettings->fileResDoc.get_file_system());
 
@@ -690,6 +710,20 @@ void WindowsSettings::loadModel(const std::string& filename)
 	dialog->dismiss();
 	disp.set_cursor(clan::StandardCursor::arrow);
 }
+
+// Показывает сообщение об ошибке.
+void WindowsSettings::showError(const std::string errMessage)
+{
+	auto pSettings = globalWorld.getSettingsStorage();
+
+	// Заголовок окна загрузим из ресурсов.
+	const std::string caption(pSettings->LocaleStr(cErrorDlgCaption));
+
+	auto dialog = std::make_shared<MsgBox>(pSettings, errMessage, caption, MsgBox::eMbType::cMbOk);
+	wManager->present_modal(this, dialog);
+	dialog->initWindow(pSettings->fileResDoc.get_file_system());
+}
+
 
 
 // trim from beginning of string (left)

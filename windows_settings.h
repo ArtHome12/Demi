@@ -115,5 +115,8 @@ private:
 
 	// Обновляет надписи с количествами.
 	void updateAmounts();
+
+	// Показывает сообщение об ошибке.
+	void showError(const std::string errMessage);
 };
 

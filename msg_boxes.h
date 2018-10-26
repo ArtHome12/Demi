@@ -12,13 +12,13 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 
 #include "settings_storage.h"
 
-enum eMbType { cMbNone, cMbOkCancel, cMbOk, cMbCancel};
-enum eMbResultType { cMbResultOk, cMbResultCancel };
-
 
 class MsgBox : public clan::WindowController
 {
 public:
+	enum eMbType { cMbNone, cMbOkCancel, cMbOk, cMbCancel };
+	enum eMbResultType { cMbResultOk, cMbResultCancel };
+
 	MsgBox(SettingsStorage* pSettings, const std::string& text, const std::string& caption, eMbType mbType);
 	~MsgBox();
 

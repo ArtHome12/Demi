@@ -1032,3 +1032,6 @@ size_t World::findElemIndex(const std::string& elemName)
 
 	throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongReaction), elemName));
 }
+
+
+
