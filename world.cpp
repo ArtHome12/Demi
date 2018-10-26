@@ -30,8 +30,6 @@ auto cResGlobalsMCdesintegrationVitalityBarrier = "desintegrationVitalityBarrier
 
 auto cResGlobalsLUCA = "Globals/LUCA";
 auto cResGlobalsLUCAMutationChance = "mutationChance";
-auto cResGlobalsLUCAVisibility = "visibility";
-auto cResGlobalsLUCAFissionBarier = "fissionBarrier";
 auto cResGlobalsLUCAAliveColor = "aliveColor";
 auto cResGlobalsLUCADeadColor = "deadColor";
 
@@ -253,6 +251,7 @@ void World::makeTick()
 		if (protoDot.organism == nullptr)
 			animals.push_back(new demi::Organism(LUCAPos, 0, 1, getModelTime(), 0, genotypesTree.species.front()));
 	}
+	//runEvolution(false);
 }
 
 
@@ -638,7 +637,6 @@ void World::doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc)
 
 	// Считываем вид протоорганизма.
 	prop = resDoc->get_resource(cResGlobalsLUCA).get_element();
-	bool specVisible = prop.get_attribute_bool(cResGlobalsLUCAVisibility);
 	//uint16_t specFissionBarrier = prop.get_attribute_int(cResGlobalsLUCAFissionBarier);
 	clan::Color specAliveColor = clan::Color(clan::Colorf(prop.get_attribute(cResGlobalsLUCAAliveColor)));
 	clan::Color specDeadColor = clan::Color(clan::Colorf(prop.get_attribute(cResGlobalsLUCADeadColor)));
@@ -656,7 +654,7 @@ void World::doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc)
 	// Очистим старое дерево генотипов/видов. Может быть переопределено при считывании двоичного файла.
 	genotypesTree.clear();
 
-	// Создадим гены, определённые в XML-файле.
+	// Прочитаем раздел с генами.
 	//
 	// Список всех названий генов.
 	const std::vector<std::string>& geneNames = resDoc->get_resource_names_of_type(cResGenesType, cResGenesSection);
@@ -704,7 +702,7 @@ void World::doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc)
 		throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongLUCAReaction), LUCAReactionName));
 
 	// Создаём вид специальным конструктором для протоорганизма. Может быть переопределён при считывании двоичного файла.
-	auto species = std::make_shared<demi::Species>(genotypesTree.genotype, geneValue, specVisible, specAliveColor, specDeadColor);
+	auto species = std::make_shared<demi::Species>(genotypesTree.genotype, geneValue, true, specAliveColor, specDeadColor);
 
 	// Сохраняем корневой вид в дереве.
 	genotypesTree.species.push_back(species);
@@ -826,10 +824,6 @@ void World::doSaveSettings(std::shared_ptr<clan::XMLResourceDocument>& resDoc)
 	prop.set_attribute_int(cResGlobalsAppearanceLeft, appearanceTopLeft.x);
 	prop.set_attribute_int(cResGlobalsAppearanceTop, appearanceTopLeft.y);
 	prop.set_attribute_float(cResGlobalsAppearanceScale, appearanceScale);
-
-	// Запишем видимость протоорганизма.
-	prop = resDoc->get_resource(cResGlobalsLUCA).get_element();
-	prop.set_attribute_bool(cResGlobalsLUCAVisibility, genotypesTree.species.front()->getVisible());
 
 	// Записываем время.
 	prop = resDoc->get_resource(cResGlobalsTime).get_element();

@@ -11,7 +11,7 @@
 		<item name="MetabolicConsts" minActiveMetabolicRate="10" minInactiveMetabolicRate="1" desintegrationVitalityBarrier="-100" />
 		<!--Протоорганизм, от которого происходят все остальные. Шанс мутации не меньше чем 0.000000001-->         
 		<!-- main="if (_vitality >= fissionBarrier) _fission()" fissionBarrier="30" -->
-		<item name="LUCA" visibility="true" x="300" y="30" mutationChance="0.0001"
+		<item name="LUCA" x="300" y="30" mutationChance="0.0001"
 			aliveColor="pink" deadColor="brown"
 			geneName="Reaction" geneValue="CO2+4H2=CH4+2H2O"
 		/>
@@ -79,10 +79,10 @@
 			<!--Варианты значений не перечислены, значит 0..65535-->
 		</Gene>
 	</section>
-	<!--Живая природа-->
+	<!--Генотипы, производные от протогенотипа-->
 	<section name="Genotypes">
 		<!--Организм с геном для накопления запаса энергии перед размножением-->
-		<item name="LUCA2" ancestor="LUCA" author="DEMI" visibility="true" geneName="BreedingReserve" geneValue="0"/>
+		<item name="LUCA2" author="DEMI" aliveColor="coral" deadColor="brown" geneName="BreedingReserve" geneValue="0"/>
 	</section>
 </resources>
 <!--Цвета C:\Development\Environment\ClanLib\Documentation\img\colors 
@@ -98,12 +98,12 @@
 	static Color blanchedalmond;
 	static Color blue;
 	static Color blueviolet;
-	static Color brown;
+	static Color brown;                     LUCA dead
 	static Color burlywood;
 	static Color cadetblue;
 	static Color chartreuse;
 	static Color chocolate;
-	static Color coral;
+	static Color coral;                     LUCA2 alive
 	static Color cornflowerblue;		Water
 	static Color cornsilk;
 	static Color crimson;
@@ -202,7 +202,7 @@
 	static Color papayawhip;
 	static Color peachpuff;
 	static Color peru;
-	static Color pink;
+	static Color pink;                      LUCA alive
 	static Color plum;
 	static Color powderblue;
 	static Color purple;

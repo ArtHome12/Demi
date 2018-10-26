@@ -88,6 +88,16 @@ Organism::~Organism()
 
 bool Organism::makeTick()
 {
+	// Если организм мёртв, его программа коротка.
+	if (!isAlive()) {
+		// Вычитаем немного энергии, чтобы он разложился.
+		processInactiveVitality();
+
+		// Возвратим ложь, поздно размножаться.
+		return false;
+	}
+
+
 	// Ссылка на точку, где находится клетка, для оптимизации.
 	Dot& dot = center.get_dot(0, 0);
 
@@ -139,10 +149,12 @@ bool Organism::makeTick()
 		for (auto &reagent : ourReaction->leftReagents)
 			globalWorld.amounts.decAmount(reagent.elementIndex, reagent.amount);
 
-		// Сохраним полученную энергию, если не достигли максимума.
+		// Сохраним полученную энергию, если не достигли максимума. При максимуме организм должен умереть - неутилизированная энергия его разрывает.
 		vitality += ourReaction->vitalityProductivity;
-		if (vitality > cMaxVitality)
-			vitality = cMaxVitality;
+		if (vitality > cMaxVitality) {
+			vitality = 0;
+			ourSpecies->decAliveCount();
+		}
 
 		// Возвратим истину, если готовы делиться.
 		return vitality >= 2;
