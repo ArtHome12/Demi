@@ -83,7 +83,7 @@
 	<!--Генотипы, производные от протогенотипа-->
 	<section name="Genotypes">
 		<!--Организм с геном для накопления запаса энергии перед размножением-->
-		<item name="LUCA2" author="DEMI" aliveColor="coral" deadColor="brown" geneName="BreedingReserve" geneValue="0"/>
+		<Genotype name="LUCA2" author="DEMI" aliveColor="coral" deadColor="brown" geneName="BreedingReserve" geneValue="0"/>
 	</section>
 </resources>
 <!--Цвета C:\Development\Environment\ClanLib\Documentation\img\colors 

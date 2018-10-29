@@ -46,11 +46,19 @@ geneValues_t Gene::getGeneMaxValue() const
 /////////////////////////////////////////////////////////////////////////////////
 // Класс для описания генотипа - совокупности генов, организованных иерархически.
 /////////////////////////////////////////////////////////////////////////////////
-Genotype::Genotype(GenotypesTree& aTreeNode, const Gene& gene, const std::string& aGenotypeName, const std::string& aGenotypeAuthor) :
+Genotype::Genotype(GenotypesTree& aTreeNode,
+	const Gene& gene,
+	const std::string& aGenotypeName,
+	const std::string& aGenotypeAuthor,
+	const clan::Color& AaliveColor,
+	const clan::Color& AdeadColor
+) :
 	treeNode(aTreeNode),
 	ownGene(gene),
 	genotypeName(aGenotypeName),
-	genotypeAuthor(aGenotypeAuthor)
+	genotypeAuthor(aGenotypeAuthor),
+	aliveColor(AaliveColor), 
+	deadColor(AdeadColor)
 {
 	// Для ускорения рассчитаем часто используемый параметр.
 	std::shared_ptr<Genotype>& anc = getAncestor();

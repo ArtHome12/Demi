@@ -61,7 +61,13 @@ namespace demi {
 	class GenotypesTree;
 	class Genotype {
 	public:
-		Genotype(GenotypesTree& aTreeNode, const Gene& gene, const std::string& aGenotypeName, const std::string& aGenotypeAuthor);
+		Genotype(GenotypesTree& aTreeNode, 
+			const Gene& gene, 
+			const std::string& aGenotypeName, 
+			const std::string& aGenotypeAuthor, 
+			const clan::Color& AaliveColor,
+			const clan::Color& AdeadColor
+		);
 
 		Genotype(const Genotype& sourceGene) = delete;
 		void operator=(const Genotype& sourceGene) = delete;
@@ -95,6 +101,10 @@ namespace demi {
 		void decAliveCount();
 		size_t getAliveCount() const { return aliveCount; }
 
+		// Цвета генотипа.
+		const clan::Color& getAliveColor() { return aliveColor; }
+		const clan::Color& getDeadColor() { return deadColor; }
+
 	private:
 		// Узел дерева генотипов, относящийся к данному генотипу.
 		GenotypesTree& treeNode;
@@ -113,6 +123,9 @@ namespace demi {
 
 		// Количество живых организмов данного вида (для статистики).
 		size_t aliveCount = 0;
+
+		// Цвет для живого и мёртвого организмов.
+		clan::Color aliveColor, deadColor;
 	};
 
 
