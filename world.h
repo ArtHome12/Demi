@@ -229,7 +229,7 @@ private:
 	void doLoadInanimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc);
 	void doLoadReactions(std::shared_ptr<clan::XMLResourceDocument>& resDoc);
 	void doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc);
-	void doLoadGenotypes(clan::XMLResourceNode &res, demi::GenotypesTree* treeItem);
+	void doLoadGenotypes(clan::DomElement& node, demi::GenotypesTree* treeItem, std::map<std::string, std::vector<std::string>>& geneDatas);
 	void doLoadBinary(const std::string &filename);
 	void doSaveSettings(std::shared_ptr<clan::XMLResourceDocument>& resDoc);
 	void doSaveBinary(const std::string &filename);

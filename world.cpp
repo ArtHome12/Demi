@@ -64,6 +64,12 @@ auto cResReactionsAmount = "amount";
 
 
 auto cResGenotypesSection = "Genotypes";
+auto cResGenotypesType = "Genotype";
+auto cResGenotypesName = "name";
+auto cResGenotypesAuthor = "author";
+auto cResGenotypesAliveColor = "aliveColor";
+auto cResGenotypesDeadColor = "deadColor";
+auto cResGenotypesGeneName = "geneName";
 
 auto cResAreaRect = "rect";	// Тег для прямоугольной области начального распределения ресурса/организмов.
 auto cResAreaPoint = "point";	// Тег для точки.
@@ -403,11 +409,8 @@ void World::loadModel(const std::string &filename)
 	// Загрузим реакции.
 	doLoadReactions(resDoc);
 
-	// Загрузим живую природу - протоорганизм и константы.
+	// Загрузим живую природу.
 	doLoadAnimal(resDoc);
-
-	// Загрузим рекурсивно остальные генотипы.
-	//doLoadGenotypes(resDoc->get_resource(cResGenotypesSection), &genotypesTree);
 
 	// Загрузим двоичный файл.
 	doLoadBinary(filename);
@@ -671,47 +674,42 @@ void World::doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc)
 
 	// Сохраняем корневой вид в дереве.
 	genotypesTree.species.push_back(species);
+
+	// Загрузим рекурсивно остальные генотипы.
+	auto genotypeNames = resDoc->get_resource_names_of_type(cResGenotypesType, cResGenotypesSection);
+	for (auto& genotypeName : genotypeNames) {
+		doLoadGenotypes(resDoc->get_resource(genotypeName).get_element(), &genotypesTree, geneDatas);
+	}
 }
 
-void World::doLoadGenotypes(clan::XMLResourceNode &res, demi::GenotypesTree* treeItem)
+void World::doLoadGenotypes(clan::DomElement& node, demi::GenotypesTree* treeItem, std::map<std::string, std::vector<std::string>>& geneDatas)
 {
-	// Если пусто, выходим.
-	if (res.is_null())
-		return;
+	// Поля - название, автор, цвета, название гена и его значение.
+	std::string name = node.get_attribute(cResGenotypesName);
+	std::string author = node.get_attribute(cResGenotypesAuthor);
+	std::string aliveColor = node.get_attribute(cResGenotypesAliveColor);
+	std::string deadColor = node.get_attribute(cResGenotypesDeadColor);
+	std::string geneName = node.get_attribute(cResGenotypesGeneName);
 
-	// Перебираем все значения, то есть все генотипы-сиблинги.
-/*	clan::DomNodeList& nodes = res.get_element().get_elements_by_tag_name(cResGenesValue);
+	// Создаём узел дерева под новый генотип и сохраняем его в дереве.
+	std::shared_ptr<demi::GenotypesTree> newGenotypeTreeNode = std::make_shared<demi::GenotypesTree>();
+	treeItem->ancestor = newGenotypeTreeNode;
+	treeItem->derivatives.push_back(newGenotypeTreeNode);
+
+	// Создаём ген протоорганизма (ген реакций) по данным из карты. Текущий временный объект будет скопирован в генотипе, оверхедом пренебрегаем.
+	demi::Gene gene(geneName, geneDatas.at(geneName));
+
+	// Создаём генотип.
+	std::shared_ptr<demi::Genotype> newGenotype = std::make_shared<demi::Genotype>(*newGenotypeTreeNode.get(), gene, name, author, aliveColor, deadColor);
+
+	// Сохраняем генотип в дереве.
+	newGenotypeTreeNode->genotype = newGenotype;
+
+	// Рекурсивно вызываем себя для вложенных генотипов.
+	clan::DomNodeList& nodes = node.get_elements_by_tag_name(cResGenotypesType);
 	for (int i = nodes.get_length() - 1; i >= 0; --i) {
-
-		// Текущий узел с информацией о генотипе.
-		clan::DomElement &node = nodes.item(i).to_element();
-
-		// Создаём реакцию.
-		//auto curReaction = std::make_shared<demi::ChemReaction>();
-
-		// Поля - название, автор, цвета, название гена и его значение.
-
-		curReaction->name = nodes.get_attribute(cResGenesValueName);
-		curReaction->geoEnergy = reactionNode.get_attribute_float(cResReactionsGeoEnergy);
-		curReaction->solarEnergy = reactionNode.get_attribute_float(cResReactionsSolarEnergy);
-		curReaction->vitalityProductivity = reactionNode.get_attribute_int(cResReactionsVitalityProductivity);
-
-		// Реагенты слева.
-		clan::DomNodeList& leftNodes = reactionNode.get_elements_by_tag_name(cResReactionsLeftReagent);
-		for (int i = leftNodes.get_length() - 1; i >= 0; --i) {
-			clan::DomElement &node = leftNodes.item(i).to_element();
-
-			// Название (элемента) реагента.
-			std::string reagentName = node.get_attribute(cResReactionsReagentName, "");
-
-			// Создаём реагент с индексом вместо названия и количеством.
-			demi::ReactionReagent reagent((uint8_t)findElemIndex(reagentName), node.get_attribute_int(cResReactionsAmount));
-
-			// Добавляем реагент в реакцию.
-			curReaction->leftReagents.push_back(reagent);
-		}
-
-	}*/
+		doLoadGenotypes(nodes.item(i).to_element(), newGenotypeTreeNode.get(), geneDatas);
+	}
 
 
 
