@@ -15,6 +15,7 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 #include <clocale>
 #include <sstream>
 #include "msg_boxes.h"
+#include "tree_view.h"
 
 // Расширение xml-файла и двоичного файла модели и их описания.
 auto cProjectXMLExtension = "demi";
@@ -249,7 +250,7 @@ void WindowsSettings::onButtondownNew()
 	initElemVisibilityTree();
 
 	// Для обновления списка видов при первой возможности.
-	globalWorld.genotypesTree.flagSpaciesChanged = true;
+	globalWorld.genotypesTree->flagSpaciesChanged = true;
 }
 
 void WindowsSettings::onButtondownOpen()
@@ -275,7 +276,7 @@ void WindowsSettings::onButtondownOpen()
 		initElemVisibilityTree();
 
 		// Для обновления списка видов при первой возможности.
-		globalWorld.genotypesTree.flagSpaciesChanged = true;
+		globalWorld.genotypesTree->flagSpaciesChanged = true;
 	}
 }
 
@@ -397,7 +398,7 @@ void WindowsSettings::onButtondownRestart()
 			initElemVisibilityTreeAfterRestart();
 
 			// Для обновления списка видов при первой возможности.
-			globalWorld.genotypesTree.flagSpaciesChanged = true;
+			globalWorld.genotypesTree->flagSpaciesChanged = true;
 		}
 	};
 	wManager->present_modal(this, dialog);
@@ -477,9 +478,16 @@ void WindowsSettings::setModelFilename(const std::string &newName)
 void WindowsSettings::modelRenderNotify(size_t secondsElapsed)
 {
 	// Обновим надписи с количествами, если панель не скрыта.
-	if (!hidden())
-		updateAmounts();
-	
+	if (!hidden()) {
+		try {
+			updateAmounts();
+		}
+		catch (...)
+		{ //-V565
+		  // Ошибки могли возникнуть только при доступе на чтение, игнорируем их. Временно и криво!!!
+		}
+	}
+
 	// Автосохранение. Если прошёл час и установлена галочка регулярного автосохранения модели, сделаем это.
 	//
 	if (secondsElapsed - this->secondsElapsed > 3600) {
@@ -555,24 +563,50 @@ void WindowsSettings::initAnimalVisibility()
 
 	// Протоорганизм (вид).
 	auto& tree = globalWorld.genotypesTree;
-	auto& LUCAGenotype = tree.genotype;
+	auto& LUCAGenotype = tree->genotype;
 
 	// Корневой узел под протовид.
-	auto& LUCAGenotypeNode = std::make_shared<TreeItem>(cachedAnimalPrefixLabel + LUCAGenotype->getGenotypeName(), true, size_t(0));
+	auto LUCAGenotypeNode = std::make_shared<TreeItem>(cachedAnimalPrefixLabel + LUCAGenotype->getGenotypeName(), true, size_t(0));
 	rootNodeS->addChild(LUCAGenotypeNode);
 
 	// Надпись под количество.
 	panelOrganismAmounts->add_child(createLabelForAmount("-"));
 
-	// Добавляем виды организмов.  Для производных видов не доделано!
-	for (auto& item : tree.species) {
+	// Добавляем виды организмов.
+	for (auto& item : tree->species) {
 		// Название генотипа указано ранее, выводим имена генов и их значения.
 		auto curNode = std::make_shared<TreeItem>(item->getSpeciesName(), item->getVisible(), size_t(item.get()));
 		LUCAGenotypeNode->addChild(curNode);
 		panelOrganismAmounts->add_child(createLabelForAmount("-"));
 	}
 
+	// Добавляем производные генотипы и виды рекурсивно.
+	doInitAnimalVisibility(tree, LUCAGenotypeNode);
+
 	pTreeViewSpecies->setRootItem(rootNodeS);
+}
+
+void WindowsSettings::doInitAnimalVisibility(std::shared_ptr<demi::GenotypesTree> treeNode, std::shared_ptr<TreeItem> item)
+{
+	for (auto& derivative : treeNode->derivatives) {
+		// Узел под генотип.
+		auto newNode = std::make_shared<TreeItem>(derivative->genotype->getGenotypeName(), true, size_t(0));
+		item->addChild(newNode);
+
+		// Надпись под количество.
+		panelOrganismAmounts->add_child(createLabelForAmount("-"));
+
+		// Добавляем виды организмов.
+		for (auto& specItem : derivative->species) {
+			// Название генотипа указано ранее, выводим имена генов и их значения.
+			auto curNode = std::make_shared<TreeItem>(specItem->getSpeciesName(), specItem->getVisible(), size_t(specItem.get()));
+			newNode->addChild(curNode);
+			panelOrganismAmounts->add_child(createLabelForAmount("-"));
+		}
+
+		// Добавляем производные узлы.
+		doInitAnimalVisibility(derivative, newNode);
+	}
 }
 
 
@@ -603,31 +637,38 @@ void WindowsSettings::updateAmounts()
 
 	// Если было обновление видов, переинициализируем надписи.
 	auto& tree = globalWorld.genotypesTree;
-	if (tree.flagSpaciesChanged) {
+	if (tree->flagSpaciesChanged) {
 
 		// Сбрасываем флаг.
-		tree.flagSpaciesChanged = false;
+		tree->flagSpaciesChanged = false;
 
 		// Инициалиируем надписи.
 		initAnimalVisibility();
 	}
 
-
-	// Первая надпись - под корневой вид.
-	//
-	// Преобразуем указатель на базовый тип View на дочерний LabelView.
-	auto& childIter = panelOrganismAmounts->children().begin();
-	std::shared_ptr<clan::LabelView> label = std::dynamic_pointer_cast<clan::LabelView>(*childIter);
-	// Впишем количество с делением по разрядам.
-	label->set_text(IntToStrWithDigitPlaces<unsigned long long>(tree.genotype->getAliveCount()), true);
-
-	// Остальные надписи под виды корневого. Для производных видов не доделано!
-	for (auto& item : tree.species) {
-		label = std::dynamic_pointer_cast<clan::LabelView>(*(++childIter));
-		label->set_text(IntToStrWithDigitPlaces<unsigned long long>(item->getAliveCount()), true);
-	}
+	// Обновим рекурсивно все надписи. Первая надпись - под корневой генотип.
+	doUpdateAnimalAmounts(tree, panelOrganismAmounts->children().begin());
 }
 
+void WindowsSettings::doUpdateAnimalAmounts(std::shared_ptr<demi::GenotypesTree> treeNode, std::_Vector_const_iterator<std::_Vector_val<std::_Simple_types<std::shared_ptr<clan::View>>>>& iter)
+{
+	// Преобразуем указатель с общего View непосредственно на Label.
+	std::shared_ptr<clan::LabelView> label = std::dynamic_pointer_cast<clan::LabelView>(*iter);
+
+	// Впишем количество генотипов текущего узла с делением по разрядам.
+	label->set_text(IntToStrWithDigitPlaces<unsigned long long>(treeNode->genotype->getAliveCount()), true);
+
+	// Обновим остальные надписи с видами генотипа.
+	for (auto& item : treeNode->species) {
+		label = std::dynamic_pointer_cast<clan::LabelView>(*(++iter));
+		label->set_text(IntToStrWithDigitPlaces<unsigned long long>(item->getAliveCount()), true);
+	}
+
+	// Вызовем рекурсивно для производных генотипов.
+	for (auto& derTreeNode : treeNode->derivatives) {
+		doUpdateAnimalAmounts(derTreeNode, ++iter);
+	}
+}
 
 
 
@@ -712,7 +753,7 @@ void WindowsSettings::loadModel(const std::string& filename)
 }
 
 // Показывает сообщение об ошибке.
-void WindowsSettings::showError(const std::string errMessage)
+void WindowsSettings::showError(const std::string& errMessage)
 {
 	auto pSettings = globalWorld.getSettingsStorage();
 

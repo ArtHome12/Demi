@@ -46,7 +46,7 @@ geneValues_t Gene::getGeneMaxValue() const
 /////////////////////////////////////////////////////////////////////////////////
 // Класс для описания генотипа - совокупности генов, организованных иерархически.
 /////////////////////////////////////////////////////////////////////////////////
-Genotype::Genotype(GenotypesTree& aTreeNode,
+Genotype::Genotype(std::shared_ptr<demi::GenotypesTree> aTreeNode,
 	const Gene& gene,
 	const std::string& aGenotypeName,
 	const std::string& aGenotypeAuthor,
@@ -79,8 +79,8 @@ const Gene& Genotype::getGeneByName(const std::string& name)
 		return ownGene;
 
 	// Обращаемся к родителю.
-	if (treeNode.ancestor)
-		treeNode.ancestor->genotype->getGeneByName(name);
+	if (treeNode->ancestor)
+		treeNode->ancestor->genotype->getGeneByName(name);
 
 	// Если более общего вида нет, сообщаем об ошибке.
 	throw EGeneNotFound(name);
@@ -94,22 +94,22 @@ void Genotype::incAliveCount()
 	++aliveCount; 
 
 	// Если есть более общий вид, уведомляем его.
-	if (treeNode.ancestor)
-		treeNode.ancestor->genotype->incAliveCount();
+	if (treeNode->ancestor)
+		treeNode->ancestor->genotype->incAliveCount();
 }
 
 void Genotype::decAliveCount() 
 { 
 	--aliveCount; 
-	if (treeNode.ancestor)
-		treeNode.ancestor->genotype->decAliveCount();
+	if (treeNode->ancestor)
+		treeNode->ancestor->genotype->decAliveCount();
 }
 
 // Возвращает предшественника или nullptr.
 std::shared_ptr<Genotype> Genotype::getAncestor() const
 { 
 	// Указатель на вышустоящий узел дерева видов.
-	auto& anc = treeNode.ancestor;
+	auto& anc = treeNode->ancestor;
 
 	// Если не пуст, вернём генотип узла-предка.
 	return anc ? anc->genotype : nullptr;
@@ -121,10 +121,8 @@ std::shared_ptr<Genotype> Genotype::getAncestor() const
 /////////////////////////////////////////////////////////////////////////////////
 Species::Species(const std::shared_ptr<Genotype>& genotype,
 	geneValues_t geneValue,
-	bool Avisible,
-	const clan::Color& AaliveColor,
-	const clan::Color& AdeadColor
-) : speciesGenotype(genotype), visible(Avisible), aliveColor(AaliveColor), deadColor(AdeadColor)
+	bool Avisible
+) : speciesGenotype(genotype), visible(Avisible), aliveColor(genotype->getAliveColor()), deadColor(genotype->getDeadColor())
 {
 	// Клетка вида. Требует переработки в будущем после появления клеток разных видов.
 	cells.push_back(std::make_shared<demi::CellAbdomen>());
@@ -178,18 +176,35 @@ Species::Species(const Species& ancestor, const std::shared_ptr<std::vector<gene
 }
 
 
+// Конструктор для использования при мутации для создания первого вида для генотипа.
+Species::Species(const std::shared_ptr<Genotype>& genotype, const Species& ancestor)
+	: speciesGenotype(genotype), visible(ancestor.visible), aliveColor(genotype->getAliveColor()), deadColor(genotype->getDeadColor()), geneValues(ancestor.geneValues), geneValuesMax(ancestor.geneValuesMax)
+{
+	// Клетка вида. Требует переработки в будущем после появления клеток разных видов.
+	cells.push_back(std::make_shared<demi::CellAbdomen>());
+
+	// Добавляем значение для нового гена в интервале от нуля до максимального.
+	std::uniform_int_distribution<> rnd_Elem(0, genotype->getOwnGeneMaxValue());
+	geneValues.push_back(geneValues_t(rnd_Elem(globalWorld.getRandomGenerator())));
+
+	// Для оптимизации.
+	geneValuesCopy = std::make_shared<std::vector<geneValues_t>>(geneValues);
+	geneValuesMax.push_back(genotype->getOwnGeneMaxValue());
+}
+
+
 // Возвращает значение требуемого гена.
 geneValues_t Species::getGeneValueByName(const std::string& name) const
 {
-	// Имена генов у нас в иерархической цепочке в генотипе, а значения в векторе.
-	// Собираем всё вместе, синхранно двигаясь по вектору и по дереву.
+	// Имена генов у нас в иерархической цепочке в генотипе, а значения в векторе. Собираем всё вместе, 
+	// синхронно разнонаправленно двигаясь по вектору и по дереву (имена генов от последнего к протоорганизму, значения наоборот).
 	std::shared_ptr<Genotype> curGenotype = speciesGenotype;
 
-	for (auto& value : geneValues) {
+	for (auto value = geneValues.rbegin(); value != geneValues.rend(); ++value) {
 	
 		// Если совпадает имя гена, возвращаем значение.
 		if (curGenotype->getOwnGeneName() == name)
-			return value;
+			return *value;
 
 		// Переходим к новому значению автоматически в цикле и вручную к новому гену.
 		curGenotype = curGenotype->getAncestor();
@@ -202,13 +217,15 @@ geneValues_t Species::getGeneValueByName(const std::string& name) const
 // Выводит имена генов и их значения, что и определяет имя вида.
 std::string Species::getSpeciesName() const
 {
-	// Имена генов у нас в иерархической цепочке в генотипе, а значения в векторе.
-	// Собираем всё вместе, синхранно двигаясь по вектору и по дереву.
+	// Имена генов у нас в иерархической цепочке в генотипе, а значения в векторе. Собираем всё вместе, 
+	// синхронно разнонаправленно двигаясь по вектору и по дереву (имена генов от последнего к протоорганизму, значения наоборот).
 	std::string retVal;
 	std::shared_ptr<Genotype> curGenotype = speciesGenotype;
 
-	for (auto& value : geneValues) {
-		retVal = " [" + curGenotype->getOwnGeneName() + ": " + curGenotype->getOwnGeneTextValue(value) + "]" + retVal;
+	for (auto value = geneValues.rbegin(); value != geneValues.rend(); ++value) {
+
+		// Вставляем в начало строки пару имя+текстовое значение.
+		retVal = " [" + curGenotype->getOwnGeneName() + ": " + curGenotype->getOwnGeneTextValue(*value) + "]" + retVal;
 
 		// Переходим к новому значению автоматически в цикле и вручную к новому гену.
 		curGenotype = curGenotype->getAncestor();
@@ -271,11 +288,11 @@ std::shared_ptr<std::vector<geneValues_t>> Species::breeding()
 void Species::initGeneValuesMax()
 {
 	// Гены у нас в иерархической цепочке. Соберём их значения.
-	GenotypesTree* curNode = &speciesGenotype->getTreeNode();
+	std::shared_ptr<demi::GenotypesTree> curNode = speciesGenotype->getTreeNode();
 	while (curNode) {
 		// Ген текущего узла.
 		geneValuesMax.push_back(curNode->genotype->getOwnGeneMaxValue());
-		curNode = curNode->ancestor.get();
+		curNode = curNode->ancestor;
 	}
 }
 

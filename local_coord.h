@@ -32,7 +32,7 @@ public:
 
 	// Количество указанного элемента в абсолютной величине, не включая то, что может быть у организма в запасах.
 	uint64_t getElemAmount(size_t index) const { return res[index]; }
-	void setElementAmount(size_t index, uint64_t amount) { res[index] = amount; }
+	void setElemAmount(size_t index, uint64_t amount) { res[index] = amount; }
 
 	// Увеличивают и уменьшают количество элемента.
 	void incElemAmount(size_t index, uint64_t amount) { res[index] += amount; }

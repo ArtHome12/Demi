@@ -10,9 +10,11 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 
 #pragma once
 
-#include "settings_storage.h"
-#include "tree_view.h"
-
+namespace demi {
+	class GenotypesTree;
+}
+class TreeItem;
+class TreeView;
 
 class WindowsSettings :	public clan::View
 {
@@ -101,6 +103,7 @@ private:
 
 	// Обновляет отображение организмов (которые меняются в процессе расчёта).
 	void initAnimalVisibility();
+	void doInitAnimalVisibility(std::shared_ptr<demi::GenotypesTree> treeNode, std::shared_ptr<TreeItem> item);
 
 	// Создаёт надпись.
 	std::shared_ptr<clan::LabelView> createLabelForAmount(std::string text);
@@ -115,8 +118,9 @@ private:
 
 	// Обновляет надписи с количествами.
 	void updateAmounts();
+	void doUpdateAnimalAmounts(std::shared_ptr<demi::GenotypesTree> treeNode, std::_Vector_const_iterator<std::_Vector_val<std::_Simple_types<std::shared_ptr<clan::View>>>>& iter);
 
 	// Показывает сообщение об ошибке.
-	void showError(const std::string errMessage);
+	void showError(const std::string& errMessage);
 };
 

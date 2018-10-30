@@ -39,7 +39,7 @@ void Dot::getColor(clan::Color &aValue) const
 	// Сначала ищем среди живых организмов. Так как есть вероятность, что расчётный поток изменит их состояние, игнорируем возможные ошибки доступа.
 	//
 	try {
-		for (auto &cell : cells) {
+		/*for (auto &cell : cells) { код с поддержкой многоклеточных организмов пока неактуален. На будущее!!!
 			demi::Organism *cellOrganism = cell->organism;
 			if (cellOrganism != nullptr) {
 				// Проверим, включено ли отображение для данного вида.
@@ -50,7 +50,17 @@ void Dot::getColor(clan::Color &aValue) const
 					return;
 				}
 			}
+		}*/
+		if (organism) {
+			// Проверим, включено ли отображение для данного вида.
+			auto spc = organism->getSpecies();
+			if (spc->getVisible()) {
+				aValue = organism->isAlive() ? spc->getAliveColor() : spc->getDeadColor();
+				aValue.set_alpha(alpha);
+				return;
+			}
 		}
+
 	}
 	catch (...)
 	{ //-V565

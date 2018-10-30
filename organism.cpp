@@ -9,9 +9,9 @@
 =============================================================================== */
 
 #include "precomp.h"
-#include "reactions.h"
 #include "organism.h"
 #include "world.h"
+#include "reactions.h"
 
 using namespace demi;
 
@@ -86,6 +86,7 @@ Organism::~Organism()
 }
 
 
+
 bool Organism::makeTick()
 {
 	// Если организм мёртв, его программа коротка.
@@ -126,7 +127,7 @@ bool Organism::makeTick()
 		// Пополняем количество в клетке и вычитаем в точке.
 		*itAmounts = amount + topIt;
 		++itAmounts;
-		dot.setElementAmount(reagent.elementIndex, maxAvailable - topIt);
+		dot.decElemAmount(reagent.elementIndex, topIt);
 	}
 
 	// Проверка готовности к реакции - должны быть вещества и энергии.
@@ -134,8 +135,7 @@ bool Organism::makeTick()
 
 		// Реакция прошла, выбросим в мир результаты.
 		for (auto &reagent : ourReaction->rightReagents) {
-			uint64_t dotAmount = dot.getElemAmount(reagent.elementIndex) + reagent.amount;
-			dot.setElementAmount(reagent.elementIndex, dotAmount);
+			dot.incElemAmount(reagent.elementIndex, reagent.amount);
 
 			// Не забудем обновить и общее количество.
 			globalWorld.amounts.incAmount(reagent.elementIndex, reagent.amount);

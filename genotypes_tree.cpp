@@ -12,6 +12,7 @@ Copyright (c) 2013-2018 by Artem Khomenko _mag12@yahoo.com.
 #include "organism.h"
 #include "gene.h"
 #include "genotypes_tree.h"
+#include "world.h"
 
 using namespace demi;
 
@@ -67,9 +68,46 @@ const std::shared_ptr<Species> GenotypesTree::breeding(const std::shared_ptr<dem
 	// ѕолучаем новые (мутировавшие) значени€ генов или nullptr, если мутаций не случилось.
 	std::shared_ptr<std::vector<geneValues_t>> newGeneValues = oldSpec->breeding();
 
-	// ћутации не произошло, возвращаем исходный вид.
-	if (!newGeneValues)
+	// ≈сли мутации в существующих генах не произошло, новые проверки.
+	if (!newGeneValues) {
+
+		// ћутаци€ с новым геном должна быть реже более заур€дной, используем двойную веро€тность.
+		if (globalWorld.activateMutation() /*&& globalWorld.activateMutation()*/) {
+			
+			// Ќеобходимо вернуть вид с производным генотипом, если он вообще задан.
+			size_t num = derivatives.size();
+			if (!num)
+				// ¬озвращаем тот же самый вид, мутаци€ бы случилась, да производного генотипа нет.
+				return oldSpec;
+
+			// ¬ыберем из имеющихс€ производных генотипов.
+			std::uniform_int_distribution<> rnd_Index(0, num - 1);
+			size_t index = rnd_Index(globalWorld.getRandomGenerator());
+			auto& newTree = derivatives[index];
+			auto& derSpecs = newTree->species;
+
+			// ƒл€ производного генотипа создаЄм новый вид на основе текущего.
+			std::shared_ptr<demi::Species> newSpec = std::make_shared<demi::Species>(newTree->genotype, *oldSpec.get());
+
+			// ѕровер€ем, нет ли уже вида с подобными генами, иначе будет дублирование видов с одинаковыми мутаци€ми.
+			for (auto& derSpec : derSpecs) {
+				// ≈сли уже есть такой вид, возвращаем его.
+				if (derSpec->isTheSameGeneValues(*newSpec.get()))
+					return derSpec;
+			}
+
+			// —охран€ем новый вид.
+			derSpecs.push_back(newSpec);
+
+			// ѕоднимаем флаг дл€ внешнего кода, что есть изменени€.
+			flagSpaciesChanged = true;
+
+			return newSpec;
+		}
+
+		// ¬озвращаем тот же самый вид, никаких мутаций нет.
 		return oldSpec;
+	}
 
 	// ѕровер€ем, нет ли уже вида с подобными генами, иначе будет дублирование видов с одинаковыми мутаци€ми.
 	for (auto& spec : species) {

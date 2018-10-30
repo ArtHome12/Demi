@@ -12,7 +12,7 @@
 		<item name="MetabolicConsts" minActiveMetabolicRate="10" minInactiveMetabolicRate="1" desintegrationVitalityBarrier="-100" />
 		<!--ѕротоорганизм, от которого происход€т все остальные. Ўанс мутации не меньше чем 0.000000001-->         
 		<!-- main="if (_vitality >= fissionBarrier) _fission()" fissionBarrier="30" -->
-		<item name="LUCA" x="300" y="30" mutationChance="0.0001"
+		<item name="LUCA" x="300" y="30" mutationChance="0.01"
 			aliveColor="pink" deadColor="brown"
 			geneName="Reaction" geneValue="CO2+4H2=CH4+2H2O"
 		/>

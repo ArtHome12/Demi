@@ -150,7 +150,7 @@ clan::Point Solar::getPos(const demi::DemiTime &timeModel)
 // =============================================================================
 // Земная поверхность, двумерный массив точек.
 // =============================================================================
-World::World() : generator(random_device()), rnd_angle(0, 7), rnd_Coord(0, 12 - 1), thread(std::thread(&World::workerThread, this))
+World::World() : generator(random_device()), rnd_angle(0, 7), rnd_Coord(0, 12 - 1), thread(std::thread(&World::workerThread, this)), genotypesTree(std::make_shared<demi::GenotypesTree>())
 {
 	// Поток не стартанёт до установки флага.
 }
@@ -190,10 +190,10 @@ void World::makeTick()
 	processDots();
 
 	// Создаём экземпляр протоорганизма, если нет живых организмов и есть место.
-	if (!genotypesTree.genotype->getAliveCount()) {
+	if (!genotypesTree->genotype->getAliveCount()) {
 		Dot& protoDot = LocalCoord(LUCAPos).get_dot(0, 0);
 		if (protoDot.organism == nullptr)
-			new demi::Organism(LUCAPos, 0, 1, getModelTime(), 0, genotypesTree.species.front());
+			new demi::Organism(LUCAPos, 0, 1, getModelTime(), 0, genotypesTree->species.front());
 	}
 	//runEvolution(false);
 }
@@ -205,7 +205,7 @@ void World::fillRectResource(size_t resId, unsigned long long amount, const clan
 	//
 	for (size_t x = rect.left; x != rect.right; ++x)
 		for (size_t y = rect.top; y != rect.bottom; ++y)
-			arDots[getDotIndexFromXY(x, y)].setElementAmount(resId, amount);
+			arDots[getDotIndexFromXY(x, y)].setElemAmount(resId, amount);
 }
 
 
@@ -311,8 +311,8 @@ void World::processDots()
 
 						// Вид нового организма, возможно с мутацией либо тот же самый.
 						const std::shared_ptr<demi::Species>& oldSpec = curOrganism->getSpecies();
-						demi::GenotypesTree& treeNode = oldSpec->getGenotype()->getTreeNode();
-						const std::shared_ptr<demi::Species> newSpec = treeNode.breeding(oldSpec);
+						std::shared_ptr<demi::GenotypesTree> treeNode = oldSpec->getGenotype()->getTreeNode();
+						const std::shared_ptr<demi::Species> newSpec = treeNode->breeding(oldSpec);
 
 						// Количество делений с защитой от переполнения.
 						uint64_t newAncestorCount = curOrganism->getAncestorsCount() + 1;
@@ -470,15 +470,15 @@ void World::doLoadInanimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc)
 	elemCount = elementNames.size();
 
 	// Выделим память под массивы.
-	arDots = new Dot[worldSize.width * worldSize.height];	// точки поверхности.
-	arResColors = new clan::Color[elemCount];				// цвета элементов.
-	arResMax = new unsigned long long[elemCount];			// максимальные концентрации элементов в одной точке.
-	arResNames = new std::string[elemCount];				// названия элементов.
-	arResVisible = new bool[elemCount];						// Видимость элементов.
-	arResVolatility = new float[elemCount];					// летучесть элементов.
-	arEnergy = new Geothermal[energyCount];					// геотермальные источники.
+	arDots = new Dot[worldSize.width * worldSize.height];		// точки поверхности.
+	arResColors = new clan::Color[elemCount];					// цвета элементов.
+	arResMax = new unsigned long long[elemCount];				// максимальные концентрации элементов в одной точке.
+	arResNames = new std::string[elemCount];					// названия элементов.
+	arResVisible = new bool[elemCount];							// Видимость элементов.
+	arResVolatility = new float[elemCount];						// летучесть элементов.
+	arEnergy = new Geothermal[energyCount];						// геотермальные источники.
 
-															// Считываем названия элементов.
+	// Считываем названия элементов.
 	for (size_t i = 0; i != elemCount; ++i) {
 
 		// Элемент.
@@ -605,7 +605,6 @@ void World::doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc)
 
 	// Считываем вид протоорганизма.
 	prop = resDoc->get_resource(cResGlobalsLUCA).get_element();
-	//uint16_t specFissionBarrier = prop.get_attribute_int(cResGlobalsLUCAFissionBarier);
 	clan::Color specAliveColor = clan::Color(clan::Colorf(prop.get_attribute(cResGlobalsLUCAAliveColor)));
 	clan::Color specDeadColor = clan::Color(clan::Colorf(prop.get_attribute(cResGlobalsLUCADeadColor)));
 	LUCAPos = clan::Point(prop.get_attribute_int("x"), prop.get_attribute_int("y"));
@@ -620,7 +619,7 @@ void World::doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc)
 	const std::string LUCAReactionName = prop.get_attribute("geneValue");
 
 	// Очистим старое дерево генотипов/видов. Может быть переопределено при считывании двоичного файла.
-	genotypesTree.clear();
+	genotypesTree->clear();
 
 	// Прочитаем раздел с генами.
 	//
@@ -656,7 +655,7 @@ void World::doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc)
 	demi::Gene gene(LUCAGeneName, geneDatas.at(LUCAGeneName));
 
 	// Создаём генотип протоорганизма.
-	genotypesTree.genotype = std::make_shared<demi::Genotype>(genotypesTree, gene, "LUCA", "Demi", specAliveColor, specDeadColor);
+	genotypesTree->genotype = std::make_shared<demi::Genotype>(genotypesTree, gene, "LUCA", "Demi", specAliveColor, specDeadColor);
 
 	// Определим индекс реакции протоорганизма, то есть значение его гена.
 	// Для этого переберём все реакции в поисках нужной. По мере увеличения количества можно переделать на map.
@@ -670,37 +669,37 @@ void World::doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc)
 		throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongLUCAReaction), LUCAReactionName));
 
 	// Создаём вид специальным конструктором для протоорганизма. Может быть переопределён при считывании двоичного файла.
-	auto species = std::make_shared<demi::Species>(genotypesTree.genotype, geneValue, true, specAliveColor, specDeadColor);
+	auto species = std::make_shared<demi::Species>(genotypesTree->genotype, geneValue, true);
 
 	// Сохраняем корневой вид в дереве.
-	genotypesTree.species.push_back(species);
+	genotypesTree->species.push_back(species);
 
 	// Загрузим рекурсивно остальные генотипы.
 	auto genotypeNames = resDoc->get_resource_names_of_type(cResGenotypesType, cResGenotypesSection);
 	for (auto& genotypeName : genotypeNames) {
-		doLoadGenotypes(resDoc->get_resource(genotypeName).get_element(), &genotypesTree, geneDatas);
+		doLoadGenotypes(resDoc->get_resource(genotypeName).get_element(), genotypesTree, geneDatas);
 	}
 }
 
-void World::doLoadGenotypes(clan::DomElement& node, demi::GenotypesTree* treeItem, std::map<std::string, std::vector<std::string>>& geneDatas)
+void World::doLoadGenotypes(clan::DomElement& node, std::shared_ptr<demi::GenotypesTree> ancestorTreeItem, std::map<std::string, std::vector<std::string>>& geneDatas)
 {
 	// Поля - название, автор, цвета, название гена и его значение.
 	std::string name = node.get_attribute(cResGenotypesName);
 	std::string author = node.get_attribute(cResGenotypesAuthor);
-	std::string aliveColor = node.get_attribute(cResGenotypesAliveColor);
-	std::string deadColor = node.get_attribute(cResGenotypesDeadColor);
+	clan::Color aliveColor = clan::Color(clan::Colorf(node.get_attribute(cResGenotypesAliveColor)));
+	clan::Color deadColor = clan::Color(clan::Colorf(node.get_attribute(cResGenotypesDeadColor)));
 	std::string geneName = node.get_attribute(cResGenotypesGeneName);
 
 	// Создаём узел дерева под новый генотип и сохраняем его в дереве.
 	std::shared_ptr<demi::GenotypesTree> newGenotypeTreeNode = std::make_shared<demi::GenotypesTree>();
-	treeItem->ancestor = newGenotypeTreeNode;
-	treeItem->derivatives.push_back(newGenotypeTreeNode);
+	newGenotypeTreeNode->ancestor = ancestorTreeItem;
+	ancestorTreeItem->derivatives.push_back(newGenotypeTreeNode);
 
 	// Создаём ген протоорганизма (ген реакций) по данным из карты. Текущий временный объект будет скопирован в генотипе, оверхедом пренебрегаем.
 	demi::Gene gene(geneName, geneDatas.at(geneName));
 
 	// Создаём генотип.
-	std::shared_ptr<demi::Genotype> newGenotype = std::make_shared<demi::Genotype>(*newGenotypeTreeNode.get(), gene, name, author, aliveColor, deadColor);
+	std::shared_ptr<demi::Genotype> newGenotype = std::make_shared<demi::Genotype>(newGenotypeTreeNode, gene, name, author, aliveColor, deadColor);
 
 	// Сохраняем генотип в дереве.
 	newGenotypeTreeNode->genotype = newGenotype;
@@ -708,7 +707,7 @@ void World::doLoadGenotypes(clan::DomElement& node, demi::GenotypesTree* treeIte
 	// Рекурсивно вызываем себя для вложенных генотипов.
 	clan::DomNodeList& nodes = node.get_elements_by_tag_name(cResGenotypesType);
 	for (int i = nodes.get_length() - 1; i >= 0; --i) {
-		doLoadGenotypes(nodes.item(i).to_element(), newGenotypeTreeNode.get(), geneDatas);
+		doLoadGenotypes(nodes.item(i).to_element(), newGenotypeTreeNode, geneDatas);
 	}
 
 
@@ -750,12 +749,12 @@ void World::doLoadBinary(const std::string &filename)
 			throw clan::Exception(clan::string_format(pSettings->LocaleStr(cWrongBinMarker), "Species:", strSecMarker));
 
 		// Считываем поля производных видов (значения генов, видимость и цвета), удалив вид протоорганизма.
-		genotypesTree.clear();
-		genotypesTree.loadFromFile(binFile);
+		genotypesTree->clear();
+		genotypesTree->loadFromFile(binFile);
 			
 		// Создадим при помощи дерева словарь видов для того, чтобы при считывании организмов использовать лишь ключ словаря.
 		speciesDict_t speciesDict;
-		genotypesTree.generateDict(speciesDict);
+		genotypesTree->generateDict(speciesDict);
 
 		// Маркер начала массива точек.
 		strSecMarker = binFile.read_string_nul();
@@ -866,11 +865,11 @@ void World::doSaveBinary(const std::string &filename)
 	binFile.write_string_nul("Species:");
 
 	// Записываем поля видов (значения генов, видимость и цвета).
-	genotypesTree.saveToFile(binFile);
+	genotypesTree->saveToFile(binFile);
 
 	// Для того, чтобы не писать перед каждым организмом строку с его названием генотипа, сделаем словарь и будем пользоваться номером.
 	speciesDict_t speciesDict;
-	genotypesTree.generateDict(speciesDict);
+	genotypesTree->generateDict(speciesDict);
 
 	// Записываем маркер начала массива точек.
 	binFile.write_string_nul("Dots:");

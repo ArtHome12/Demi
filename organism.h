@@ -9,10 +9,9 @@
 =============================================================================== */
 #pragma once
 
-#include "reactions.h"
+#include "gene.h"
 #include "local_coord.h"
 #include "demi_time.h"
-#include "gene.h"
 
 
 namespace demi {
@@ -27,10 +26,15 @@ namespace demi {
 	// Максимально возможная накопленная (жизненная) энергия.
 	const uint16_t cMaxVitality = UINT16_MAX - UINT8_MAX;
 
+	// Некоторые предварительные объявления.
+	class Organism;
+	class DemiTime;
+	class ChemReaction;
+
+
 //
 // Клетка, базовый тип.
 //
-	class Organism;
 class GenericCell
 {
 public:
@@ -84,7 +88,7 @@ public:
 	const DemiTime& getBirthday() const { return birthday; }
 	uint64_t getAncestorsCount() const { return ancestorsCount; }
 	const std::shared_ptr<Species>& getSpecies() const { return ourSpecies; }
-	 organismAmounts_t& getLeftReagentAmounts()  { return leftReagentAmounts; }
+	organismAmounts_t& getLeftReagentAmounts()  { return leftReagentAmounts; }
 	int32_t getVitality() const { return vitality; }
 	const std::shared_ptr<ChemReaction>& getChemReaction() const { return ourReaction; }
 

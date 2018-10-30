@@ -59,9 +59,10 @@ namespace demi {
 	//  ласс дл€ описани€ генотипа - совокупности генов, организованных иерархически.
 	//
 	class GenotypesTree;
+	class GenericCell;
 	class Genotype {
 	public:
-		Genotype(GenotypesTree& aTreeNode, 
+		Genotype(std::shared_ptr<demi::GenotypesTree> aTreeNode,
 			const Gene& gene, 
 			const std::string& aGenotypeName, 
 			const std::string& aGenotypeAuthor, 
@@ -91,7 +92,7 @@ namespace demi {
 		geneValues_t getOwnGeneMaxValue() const { return ownGene.getGeneMaxValue(); }
 
 		// —сылка на дерево.
-		GenotypesTree& getTreeNode() const { return treeNode; }
+		std::shared_ptr<demi::GenotypesTree> getTreeNode() const { return treeNode; }
 
 		// ¬озвращает предшественника или nullptr.
 		std::shared_ptr<Genotype> getAncestor() const;
@@ -107,7 +108,7 @@ namespace demi {
 
 	private:
 		// ”зел дерева генотипов, относ€щийс€ к данному генотипу.
-		GenotypesTree& treeNode;
+		std::shared_ptr<demi::GenotypesTree> treeNode;
 
 		// √ен, которым насто€щий генотип отличаетс€ от родительского.
 		Gene ownGene;
@@ -136,19 +137,17 @@ namespace demi {
 	class Species
 	{
 	public:
-		//  онструктор дл€ протоорганизма
-		Species(const std::shared_ptr<Genotype>& genotype,
-			geneValues_t geneValue,
-			bool Avisible,
-			const clan::Color& AaliveColor,
-			const clan::Color& AdeadColor
-			);
+		//  онструктор дл€ протоорганизма 
+		Species(const std::shared_ptr<Genotype>& genotype, geneValues_t geneValue, bool Avisible);
 
 		//  онструктор дл€ считывани€ из файла.
 		Species(const std::shared_ptr<Genotype>& genotype, clan::IODevice& binFile);
 
-		//  онструктор дл€ использовани€ при мутации дл€ создани€ производного вида.
+		//  онструктор дл€ использовани€ при мутации дл€ создани€ производного вида на основе существующего.
 		Species(const Species& ancestor, const std::shared_ptr<std::vector<geneValues_t>>& newGeneValues);
+
+		//  онструктор дл€ использовани€ при мутации дл€ создани€ первого вида дл€ генотипа.
+		Species(const std::shared_ptr<Genotype>& genotype, const Species& ancestor);
 
 		// ƒоступ к пол€м.
 		void setVisible(bool AVisible) { visible = AVisible; };
@@ -182,6 +181,7 @@ namespace demi {
 
 		// ¬озващает истину, если значени€ генов совпадают.
 		bool isTheSameGeneValues(const std::shared_ptr<std::vector<geneValues_t>>& otherValues) const { return geneValues == *otherValues.get(); }
+		bool isTheSameGeneValues(const Species& otherSpecies) const { return geneValues == otherSpecies.geneValues; }
 
 	private:
 		// √енотип.

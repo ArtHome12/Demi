@@ -111,7 +111,7 @@ public:
 	Amounts amounts;
 
 	// Объект для связи между интерфейсом и генотипами/видами модели. Древовидный список, в вершине - вид протоорганизма.
-	demi::GenotypesTree genotypesTree;
+	std::shared_ptr<demi::GenotypesTree> genotypesTree;
 
 	// Возвращает скорость модели в тиках в секунду.
 	int getUpdatesPerSecond() { return current_tps; }
@@ -134,7 +134,7 @@ private:
 	// Размеры мира.
 	clan::Size worldSize;
 
-	// Поверхность земли и копия для отображения на экране.
+	// Поверхность земли.
 	Dot *arDots = nullptr;
 
 	// Свойства, используемые для отображения модели - координата левого верхнего угла, масштаб.
@@ -229,7 +229,7 @@ private:
 	void doLoadInanimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc);
 	void doLoadReactions(std::shared_ptr<clan::XMLResourceDocument>& resDoc);
 	void doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc);
-	void doLoadGenotypes(clan::DomElement& node, demi::GenotypesTree* treeItem, std::map<std::string, std::vector<std::string>>& geneDatas);
+	void doLoadGenotypes(clan::DomElement& node, std::shared_ptr<demi::GenotypesTree> ancestorTreeItem, std::map<std::string, std::vector<std::string>>& geneDatas);
 	void doLoadBinary(const std::string &filename);
 	void doSaveSettings(std::shared_ptr<clan::XMLResourceDocument>& resDoc);
 	void doSaveBinary(const std::string &filename);
