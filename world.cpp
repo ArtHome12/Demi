@@ -193,7 +193,7 @@ void World::makeTick()
 	if (!genotypesTree->genotype->getAliveCount()) {
 		Dot& protoDot = LocalCoord(LUCAPos).get_dot(0, 0);
 		if (protoDot.organism == nullptr)
-			new demi::Organism(LUCAPos, 0, 1, getModelTime(), 0, genotypesTree->species.front());
+			new demi::Organism(LUCAPos, 0, 1, timeModel, 0, genotypesTree->species.front());
 	}
 	//runEvolution(false);
 }
@@ -286,8 +286,12 @@ void World::processDots()
 		toDot.res[rndResIndex] += amount;
 
 		// Обработка организма, если он есть. Таким образом у организмов приоритет - в то время как в неживой природе меняется один элемент, меняется и организм.
+		// Перед доступом к полям организма делаем однократную попытку получить монопольный доступ к нему. 
+		// Если не удалось, переходим к следующей точке, а ему не повезло (альтернатива - ждать освобождения). 
+		// С одной стороны такое поведение ускоряет расчёт модели, с другой - потоки-просмотрщики начинают влиять на модель, замедляя организмы, на которые смотрит пользователь.
+		// С третьей стороны это добавляет нелинейности в эволюцию и на фоне непрерывных случайных чисел влияние возможно ничтожно.
 		demi::Organism* curOrganism = fromDot.organism;
-		if (curOrganism) {
+		if (curOrganism && curOrganism->tryLock()) {
 
 			// Если мёртвый организм распался и его надо удалить, сделаем это.
 			if (curOrganism->needDesintegration()) {
@@ -327,7 +331,7 @@ void World::processDots()
 						clan::Point newPoint = curOrganism->getCenter().getGlobalPoint(freePlace);
 
 						// Создаём производный организм. По новому местоположению он поместит сам себя в конструкторе.
-						new demi::Organism(newPoint, newAngle, newVitality, getModelTime(), newAncestorCount, newSpec);
+						new demi::Organism(newPoint, newAngle, newVitality, timeModel, newAncestorCount, newSpec);
 					}
 				}
 				
@@ -344,6 +348,9 @@ void World::processDots()
 					if (!curOrganism->isAlive())
 						curOrganism->processInactiveVitality();
 				}
+
+				// Разблокируем организм.
+				curOrganism->unlock();
 			}
 		}
 
@@ -459,7 +466,6 @@ void World::doLoadInanimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc)
 	timeModel.year = prop.get_attribute_int(cResGlobalsTimeYear, 1);
 	timeModel.day = prop.get_attribute_int(cResGlobalsTimeDay, 1);
 	timeModel.sec = prop.get_attribute_int(cResGlobalsTimeSecond, 0);
-	timeBackup = timeModel;
 
 	// Источники энергии.
 	const std::vector<std::string>& energy = resDoc->get_resource_names_of_type(cResEnergyType, cResEnergySection);
@@ -900,7 +906,7 @@ void World::workerThread()
 	{
 		while (true)
 		{
-			// Останавливаемся до установки флагов, блокируя при необходимости основной поток.
+			// Останавливаемся до установки флагов, блокируя при необходимости основной (интерфейсный) поток.
 			std::unique_lock<std::mutex> lock(threadMutex);
 			threadEvent.wait(lock, [&]() { return threadRunFlag || threadExitFlag; });
 
@@ -916,12 +922,6 @@ void World::workerThread()
 
 			// Выполняем расчёт модели.
 			makeTick();
-
-			// Блокируем основной поток для сохранения результата.
-			lock.lock();
-
-			// Копируем расчётную модель в буфер, используемый для отображения.
-			timeBackup = timeModel;
 
 			//throw clan::Exception("Bang!");	// <--- Use this to test the application handles exceptions in threads
 
@@ -959,7 +959,6 @@ void World::resetModel(const std::string &modelFilename, const std::string &defa
 	try {
 		globalWorld.loadModel(modelFilename);
 		timeModel = demi::DemiTime();
-		timeBackup = timeModel;
 	}
 	catch (...) {
 		// При ошибке загружаем чистую модель.

@@ -51,8 +51,17 @@ Organism::Organism(const clan::Point &Acenter, uint8_t Aangle, int32_t Avitality
 
 	// –азместим свои клетки в точках мира. ѕока одна клетка.
 	Dot &dot = center.get_dot(0, 0);
+
+	// ѕредотвратим доступ со стороны потока, который может начать читать данную точку, до размещени€ и клеток и организма.
+	// —корей всего это состо€ние по-умолчанию, но на вс€кий случай.
+	lockFlag.test_and_set(std::memory_order_acquire);
+
+	// –азместим клетки и указатель на организм.
 	dot.cells.push_back(cells[0]);
 	dot.organism = this;
+
+	// —нимем блокировку.
+	lockFlag.clear(std::memory_order_release);
 
 	// ќткорректируем статистику.
 	if (isAlive())

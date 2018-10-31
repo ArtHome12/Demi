@@ -478,15 +478,8 @@ void WindowsSettings::setModelFilename(const std::string &newName)
 void WindowsSettings::modelRenderNotify(size_t secondsElapsed)
 {
 	// Обновим надписи с количествами, если панель не скрыта.
-	if (!hidden()) {
-		try {
-			updateAmounts();
-		}
-		catch (...)
-		{ //-V565
-		  // Ошибки могли возникнуть только при доступе на чтение, игнорируем их. Временно и криво!!!
-		}
-	}
+	if (!hidden())
+		updateAmounts();
 
 	// Автосохранение. Если прошёл час и установлена галочка регулярного автосохранения модели, сделаем это.
 	//

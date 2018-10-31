@@ -71,15 +71,15 @@ const std::shared_ptr<Species> GenotypesTree::breeding(const std::shared_ptr<dem
 	// ≈сли мутации в существующих генах не произошло, новые проверки.
 	if (!newGeneValues) {
 
+		// Ќеобходимо вернуть вид с производным генотипом, если такие имеютс€.
+		size_t num = derivatives.size();
+		if (!num)
+			// ¬озвращаем тот же самый вид, мутировать не в кого.
+			return oldSpec;
+
 		// ћутаци€ с новым геном должна быть реже более заур€дной, используем двойную веро€тность.
 		if (globalWorld.activateMutation() /*&& globalWorld.activateMutation()*/) {
 			
-			// Ќеобходимо вернуть вид с производным генотипом, если он вообще задан.
-			size_t num = derivatives.size();
-			if (!num)
-				// ¬озвращаем тот же самый вид, мутаци€ бы случилась, да производного генотипа нет.
-				return oldSpec;
-
 			// ¬ыберем из имеющихс€ производных генотипов.
 			std::uniform_int_distribution<> rnd_Index(0, num - 1);
 			size_t index = rnd_Index(globalWorld.getRandomGenerator());
@@ -112,7 +112,7 @@ const std::shared_ptr<Species> GenotypesTree::breeding(const std::shared_ptr<dem
 	// ѕровер€ем, нет ли уже вида с подобными генами, иначе будет дублирование видов с одинаковыми мутаци€ми.
 	for (auto& spec : species) {
 		// ≈сли уже есть такой вид, возвращаем его. »сходный вид дл€ оптимизации не провер€ем, он по-определению не совпадает.
-		if (spec != oldSpec && spec->isTheSameGeneValues(newGeneValues))
+		if (spec != oldSpec && spec->isTheSameGeneValues(*newGeneValues.get()))
 			return spec;
 	}
 

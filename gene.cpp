@@ -39,7 +39,7 @@ geneValues_t Gene::getGeneMaxValue() const
 	// ћаксимальное значение гена определ€етс€ количеством возможных вариантов.
 	size_t size = geneValuesVector.size();
 
-	return geneValues_t(size ? size - 1 : geneValues_t_MAX);
+	return geneValues_t(size ? size - 1 : 1);// geneValues_t_MAX);
 }
 
 
@@ -260,7 +260,7 @@ std::shared_ptr<std::vector<geneValues_t>> Species::breeding()
 	bool changed = false;
 
 	// ѕеребираем все значени€ генов.
-	const size_t len = geneValuesCopy->size();
+	const size_t len = speciesGenotype->getGenotypeLength();	// Ѕолее быстрый способ, чем спрашивать сам вектор о размере.
 	for (size_t i = 0; i != len; ++i) {
 
 		// ќпредел€ем веро€тность мутации.
@@ -295,4 +295,12 @@ void Species::initGeneValuesMax()
 		curNode = curNode->ancestor;
 	}
 }
+
+bool Species::isTheSameGeneValues(const std::vector<geneValues_t>& otherValues) const
+{
+	// —равним два вектора. ƒл€ стандатного оператора сравнени€ выполн€етс€ множество действий дл€ поддержки собственных операторов сравнени€ у типов, поэтому упростим.
+	//return geneValues-> == otherValues;
+	return memcmp(geneValues.data(), otherValues.data(), speciesGenotype->getGenotypeLength() * sizeof(geneValues_t)) == 0;
+}
+
 

@@ -73,7 +73,7 @@ public:
 
 	// Возвращает точки поверхности.
 	Dot *getDotsArray() { return arDots; }
-	const demi::DemiTime& getModelTime() { return timeBackup; }
+	const demi::DemiTime& getModelTime() { return timeModel; }
 
 	// Доступ к свойствам.
 	clan::Size getWorldSize() { return worldSize; }
@@ -117,10 +117,8 @@ public:
 	int getUpdatesPerSecond() { return current_tps; }
 
 private:
-
-	// Текущий момент времени в расчётной модели и в сохранённой для отрисовки на экране копии.
+	// Текущий момент времени в расчётной модели.
 	demi::DemiTime timeModel;
-	demi::DemiTime timeBackup;
 
 	// Источник солнечной энергии.
 	Solar solar;
@@ -206,7 +204,7 @@ private:
 	void addGeothermal(size_t i, const clan::Point &coord);
 
 	// Флаги для управления потоком.
-	bool threadExitFlag = false;		// Если истина, поток должен завершиться.
+	bool threadExitFlag = false;	// Если истина, поток должен завершиться.
 	bool threadRunFlag = false;		// Если истина, то поток работает и изменяет модель, иначе простаивает.
 	bool threadCrashedFlag = false;	// Если истина, значит поток завершился аварийно.
 	std::mutex threadMutex;

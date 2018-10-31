@@ -325,29 +325,28 @@ void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan
 			if (yLine < h) {
 
 				// Выводим информацию об организме, если есть.
-				try {
-					demi::Organism* pOrganism = d.organism;
-					if (pOrganism) {
+				demi::Organism* pOrganism = d.organism;
+				if (pOrganism && pOrganism->tryLock()) {
 
-						// Название генотипа плюс название вида.
-						std::string str = pOrganism->getGenotypeName() + pOrganism->getSpeciesName();
+					// Название генотипа плюс название вида.
+					std::string str = pOrganism->getGenotypeName() + pOrganism->getSpeciesName();
 
-						// Жизненная сила, порог размножения, количество предков, дата рождения.
-						str += IntToStrWithDigitPlaces<int32_t>(pOrganism->getVitality())
-//							+ " / " + IntToStrWithDigitPlaces<uint16_t>(pOrganism->getFissionBarrier())
-							+ ", " + IntToStrWithDigitPlaces<uint64_t>(pOrganism->getAncestorsCount())
-							+" / " + pOrganism->getBirthday().getDateStr();
+					// Жизненная сила, порог размножения, количество предков, дата рождения.
+					str += IntToStrWithDigitPlaces<int32_t>(pOrganism->getVitality())
+						+ ", " + IntToStrWithDigitPlaces<uint64_t>(pOrganism->getAncestorsCount())
+						+" / " + pOrganism->getBirthday().getDateStr();
 
-						// Проверим ограничение на максимальную длину строки.
-						if (str.length() > maxStrLen)
-							str.resize(maxStrLen);
+					// Разблокируем объект.
+					pOrganism->unlock();
 
-						// Выводим строку.
-						cellFont.draw_text(canvas, float(indent), float(yLine), str, color);
-						yLine += cCompactCellResLineHeight;
-					}
+					// Проверим ограничение на максимальную длину строки.
+					if (str.length() > maxStrLen)
+						str.resize(maxStrLen);
+
+					// Выводим строку.
+					cellFont.draw_text(canvas, float(indent), float(yLine), str, color);
+					yLine += cCompactCellResLineHeight;
 				}
-				catch (...) {} //-V565
 			}
 
 			// Отрисовку клеток других организмов в точке оставим на будущее.

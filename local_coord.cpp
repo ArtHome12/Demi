@@ -36,35 +36,30 @@ void Dot::getColor(clan::Color &aValue) const
 	// Солнечный свет и энергия это альфа-канал.
 	unsigned char alpha = (unsigned char)(clan::max<float, float>(getSolarEnergy(), getGeothermalEnergy()) * 255.0f);
 
-	// Сначала ищем среди живых организмов. Так как есть вероятность, что расчётный поток изменит их состояние, игнорируем возможные ошибки доступа.
+	// Сначала ищем среди живых организмов.
 	//
-	try {
-		/*for (auto &cell : cells) { код с поддержкой многоклеточных организмов пока неактуален. На будущее!!!
-			demi::Organism *cellOrganism = cell->organism;
-			if (cellOrganism != nullptr) {
-				// Проверим, включено ли отображение для данного вида.
-				auto spc = cellOrganism->getSpecies();
-				if (spc->getVisible()) {
-					aValue = cellOrganism->isAlive() ? spc->getAliveColor() : spc->getDeadColor();
-					aValue.set_alpha(alpha);
-					return;
-				}
-			}
-		}*/
-		if (organism) {
+	/*for (auto &cell : cells) { код с поддержкой многоклеточных организмов пока неактуален. На будущее!!!
+		demi::Organism *cellOrganism = cell->organism;
+		if (cellOrganism != nullptr) {
 			// Проверим, включено ли отображение для данного вида.
-			auto spc = organism->getSpecies();
+			auto spc = cellOrganism->getSpecies();
 			if (spc->getVisible()) {
-				aValue = organism->isAlive() ? spc->getAliveColor() : spc->getDeadColor();
+				aValue = cellOrganism->isAlive() ? spc->getAliveColor() : spc->getDeadColor();
 				aValue.set_alpha(alpha);
 				return;
 			}
 		}
-
-	}
-	catch (...)
-	{ //-V565
-		// Ошибки могли возникнуть только при доступе на чтение, игнорируем их.
+	}*/
+	if (organism && organism->tryLock()) {
+		// Проверим, включено ли отображение для данного вида.
+		auto spc = organism->getSpecies();
+		if (spc->getVisible()) {
+			aValue = organism->isAlive() ? spc->getAliveColor() : spc->getDeadColor();
+			aValue.set_alpha(alpha);
+			organism->unlock();
+			return;
+		}
+		organism->unlock();
 	}
 
 	// Папали сюда, значит определяем на основе неживых элементов.

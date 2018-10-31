@@ -180,8 +180,8 @@ namespace demi {
 		std::shared_ptr<std::vector<geneValues_t>> breeding();
 
 		// Возващает истину, если значения генов совпадают.
-		bool isTheSameGeneValues(const std::shared_ptr<std::vector<geneValues_t>>& otherValues) const { return geneValues == *otherValues.get(); }
-		bool isTheSameGeneValues(const Species& otherSpecies) const { return geneValues == otherSpecies.geneValues; }
+		bool isTheSameGeneValues(const std::vector<geneValues_t>& otherValues) const;
+		bool isTheSameGeneValues(const Species& otherSpecies) const { return isTheSameGeneValues(otherSpecies.geneValues); }
 
 	private:
 		// Генотип.
