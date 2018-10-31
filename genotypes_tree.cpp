@@ -96,8 +96,10 @@ const std::shared_ptr<Species> GenotypesTree::breeding(const std::shared_ptr<dem
 					return derSpec;
 			}
 
-			// Сохраняем новый вид.
+			// Сохраняем новый вид с блокировкой от параллельного чтения в интерфейсном потоке.
+			lockSpecies();
 			derSpecs.push_back(newSpec);
+			unlockSpecies();
 
 			// Поднимаем флаг для внешнего кода, что есть изменения.
 			flagSpaciesChanged = true;
@@ -116,9 +118,11 @@ const std::shared_ptr<Species> GenotypesTree::breeding(const std::shared_ptr<dem
 			return spec;
 	}
 
-	// Создаём и сохраняем новый вид.
+	// Создаём и сохраняем новый вид с блокировкой от параллельного чтения в интерфейсном потоке.
 	std::shared_ptr<demi::Species> newSpec = std::make_shared<demi::Species>(*oldSpec.get(), newGeneValues);
+	lockSpecies();
 	species.push_back(newSpec);
+	unlockSpecies();
 
 	// Поднимаем флаг для внешнего кода, что есть изменения.
 	flagSpaciesChanged = true;

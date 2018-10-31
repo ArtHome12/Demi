@@ -49,5 +49,16 @@ namespace demi {
 
 		// ¬озвращает указатель на вид в рамках текущего генотипа, возможно с мутацией.
 		const std::shared_ptr<demi::Species> breeding(const std::shared_ptr<demi::Species>& oldSpec);
+
+		// ƒолжны вызыватьс€ перед доступом к видам.
+		// ƒелает одну попытку установить блокировку и возвращает истину, если удалось. ≈сли ложь, обращатьс€ к пол€м организма небезопасно.
+		bool tryLockSpecies() { return !lockFlag.test_and_set(std::memory_order_acquire); }
+		// ќстанавливает выполнение до тех пор, пока не удастс€ установить блокировку.
+		void lockSpecies() { for (size_t i = 0; !tryLockSpecies(); ++i) if (i % 100 == 0) std::this_thread::yield(); }
+		// —нимает блокировку.
+		void unlockSpecies() { lockFlag.clear(std::memory_order_release); }
+	private:
+		// ƒл€ блокировки одновременного доступа из разных потоков (расчЄтного и интерфейсного).
+		std::atomic_flag lockFlag;
 	};
 };

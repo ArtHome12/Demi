@@ -565,13 +565,15 @@ void WindowsSettings::initAnimalVisibility()
 	// Надпись под количество.
 	panelOrganismAmounts->add_child(createLabelForAmount("-"));
 
-	// Добавляем виды организмов.
+	// Добавляем виды организмов с блокировкой от параллельного изменения в расчётном потоке. Надо замерить скорость цикла и возможно выкопирывовать виды и снимать блокировку.
+	tree->lockSpecies();
 	for (auto& item : tree->species) {
 		// Название генотипа указано ранее, выводим имена генов и их значения.
 		auto curNode = std::make_shared<TreeItem>(item->getSpeciesName(), item->getVisible(), size_t(item.get()));
 		LUCAGenotypeNode->addChild(curNode);
 		panelOrganismAmounts->add_child(createLabelForAmount("-"));
 	}
+	tree->unlockSpecies();
 
 	// Добавляем производные генотипы и виды рекурсивно.
 	doInitAnimalVisibility(tree, LUCAGenotypeNode);
@@ -589,13 +591,15 @@ void WindowsSettings::doInitAnimalVisibility(std::shared_ptr<demi::GenotypesTree
 		// Надпись под количество.
 		panelOrganismAmounts->add_child(createLabelForAmount("-"));
 
-		// Добавляем виды организмов.
+		// Добавляем виды организмов с блокировкой от параллельного изменения в расчётном потоке.
+		derivative->lockSpecies();
 		for (auto& specItem : derivative->species) {
 			// Название генотипа указано ранее, выводим имена генов и их значения.
 			auto curNode = std::make_shared<TreeItem>(specItem->getSpeciesName(), specItem->getVisible(), size_t(specItem.get()));
 			newNode->addChild(curNode);
 			panelOrganismAmounts->add_child(createLabelForAmount("-"));
 		}
+		derivative->unlockSpecies();
 
 		// Добавляем производные узлы.
 		doInitAnimalVisibility(derivative, newNode);
@@ -651,7 +655,8 @@ void WindowsSettings::doUpdateAnimalAmounts(std::shared_ptr<demi::GenotypesTree>
 	// Впишем количество генотипов текущего узла с делением по разрядам.
 	label->set_text(IntToStrWithDigitPlaces<unsigned long long>(treeNode->genotype->getAliveCount()), true);
 
-	// Обновим остальные надписи с видами генотипа.
+	// Обновим остальные надписи с видами генотипа. Виды из дерева брать нельзя, так как их может менять рабочий поток и они перестанут соответствовать надписям.
+
 	for (auto& item : treeNode->species) {
 		label = std::dynamic_pointer_cast<clan::LabelView>(*(++iter));
 		label->set_text(IntToStrWithDigitPlaces<unsigned long long>(item->getAliveCount()), true);
