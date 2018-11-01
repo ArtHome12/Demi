@@ -9,22 +9,21 @@ Copyright (c) 2013-2018 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 #pragma once
 
-#include <vector>
-
-typedef std::vector<std::shared_ptr<demi::Species>> speciesDict_t;
-
-//
-// Древовидный список, в вершине - вид протоорганизма.
-//
 namespace demi {
 
+	class Species;
+	class Genotype;
+
+	//
+	// Древовидный список, в вершине - вид протоорганизма.
+	//
 	class GenotypesTree {
 	public:
 		// Родительский узел, если есть.
 		std::shared_ptr<GenotypesTree> ancestor = nullptr;
 
 		// Текущий генотип узла дерева.
-		std::shared_ptr<demi::Genotype> genotype;
+		std::shared_ptr<Genotype> genotype;
 
 		// Список производных узлов.
 		std::vector<std::shared_ptr<GenotypesTree>> derivatives;
@@ -61,4 +60,5 @@ namespace demi {
 		// Для блокировки одновременного доступа из разных потоков (расчётного и интерфейсного).
 		std::atomic_flag lockFlag;
 	};
+
 };

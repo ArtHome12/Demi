@@ -10,7 +10,10 @@ Copyright (c) 2013-2018 by Artem Khomenko _mag12@yahoo.com.
 
 #include "precomp.h"
 #include "local_coord.h"
+#include "organism.h"
 #include "world.h"
+
+using namespace demi;
 
 // =============================================================================
 // Точка на земной поверхности с координатами и списком ресурсов с указанием их количества.

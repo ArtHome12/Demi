@@ -11,19 +11,22 @@
 #pragma once
 
 #include <set>
-#include "organism.h"
-#include "settings_storage.h"
-#include "reactions.h"
-#include "local_coord.h"
 #include "amounts.h"
 #include "demi_time.h"
-#include "genotypes_tree.h"
 
 
 // Глобальная переменная - мир.
 class World;
 extern World globalWorld;
 
+class SettingsStorage;
+
+namespace demi {
+	class Dot;
+	class ChemReaction;
+	class GenotypesTree;
+	class Organism;
+}
 
 //
 // Источник солнечной энергии
@@ -72,7 +75,7 @@ public:
 	void resetModel(const std::string &modelFilename, const std::string &defaultFilename);
 
 	// Возвращает точки поверхности.
-	Dot *getDotsArray() { return arDots; }
+	demi::Dot *getDotsArray() { return arDots; }
 	const demi::DemiTime& getModelTime() { return timeModel; }
 
 	// Доступ к свойствам.
@@ -133,7 +136,7 @@ private:
 	clan::Size worldSize;
 
 	// Поверхность земли.
-	Dot *arDots = nullptr;
+	demi::Dot *arDots = nullptr;
 
 	// Свойства, используемые для отображения модели - координата левого верхнего угла, масштаб.
 	clan::Point appearanceTopLeft;

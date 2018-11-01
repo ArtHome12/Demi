@@ -9,12 +9,7 @@
 =============================================================================== */
 #pragma once
 
-#include <vector>
-
 namespace demi {
-
-	typedef uint16_t geneValues_t;
-#define geneValues_t_MAX UINT16_MAX
 
 
 	// Исключение, если ген не найден.

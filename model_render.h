@@ -10,6 +10,12 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 
 #pragma once
 
+
+namespace demi {
+	class Dot;
+}
+class SettingsStorage;
+
 class ModelRender: public clan::View
 {
 public:
@@ -17,7 +23,7 @@ public:
 	~ModelRender();
 
 	// Постоянная подсветка мира.
-	const bool getIlluminatedWorld() { return pSettings->getTopMenuIsModelIlluminated(); }
+	const bool getIlluminatedWorld();
 	void setIlluminatedWorld(bool newValue);
 
 	const bool getIsFrameUpdated() { return isFrameUpdated; }
@@ -70,7 +76,7 @@ private:
 	void DrawGrid(clan::Canvas &canvas, const clan::Size &windowSize);
 
 	// Отрисовывает клетку в компактном виде - с координатой и ресурсами, которые поместятся.
-	void DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan::Rect &rect, int xLabel, int yLabel, const clan::Color& dotColor);
+	void DrawCellCompact(clan::Canvas &canvas, const demi::Dot &d, const clan::Rect &rect, int xLabel, int yLabel, const clan::Color& dotColor);
 
 	// Звуки включения и выключения подсветки.
 	clan::SoundBuffer soundIlluminateOn;

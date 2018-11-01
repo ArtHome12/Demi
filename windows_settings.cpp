@@ -10,12 +10,13 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 
 #include "precomp.h"
 #include "windows_settings.h"
+#include "gene.h"
+#include "genotypes_tree.h"
 #include "Theme/theme.h"
 #include "world.h"
-#include <clocale>
-#include <sstream>
 #include "msg_boxes.h"
 #include "tree_view.h"
+#include "settings_storage.h"
 
 // Расширение xml-файла и двоичного файла модели и их описания.
 auto cProjectXMLExtension = "demi";
@@ -51,6 +52,40 @@ auto cWindowsSettingsAmountsLabel = "WindowsSettingsAmountsLabel";
 auto cErrorDlgCaption = "WindowsSettingsErrorDlgCaption";
 
 
+// ===========================================================================================
+// Вспомогательный класс для хранения информации о дереве видов для использования в чекбоксах.
+// Максимально быстрый для создания элемент, так как он блокирует расчётный поток.
+// ===========================================================================================
+class GenotypesTreeHelperItem {
+public:
+	// Визуальный элемент - надпись для отображения количества.
+	std::shared_ptr<clan::LabelView> label = nullptr;
+
+	// Ссылка на генотип, если это элемент генотипа или nullptr
+	std::shared_ptr<demi::Genotype> genotype = nullptr;
+
+	// Ссылка на вид, если это элемент вида или nullptr
+	std::shared_ptr<demi::Species> species = nullptr;
+
+	// Обновляет значение надписи в зависимости от того, какого типа элемент.
+	void updateLabel();
+};
+
+
+// Обновляет значение надписи в зависимости от того, какого типа элемент.
+void GenotypesTreeHelperItem::updateLabel()
+{
+	// Получем количество либо от генотипа, либо от вида.
+	unsigned long long amount = genotype ? genotype->getAliveCount() : species->getAliveCount();
+
+	// Впишем количество с делением по разрядам.
+	label->set_text(IntToStrWithDigitPlaces<unsigned long long>(amount), true);
+}
+
+
+// ===========================================================================================
+// Окно с настройками.
+// ===========================================================================================
 WindowsSettings::WindowsSettings()
 {
 	// Настройки.
@@ -547,6 +582,7 @@ void WindowsSettings::initElemVisibilityTreeAfterRestart()
 void WindowsSettings::initAnimalVisibility()
 {
 	// Удалим старые надписи для количеств.
+	treeBackup.clear();
 	auto& children = panelOrganismAmounts->children();
 	while (!children.empty())
 		children.back()->remove_from_parent();
@@ -562,8 +598,10 @@ void WindowsSettings::initAnimalVisibility()
 	auto LUCAGenotypeNode = std::make_shared<TreeItem>(cachedAnimalPrefixLabel + LUCAGenotype->getGenotypeName(), true, size_t(0));
 	rootNodeS->addChild(LUCAGenotypeNode);
 
-	// Надпись под количество.
-	panelOrganismAmounts->add_child(createLabelForAmount("-"));
+	// Создадим вспомогательный элемент для использования при отображении количеств.
+	GenotypesTreeHelperItem* helper = new GenotypesTreeHelperItem();
+	helper->genotype = LUCAGenotype;
+	treeBackup.push_back(helper);
 
 	// Добавляем виды организмов с блокировкой от параллельного изменения в расчётном потоке. Надо замерить скорость цикла и возможно выкопирывовать виды и снимать блокировку.
 	tree->lockSpecies();
@@ -571,12 +609,22 @@ void WindowsSettings::initAnimalVisibility()
 		// Название генотипа указано ранее, выводим имена генов и их значения.
 		auto curNode = std::make_shared<TreeItem>(item->getSpeciesName(), item->getVisible(), size_t(item.get()));
 		LUCAGenotypeNode->addChild(curNode);
-		panelOrganismAmounts->add_child(createLabelForAmount("-"));
+	
+		// Вспомогательный элемент.
+		helper = new GenotypesTreeHelperItem();
+		helper->species = item;
+		treeBackup.push_back(helper);
 	}
 	tree->unlockSpecies();
 
 	// Добавляем производные генотипы и виды рекурсивно.
 	doInitAnimalVisibility(tree, LUCAGenotypeNode);
+
+	// Создадим надписи-элементы интерфейса под количества.
+	for (auto helper : treeBackup) {
+		helper->label = createLabelForAmount("-");
+		panelOrganismAmounts->add_child(helper->label);
+	}
 
 	pTreeViewSpecies->setRootItem(rootNodeS);
 }
@@ -588,8 +636,10 @@ void WindowsSettings::doInitAnimalVisibility(std::shared_ptr<demi::GenotypesTree
 		auto newNode = std::make_shared<TreeItem>(derivative->genotype->getGenotypeName(), true, size_t(0));
 		item->addChild(newNode);
 
-		// Надпись под количество.
-		panelOrganismAmounts->add_child(createLabelForAmount("-"));
+		// Вспомогательный элемент.
+		GenotypesTreeHelperItem* helper = new GenotypesTreeHelperItem();
+		helper->genotype = derivative->genotype;
+		treeBackup.push_back(helper);
 
 		// Добавляем виды организмов с блокировкой от параллельного изменения в расчётном потоке.
 		derivative->lockSpecies();
@@ -597,7 +647,11 @@ void WindowsSettings::doInitAnimalVisibility(std::shared_ptr<demi::GenotypesTree
 			// Название генотипа указано ранее, выводим имена генов и их значения.
 			auto curNode = std::make_shared<TreeItem>(specItem->getSpeciesName(), specItem->getVisible(), size_t(specItem.get()));
 			newNode->addChild(curNode);
-			panelOrganismAmounts->add_child(createLabelForAmount("-"));
+
+			// Вспомогательный элемент.
+			helper = new GenotypesTreeHelperItem();
+			helper->species = specItem;
+			treeBackup.push_back(helper);
 		}
 		derivative->unlockSpecies();
 
@@ -643,31 +697,10 @@ void WindowsSettings::updateAmounts()
 		initAnimalVisibility();
 	}
 
-	// Обновим рекурсивно все надписи. Первая надпись - под корневой генотип.
-	doUpdateAnimalAmounts(tree, panelOrganismAmounts->children().begin());
+	// Обновим все надписи используя накопленную информацию в вспомогательном объекте.
+	for (auto helper : treeBackup)
+		helper->updateLabel();
 }
-
-void WindowsSettings::doUpdateAnimalAmounts(std::shared_ptr<demi::GenotypesTree> treeNode, std::_Vector_const_iterator<std::_Vector_val<std::_Simple_types<std::shared_ptr<clan::View>>>>& iter)
-{
-	// Преобразуем указатель с общего View непосредственно на Label.
-	std::shared_ptr<clan::LabelView> label = std::dynamic_pointer_cast<clan::LabelView>(*iter);
-
-	// Впишем количество генотипов текущего узла с делением по разрядам.
-	label->set_text(IntToStrWithDigitPlaces<unsigned long long>(treeNode->genotype->getAliveCount()), true);
-
-	// Обновим остальные надписи с видами генотипа. Виды из дерева брать нельзя, так как их может менять рабочий поток и они перестанут соответствовать надписям.
-
-	for (auto& item : treeNode->species) {
-		label = std::dynamic_pointer_cast<clan::LabelView>(*(++iter));
-		label->set_text(IntToStrWithDigitPlaces<unsigned long long>(item->getAliveCount()), true);
-	}
-
-	// Вызовем рекурсивно для производных генотипов.
-	for (auto& derTreeNode : treeNode->derivatives) {
-		doUpdateAnimalAmounts(derTreeNode, ++iter);
-	}
-}
-
 
 
 // Создаёт надпись.

@@ -9,9 +9,8 @@ Copyright (c) 2013-2018 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 #include "precomp.h"
-#include "organism.h"
-#include "gene.h"
 #include "genotypes_tree.h"
+#include "gene.h"
 #include "world.h"
 
 using namespace demi;

@@ -9,10 +9,9 @@
 =============================================================================== */
 
 #include "precomp.h"
-#include "reactions.h"
-#include "organism.h"
 #include "gene.h"
 #include "genotypes_tree.h"
+#include "organism.h"
 #include "world.h"
 
 using namespace demi;

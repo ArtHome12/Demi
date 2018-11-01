@@ -15,6 +15,7 @@ namespace demi {
 }
 class TreeItem;
 class TreeView;
+class GenotypesTreeHelperItem;
 
 class WindowsSettings :	public clan::View
 {
@@ -112,6 +113,9 @@ private:
 
 	clan::WindowManager* wManager;
 
+	// Выкопированный список элементов с дерева для использования при обновлении количеств.
+	std::vector<GenotypesTreeHelperItem*> treeBackup;
+
 	// Сохраняет модель с показом диалогового окна.
 	void saveModel(const std::string& filename);
 
@@ -120,7 +124,6 @@ private:
 
 	// Обновляет надписи с количествами.
 	void updateAmounts();
-	void doUpdateAnimalAmounts(std::shared_ptr<demi::GenotypesTree> treeNode, std::_Vector_const_iterator<std::_Vector_val<std::_Simple_types<std::shared_ptr<clan::View>>>>& iter);
 
 	// Показывает сообщение об ошибке.
 	void showError(const std::string& errMessage);

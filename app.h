@@ -10,6 +10,12 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 
 #pragma once
 
+#include "demi_time.h"
+
+class WindowsSettings;
+class ModelRender;
+class SettingsStorage;
+
 class MainWindow : public clan::WindowController
 {
 public:

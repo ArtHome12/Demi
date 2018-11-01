@@ -10,8 +10,7 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 
 #pragma once
 
-#include "settings_storage.h"
-
+class SettingsStorage;
 
 class MsgBox : public clan::WindowController
 {

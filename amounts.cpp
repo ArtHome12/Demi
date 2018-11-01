@@ -10,6 +10,9 @@ Copyright (c) 2013-2018 by Artem Khomenko _mag12@yahoo.com.
 
 #include "precomp.h"
 #include "amounts.h"
+#include "local_coord.h"
+#include "organism.h"
+#include "reactions.h"
 #include "world.h"
 
 // Инициализация класса. Его инициализация должна происходить после инициализации массивов в World, когда модель готова к первому тику.
@@ -25,9 +28,9 @@ void Amounts::Init()
 	memset(arResAmounts, 0, sizeof(unsigned long long) * elemCount);
 
 	// Перебираем все точки и сохраняем количества.
-	Dot *cur = globalWorld.getDotsArray();						// Первая точка массива.
+	demi::Dot *cur = globalWorld.getDotsArray();						// Первая точка массива.
 	const clan::Size& worldSize = globalWorld.getWorldSize();
-	Dot *last = cur + worldSize.width * worldSize.height;		// Точка после последней точки массива.
+	demi::Dot *last = cur + worldSize.width * worldSize.height;		// Точка после последней точки массива.
 	while (cur < last) {
 
 		// Суммируем ресурсы каждой точки.
@@ -37,11 +40,11 @@ void Amounts::Init()
 		// Если в точке есть организм, посчитаем ресурсы в нём.
 		demi::Organism* organism = cur->organism;
 		if (organism) {
-			demi::organismAmounts_t::const_iterator itAmounts = organism->getLeftReagentAmounts().begin();
+			organismAmounts_t::const_iterator itAmounts = organism->getLeftReagentAmounts().begin();
 			const demi::ChemReaction &reaction = *organism->getChemReaction().get();
 			for (auto &reagent : reaction.leftReagents) {
 				// Текущее имеющееся значение во "рту" организма.
-				demi::organismAmount_t amnt = *itAmounts++;
+				organismAmount_t amnt = *itAmounts++;
 				if (amnt != 0)
 					arResAmounts[reagent.elementIndex] += amnt;
 			}

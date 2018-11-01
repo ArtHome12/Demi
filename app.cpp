@@ -9,12 +9,12 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 #include "precomp.h"
+#include "app.h"
 #include "windows_settings.h"
 #include "Theme/theme.h"
 #include "settings_storage.h"
 #include "world.h"
 #include "model_render.h"
-#include "app.h"
 
 
 // Высота строки с панелью меню.

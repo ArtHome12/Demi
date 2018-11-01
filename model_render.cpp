@@ -9,11 +9,11 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 #include "precomp.h"
-#include "world.h"
-#include "settings_storage.h"
 #include "model_render.h"
-#include <chrono>
-#include <thread>
+#include "local_coord.h"
+#include "organism.h"
+#include "settings_storage.h"
+#include "world.h"
 
 // Масштаб, при котором происходит переключение отображения по точкам на отображение клеток.
 const float cPixelDetailLevel = 0.1f;
@@ -148,7 +148,7 @@ void ModelRender::render_content(clan::Canvas &canvas)
 		bool showTextInCell = scale < cCompactCellDetailLevel;
 
 		// Определим систему координат.
-		LocalCoord coordSystem(topLeftWorld);
+		demi::LocalCoord coordSystem(topLeftWorld);
 
 		// Включена ли постоянная подсветка, для удобства.
 		bool illuminated = getIlluminatedWorld();
@@ -173,7 +173,7 @@ void ModelRender::render_content(clan::Canvas &canvas)
 			while (r.left < windowSize.width) {
 
 				// Точка мира. 
-				Dot& d = coordSystem.get_dot(xDotIndex, yDotIndex);
+				demi::Dot& d = coordSystem.get_dot(xDotIndex, yDotIndex);
 
 				// Получим цвет точки.
 				d.getColor(color);
@@ -232,7 +232,7 @@ void ModelRender::DrawGrid(clan::Canvas &canvas, const clan::Size &windowSize)
 	}
 }
 
-void ModelRender::DrawCellCompact(clan::Canvas &canvas, const Dot &d, const clan::Rect &rect, int xLabel, int yLabel, const clan::Color& dotColor)
+void ModelRender::DrawCellCompact(clan::Canvas &canvas, const demi::Dot &d, const clan::Rect &rect, int xLabel, int yLabel, const clan::Color& dotColor)
 {
 	// Отрисовывает клетку в компактном виде - с координатой и ресурсами, которые поместятся.
 
@@ -548,6 +548,12 @@ void ModelRender::DoScaleStep(const clan::Pointf &pos, float scaleStep, clan::Po
 }
 
 // Постоянная подсветка мира.
+inline const bool ModelRender::getIlluminatedWorld() 
+{ 
+	return pSettings->getTopMenuIsModelIlluminated(); 
+}
+
+
 void ModelRender::setIlluminatedWorld(bool newValue) 
 { 
 	pSettings->setTopMenuIsModelIlluminated(newValue);
@@ -579,7 +585,7 @@ void ModelRender::workerThread()
 			float scale = globalWorld.getAppearanceScale();
 
 			// Определим систему координат.
-			LocalCoord coordSystem(globalWorld.getAppearanceTopLeft());
+			demi::LocalCoord coordSystem(globalWorld.getAppearanceTopLeft());
 
 			// Включена ли постоянная подсветка, для удобства.
 			bool illuminated = getIlluminatedWorld();
@@ -622,7 +628,7 @@ void ModelRender::workerThread()
 
 						// Если одна координата не меняется, не делаем медленные вычисления.
 						if (xIndex != oldXIndex) {
-							Dot& d = coordSystem.get_dot(xIndex, yIndex);
+							demi::Dot& d = coordSystem.get_dot(xIndex, yIndex);
 							d.getColor(color);
 							oldXIndex = xIndex;
 						}

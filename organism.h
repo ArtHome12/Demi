@@ -9,22 +9,14 @@
 =============================================================================== */
 #pragma once
 
-#include "gene.h"
 #include "local_coord.h"
 #include "demi_time.h"
-
+#include "gene.h"
 
 namespace demi {
 
 	// Типы клеток - мозг, рецептор, мышца, жир, живот, рот, броня.
 	enum CellTypes {cellBrain, cellReceptor, cellMuscle, cellAdipose, cellAbdomen, cellMouth, cellArmor};
-
-	// Тип для хранения текущих накопленных веществ в организме.
-	typedef uint8_t organismAmount_t;
-	typedef std::vector<organismAmount_t> organismAmounts_t;
-
-	// Максимально возможная накопленная (жизненная) энергия.
-	const uint16_t cMaxVitality = UINT16_MAX - UINT8_MAX;
 
 	// Некоторые предварительные объявления.
 	class Organism;

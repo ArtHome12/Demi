@@ -43,3 +43,23 @@ template<typename T> std::string IntToStrWithDigitPlaces(T num)
 
 	return retVal;
 }
+
+// ¬ектор видов организма.
+namespace demi {
+
+	class Species;
+}
+typedef std::vector<std::shared_ptr<demi::Species>> speciesDict_t;
+
+// “ип значени€ гена и его максимально возможное значение.
+typedef uint16_t geneValues_t;
+#define geneValues_t_MAX UINT16_MAX
+
+
+// “ип дл€ хранени€ текущих накопленных веществ в организме.
+typedef uint8_t organismAmount_t;
+typedef std::vector<organismAmount_t> organismAmounts_t;
+
+// ћаксимально возможна€ накопленна€ (жизненна€) энерги€.
+const uint16_t cMaxVitality = UINT16_MAX - UINT8_MAX;
+

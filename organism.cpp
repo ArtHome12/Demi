@@ -13,6 +13,7 @@
 #include "world.h"
 #include "reactions.h"
 
+
 using namespace demi;
 
 //
@@ -273,7 +274,7 @@ Organism* Organism::createFromFile(clan::IODevice& binFile, const clan::Point& A
 	Organism* retVal = new Organism(Acenter, Aangle, Avitality, Abirthday, AancestorsCount, Aspecies);
 
 	// Содержимое ячеек реакции.
-	const size_t numBytes = sizeof(demi::organismAmount_t) * retVal->leftReagentAmounts.size();
+	const size_t numBytes = sizeof(organismAmount_t) * retVal->leftReagentAmounts.size();
 	binFile.read(retVal->leftReagentAmounts.data(), numBytes);
 
 	return retVal;
@@ -289,6 +290,6 @@ void Organism::saveToFile(clan::IODevice& binFile)
 	binFile.write_uint64(ancestorsCount);	// ancestorsCount
 
 	// Содержимое ячеек реакции.
-	const size_t numBytes = sizeof(demi::organismAmount_t) * leftReagentAmounts.size();
+	const size_t numBytes = sizeof(organismAmount_t) * leftReagentAmounts.size();
 	binFile.write(leftReagentAmounts.data(), numBytes);
 }

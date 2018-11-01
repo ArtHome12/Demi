@@ -10,6 +10,12 @@
 
 #include "precomp.h"
 #include "world.h"
+#include "local_coord.h"
+#include "genotypes_tree.h"
+#include "organism.h"
+#include "settings_storage.h"
+#include "reactions.h"
+
 
 const size_t cGeothermRadius = 12;
 
@@ -101,7 +107,7 @@ void Solar::Shine(const demi::DemiTime &timeModel)
 	// Сброс старой освещённости должен был быть сделан при перемешивании, но практически она затирается сама.
 
 	// Определим систему координат с положением солнца в центре.
-	LocalCoord coord(getPos(timeModel));
+	demi::LocalCoord coord(getPos(timeModel));
 
 	int lightRadius = int(globalWorld.getLightRadius());
 	for (int x = -lightRadius + 1; x != lightRadius; ++x)			// Симметрично отбрасываем координаты самую левую (верхнюю) и самую правую (нижнюю) для ускорения - иначе ради 1 точки проходить весь ряд прямоугольника.
@@ -191,7 +197,7 @@ void World::makeTick()
 
 	// Создаём экземпляр протоорганизма, если нет живых организмов и есть место.
 	if (!genotypesTree->genotype->getAliveCount()) {
-		Dot& protoDot = LocalCoord(LUCAPos).get_dot(0, 0);
+		demi::Dot& protoDot = demi::LocalCoord(LUCAPos).get_dot(0, 0);
 		if (protoDot.organism == nullptr)
 			new demi::Organism(LUCAPos, 0, 1, timeModel, 0, genotypesTree->species.front());
 	}
@@ -221,9 +227,9 @@ void World::processDots()
 
 
 	// Границы массива, за которую заходить нельзя.
-	Dot *cur = arDots;											// Исходная точка для переноса ресурсов - первая точка массива.
-	Dot *last = cur + worldSize.width * worldSize.height;		// Точка после последней точки массива.
-	Dot *dest;													// Конечная точка
+	demi::Dot *cur = arDots;											// Исходная точка для переноса ресурсов - первая точка массива.
+	demi::Dot *last = cur + worldSize.width * worldSize.height;		// Точка после последней точки массива.
+	demi::Dot *dest;													// Конечная точка
 
 	// Элемент
 	std::uniform_int_distribution<> rnd_Elem(0, elemCount-1);
@@ -273,8 +279,8 @@ void World::processDots()
 			dest = arDots + (dest - last);
 
 		// Осуществим перенос вещества из исходной точки в конечную согласно летучести ресурса.
-		Dot &fromDot = *cur;
-		Dot &toDot = *dest;
+		demi::Dot &fromDot = *cur;
+		demi::Dot &toDot = *dest;
 		const size_t rndResIndex = rnd_Elem(generator);			// случайный элемент.
 		unsigned long long amount = unsigned long long(fromDot.res[rndResIndex] * arResVolatility[rndResIndex] + 0.5f);
 
@@ -381,7 +387,7 @@ void World::addGeothermal(size_t i, const clan::Point &coord)
 	//
 
 	// Определим систему координат.
-	LocalCoord geothermalCoord(coord);
+	demi::LocalCoord geothermalCoord(coord);
 	int rad = cGeothermRadius;
 	for (int xp = -rad; xp <= rad; ++xp)
 		for (int yp = -rad; yp <= rad; ++yp) {
@@ -476,7 +482,7 @@ void World::doLoadInanimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc)
 	elemCount = elementNames.size();
 
 	// Выделим память под массивы.
-	arDots = new Dot[worldSize.width * worldSize.height];		// точки поверхности.
+	arDots = new demi::Dot[worldSize.width * worldSize.height];		// точки поверхности.
 	arResColors = new clan::Color[elemCount];					// цвета элементов.
 	arResMax = new unsigned long long[elemCount];				// максимальные концентрации элементов в одной точке.
 	arResNames = new std::string[elemCount];					// названия элементов.
@@ -665,10 +671,10 @@ void World::doLoadAnimal(std::shared_ptr<clan::XMLResourceDocument>& resDoc)
 
 	// Определим индекс реакции протоорганизма, то есть значение его гена.
 	// Для этого переберём все реакции в поисках нужной. По мере увеличения количества можно переделать на map.
-	demi::geneValues_t geneValue = geneValues_t_MAX;
+	geneValues_t geneValue = geneValues_t_MAX;
 	for (size_t i = 0; i != reactions.size(); ++i)
 		if (reactions[i]->name == LUCAReactionName) {
-			geneValue = (demi::geneValues_t)i;
+			geneValue = (geneValues_t)i;
 			break;
 		}
 	if (geneValue == geneValues_t_MAX)
@@ -772,7 +778,7 @@ void World::doLoadBinary(const std::string &filename)
 		for (size_t i = 0; i != dotsCount; ++i) {
 
 			// Текущая точка.
-			Dot &dot = arDots[i];
+			demi::Dot &dot = arDots[i];
 
 			// Количества элементов в точке.
 			const size_t elemArraySize = sizeof(uint64_t) * elemCount;
@@ -885,7 +891,7 @@ void World::doSaveBinary(const std::string &filename)
 	const size_t elemArraySize = sizeof(uint64_t) * elemCount;
 	for (size_t i = 0; i != dotsCount; ++i) {
 		// Текущая точка.
-		const Dot &dot = arDots[i];
+		const demi::Dot &dot = arDots[i];
 
 		// Количества элементов в точке.
 		binFile.write(dot.res, elemArraySize);
@@ -1008,8 +1014,8 @@ void World::InitResMaxArray()
 	memset(arResMax, 0, sizeof(unsigned long long) * elemCount);
 
 	// Перебираем все точки и сохраняем количества.
-	Dot *cur = arDots;										// Первая точка массива.
-	Dot *last = cur + worldSize.width * worldSize.height;	// Точка после последней точки массива.
+	demi::Dot *cur = arDots;										// Первая точка массива.
+	demi::Dot *last = cur + worldSize.width * worldSize.height;	// Точка после последней точки массива.
 	while (cur < last) {
 
 		// Обработка организма - при его распаде он вернёт вещества.

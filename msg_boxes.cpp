@@ -9,8 +9,9 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 #include "precomp.h"
-#include "Theme/theme.h"
 #include "msg_boxes.h"
+#include "settings_storage.h"
+#include "Theme/theme.h"
 
 // Строковые ресурсы
 auto cMsgBoxOk = "MsgBoxOk";
