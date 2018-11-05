@@ -128,3 +128,24 @@ const std::shared_ptr<Species> GenotypesTree::breeding(const std::shared_ptr<dem
 
 	return newSpec;
 }
+
+// Удаляет вид.
+void demi::GenotypesTree::removeSpecies(std::shared_ptr<demi::Species>& specToRemove)
+{
+	// Включаем блокировку.
+	lockSpecies();
+	
+	// Находим интератор.
+	auto it = std::find(species.begin(), species.end(), specToRemove);
+
+	// Удаляем элемент.
+	*it = std::move(species.back());
+	species.pop_back();
+
+	// Снимаем блокировку.
+	unlockSpecies();
+
+	// Флаг наличия изменений не поднимаем, чтобы пользователь мог увидеть 0. Обновление произойдёт при добавлении вида.
+	//flagSpaciesChanged = true;
+}
+

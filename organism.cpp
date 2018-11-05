@@ -12,6 +12,7 @@
 #include "organism.h"
 #include "world.h"
 #include "reactions.h"
+#include "genotypes_tree.h"
 
 
 using namespace demi;
@@ -163,7 +164,7 @@ bool Organism::makeTick()
 		vitality += ourReaction->vitalityProductivity;
 		if (vitality > cMaxVitality) {
 			vitality = 0;
-			ourSpecies->decAliveCount();
+			decAliveCount();
 		}
 
 		// Возвратим истину, если готовы делиться.
@@ -180,6 +181,15 @@ bool Organism::makeTick()
 	}
 }
 
+// Уменьшает количество живых организмов.
+void Organism::decAliveCount()
+{
+	ourSpecies->decAliveCount();
+
+	// Если живых не осталось, исключим вид из дерева.
+	if (!ourSpecies->getAliveCount())
+		ourSpecies->getGenotype()->getTreeNode()->removeSpecies(ourSpecies);
+}
 
 // Вычитает жизненную энергию на неактивное состояние и обновляет статистику.
 void Organism::processInactiveVitality() 
@@ -191,8 +201,8 @@ void Organism::processInactiveVitality()
 	vitality -= minActiveMetabolicRate; 
 
 	// Если помер, то откорректируем статистику.
-	if (oldAlive != isAlive())
-		ourSpecies->decAliveCount(); 
+	if (oldAlive != isAlive()) 
+		decAliveCount();
 }
 
 

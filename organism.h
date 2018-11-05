@@ -168,6 +168,8 @@ private:
 	// ¬озвращает точку, лежащую относительно исходной в указанном направлении с учЄтом собственного направлени€.
 	void getPointAtDirection(uint8_t direction, clan::Point & dest);
 
+	// ”меньшает количество живых организмов.
+	void decAliveCount();
 };
 
 };

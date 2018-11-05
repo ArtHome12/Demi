@@ -10,7 +10,7 @@
 	</section>--&gt;
 	<section name="Project">
 		<!--Project filename, XML-part. Using a relative path for easy moving/copying the application, if possible.-->
-		<item name="ProjectName" filename="../tmp.demi"/>
+		<item name="ProjectName" filename=""/>
 		<!--Checkboxes on settings window-->
 		<item name="Checkboxes" autorun="false" autosave="false" autosave_hourly="true" top="0" state="7" width="1280" height="1024" left="0"/>
 	</section>--&gt;

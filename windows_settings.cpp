@@ -280,12 +280,6 @@ void WindowsSettings::onButtondownNew()
 	// Сбросим имя модели и загрузим в модель шаблон.
 	setModelFilename("");
 	loadModel(cProjectTemplate);
-
-	// Обновим дерево с галочками видимости элементов.
-	initElemVisibilityTree();
-
-	// Для обновления списка видов при первой возможности.
-	globalWorld.genotypesTree->flagSpaciesChanged = true;
 }
 
 void WindowsSettings::onButtondownOpen()
@@ -306,12 +300,6 @@ void WindowsSettings::onButtondownOpen()
 			showError(e.message);
 			onButtondownNew();
 		}
-
-		// Обновим дерево с галочками видимости элементов.
-		initElemVisibilityTree();
-
-		// Для обновления списка видов при первой возможности.
-		globalWorld.genotypesTree->flagSpaciesChanged = true;
 	}
 }
 
@@ -792,6 +780,12 @@ void WindowsSettings::loadModel(const std::string& filename)
 	// Погасим диалог.
 	dialog->dismiss();
 	disp.set_cursor(clan::StandardCursor::arrow);
+
+	// Обновим дерево с галочками видимости элементов.
+	initElemVisibilityTree();
+
+	// Для обновления списка видов при первой возможности.
+	globalWorld.genotypesTree->flagSpaciesChanged = true;
 }
 
 // Показывает сообщение об ошибке.

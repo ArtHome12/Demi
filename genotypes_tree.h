@@ -37,6 +37,9 @@ namespace demi {
 		// Очищает векторы.
 		void clear() { derivatives.clear(); species.clear(); }
 
+		// Удаляет вид.
+		void removeSpecies(std::shared_ptr<demi::Species>& specToRemove);
+
 		// Создаёт словарь для сопоставления видов и индексов.
 		void generateDict(speciesDict_t& dict);
 
