@@ -462,13 +462,15 @@ void WindowsSettings::onTreeElementsCheckChanged(TreeItem &item)
 
 void WindowsSettings::onTreeSpeciesCheckChanged(TreeItem &item)
 {
-	if (item.tag) {
+	// Вспомогательный элемент под генотип.
+	GenotypesTreeHelperItem* helper = (GenotypesTreeHelperItem*)item.tag;
+
+	if (helper->species) {
 		// Если указатель на вид организма, меняем видимость вида.
-		demi::Species *spec = reinterpret_cast<demi::Species *>(item.tag);
-		spec->setVisible(item.getChecked());
+		helper->species->setVisible(item.getChecked());
 	}
 	else {
-		// Если указатель на генотип, надо поменять видимость у всех подчинённых узлов.
+		// Если указатель на генотип, надо также поменять видимость у всех подчинённых узлов.
 		for (auto child : item.getChildren()) {
 			child->setChecked(item.getChecked());
 		}
@@ -587,30 +589,32 @@ std::shared_ptr<TreeItem> WindowsSettings::doInitAnimalVisibility(std::shared_pt
 	// Узел под генотип.
 	std::shared_ptr<TreeItem> newNode = nullptr;
 
+	// Вспомогательный элемент под генотип.
+	GenotypesTreeHelperItem* helper = new GenotypesTreeHelperItem();
+
 	// Если узел не передан, это первая итерация и надо создать корневой.
 	if (!treeNode) {
-		// Корневой невидимый узел, дереву необходим для того, чтобы визуально могло быть сразу несколько узлов первого уровня.
-		item = std::make_shared<TreeItem>("", false, 0);
-
 		// Первый элемент дерева генотипов и видов.
 		treeNode = globalWorld.genotypesTree;
 	
+		// Корневой невидимый узел, дереву необходим для того, чтобы визуально могло быть сразу несколько узлов первого уровня.
+		item = std::make_shared<TreeItem>("", false, 0);
+
 		// Генотип корневого узла.
 		auto& LUCAGenotype = treeNode->genotype;
 
 		// Корневой узел под протовид.
-		newNode = std::make_shared<TreeItem>(cachedAnimalPrefixLabel + LUCAGenotype->getGenotypeName(), true, 0);
+		newNode = std::make_shared<TreeItem>(cachedAnimalPrefixLabel + LUCAGenotype->getGenotypeName(), true, size_t(helper));
 	}
 	else {
 		// Узел под производный генотип (без префикса).
-		newNode = std::make_shared<TreeItem>(treeNode->genotype->getGenotypeName(), true, 0);
+		newNode = std::make_shared<TreeItem>(treeNode->genotype->getGenotypeName(), true, size_t(helper));
 	}
 
 	// Сохраняем узел под генотип.
 	item->addChild(newNode);
 
-	// Вспомогательный элемент.
-	GenotypesTreeHelperItem* helper = new GenotypesTreeHelperItem();
+	// Инициализируем поля вспомогательного элемента под генотип и сохраняем его.
 	helper->genotype = treeNode->genotype;
 	treeBackup.push_back(helper);
 
@@ -644,7 +648,7 @@ std::shared_ptr<TreeItem> WindowsSettings::doInitAnimalVisibility(std::shared_pt
 		auto& curSpec = helper->species;
 
 		// Название вида - визуальный элемент с чекбоксом.
-		auto curNode = std::make_shared<TreeItem>(curSpec->getSpeciesName(), curSpec->getVisible(), 0);
+		auto curNode = std::make_shared<TreeItem>(curSpec->getSpeciesName(), curSpec->getVisible(), size_t(helper));
 		newNode->addChild(curNode);
 
 		// Надпись под количество.
