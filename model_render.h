@@ -10,11 +10,11 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 
 #pragma once
 
+#include "settings_storage.h"
 
 namespace demi {
 	class Dot;
 }
-class SettingsStorage;
 
 class ModelRender: public clan::View
 {
@@ -23,7 +23,7 @@ public:
 	~ModelRender();
 
 	// Постоянная подсветка мира.
-	const bool getIlluminatedWorld();
+	const bool getIlluminatedWorld() { return pSettings->getTopMenuIsModelIlluminated(); }
 	void setIlluminatedWorld(bool newValue);
 
 	const bool getIsFrameUpdated() { return isFrameUpdated; }

@@ -587,77 +587,88 @@ void WindowsSettings::initAnimalVisibility()
 	while (!children.empty())
 		children.back()->remove_from_parent();
 
-	// Корневой невидимый узел, дереву необходим для того, чтобы визуально могло быть сразу несколько узлов первого уровня.
-	auto rootNodeS = std::make_shared<TreeItem>("", false, size_t(SIZE_MAX));
+	// Добавим новые рекурсивно.
+	auto rootNode = doInitAnimalVisibility(nullptr, nullptr);
 
-	// Протоорганизм (вид).
-	auto& tree = globalWorld.genotypesTree;
-	auto& LUCAGenotype = tree->genotype;
+	// Создадим элемент интерфейса - дерево с чекбоксами.
+	pTreeViewSpecies->setRootItem(rootNode);
+}
 
-	// Корневой узел под протовид.
-	auto LUCAGenotypeNode = std::make_shared<TreeItem>(cachedAnimalPrefixLabel + LUCAGenotype->getGenotypeName(), true, size_t(0));
-	rootNodeS->addChild(LUCAGenotypeNode);
+std::shared_ptr<TreeItem> WindowsSettings::doInitAnimalVisibility(std::shared_ptr<demi::GenotypesTree> treeNode, std::shared_ptr<TreeItem> item)
+{
+	// Узел под генотип.
+	std::shared_ptr<TreeItem> newNode = nullptr;
 
-	// Создадим вспомогательный элемент для использования при отображении количеств.
+	// Если узел не передан, это первая итерация и надо создать корневой.
+	if (!treeNode) {
+		// Корневой невидимый узел, дереву необходим для того, чтобы визуально могло быть сразу несколько узлов первого уровня.
+		item = std::make_shared<TreeItem>("", false, 0);
+
+		// Первый элемент дерева генотипов и видов.
+		treeNode = globalWorld.genotypesTree;
+	
+		// Генотип корневого узла.
+		auto& LUCAGenotype = treeNode->genotype;
+
+		// Корневой узел под протовид.
+		newNode = std::make_shared<TreeItem>(cachedAnimalPrefixLabel + LUCAGenotype->getGenotypeName(), true, 0);
+	}
+	else {
+		// Узел под производный генотип (без префикса).
+		newNode = std::make_shared<TreeItem>(treeNode->genotype->getGenotypeName(), true, 0);
+	}
+
+	// Сохраняем узел под генотип.
+	item->addChild(newNode);
+
+	// Вспомогательный элемент.
 	GenotypesTreeHelperItem* helper = new GenotypesTreeHelperItem();
-	helper->genotype = LUCAGenotype;
+	helper->genotype = treeNode->genotype;
 	treeBackup.push_back(helper);
 
-	// Добавляем виды организмов с блокировкой от параллельного изменения в расчётном потоке. Надо замерить скорость цикла и возможно выкопирывовать виды и снимать блокировку.
-	tree->lockSpecies();
-	for (auto& item : tree->species) {
-		// Название генотипа указано ранее, выводим имена генов и их значения.
-		auto curNode = std::make_shared<TreeItem>(item->getSpeciesName(), item->getVisible(), size_t(item.get()));
-		LUCAGenotypeNode->addChild(curNode);
-	
-		// Вспомогательный элемент.
+	// Надпись под количество.
+	helper->label = createLabelForAmount("-");
+	panelOrganismAmounts->add_child(helper->label);
+
+	// Количество вспомогательных элементов до добавления новых.
+	size_t sizeBefore = treeBackup.size();
+
+	// Выкопирываем виды организмов с блокировкой от параллельного изменения в расчётном потоке.
+	treeNode->lockSpecies();
+	for (auto& specItem : treeNode->species) {
+		// Вспомогательный элемент для хранения выкопированных видов.
 		helper = new GenotypesTreeHelperItem();
-		helper->species = item;
+		helper->species = specItem;
 		treeBackup.push_back(helper);
 	}
-	tree->unlockSpecies();
+	treeNode->unlockSpecies();
 
-	// Добавляем производные генотипы и виды рекурсивно.
-	doInitAnimalVisibility(tree, LUCAGenotypeNode);
+	// Количество вспомогательных элементов после добавления новых.
+	size_t sizeAfter = treeBackup.size();
 
-	// Создадим надписи-элементы интерфейса под количества.
-	for (auto helper : treeBackup) {
+	// Создадим надписи-элементы интерфейса под новые виды.
+	for (; sizeBefore != sizeAfter; ++sizeBefore) {
+		
+		// Текущий вспомогательный элемент.
+		helper = treeBackup[sizeBefore];
+
+		// Вид.
+		auto& curSpec = helper->species;
+
+		// Название вида - визуальный элемент с чекбоксом.
+		auto curNode = std::make_shared<TreeItem>(curSpec->getSpeciesName(), curSpec->getVisible(), 0);
+		newNode->addChild(curNode);
+
+		// Надпись под количество.
 		helper->label = createLabelForAmount("-");
 		panelOrganismAmounts->add_child(helper->label);
 	}
 
-	pTreeViewSpecies->setRootItem(rootNodeS);
-}
-
-void WindowsSettings::doInitAnimalVisibility(std::shared_ptr<demi::GenotypesTree> treeNode, std::shared_ptr<TreeItem> item)
-{
-	for (auto& derivative : treeNode->derivatives) {
-		// Узел под генотип.
-		auto newNode = std::make_shared<TreeItem>(derivative->genotype->getGenotypeName(), true, size_t(0));
-		item->addChild(newNode);
-
-		// Вспомогательный элемент.
-		GenotypesTreeHelperItem* helper = new GenotypesTreeHelperItem();
-		helper->genotype = derivative->genotype;
-		treeBackup.push_back(helper);
-
-		// Добавляем виды организмов с блокировкой от параллельного изменения в расчётном потоке.
-		derivative->lockSpecies();
-		for (auto& specItem : derivative->species) {
-			// Название генотипа указано ранее, выводим имена генов и их значения.
-			auto curNode = std::make_shared<TreeItem>(specItem->getSpeciesName(), specItem->getVisible(), size_t(specItem.get()));
-			newNode->addChild(curNode);
-
-			// Вспомогательный элемент.
-			helper = new GenotypesTreeHelperItem();
-			helper->species = specItem;
-			treeBackup.push_back(helper);
-		}
-		derivative->unlockSpecies();
-
-		// Добавляем производные узлы.
+	// Рекурсивно добавляем производные генотипы.
+	for (auto& derivative : treeNode->derivatives)
 		doInitAnimalVisibility(derivative, newNode);
-	}
+	
+	return item;
 }
 
 

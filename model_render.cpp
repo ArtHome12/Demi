@@ -12,7 +12,6 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 #include "model_render.h"
 #include "local_coord.h"
 #include "organism.h"
-#include "settings_storage.h"
 #include "world.h"
 
 // Масштаб, при котором происходит переключение отображения по точкам на отображение клеток.
@@ -545,12 +544,6 @@ void ModelRender::DoScaleStep(const clan::Pointf &pos, float scaleStep, clan::Po
 
 	// Сохраним изменения.
 	globalWorld.setAppearanceScale(scale);
-}
-
-// Постоянная подсветка мира.
-inline const bool ModelRender::getIlluminatedWorld() 
-{ 
-	return pSettings->getTopMenuIsModelIlluminated(); 
 }
 
 

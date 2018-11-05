@@ -106,7 +106,7 @@ private:
 
 	// ќбновл€ет отображение организмов (которые мен€ютс€ в процессе расчЄта).
 	void initAnimalVisibility();
-	void doInitAnimalVisibility(std::shared_ptr<demi::GenotypesTree> treeNode, std::shared_ptr<TreeItem> item);
+	std::shared_ptr<TreeItem> doInitAnimalVisibility(std::shared_ptr<demi::GenotypesTree> treeNode, std::shared_ptr<TreeItem> item);
 
 	// —оздаЄт надпись.
 	std::shared_ptr<clan::LabelView> createLabelForAmount(std::string text);
