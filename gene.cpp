@@ -38,7 +38,7 @@ geneValues_t Gene::getGeneMaxValue() const
 	// Максимальное значение гена определяется количеством возможных вариантов.
 	size_t size = geneValuesVector.size();
 
-	return geneValues_t(size ? size - 1 : 1);// geneValues_t_MAX);
+	return geneValues_t(size ? size - 1 : geneValues_t_MAX);
 }
 
 

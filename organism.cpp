@@ -65,6 +65,10 @@ Organism::Organism(const clan::Point &Acenter, uint8_t Aangle, int32_t Avitality
 	// Снимем блокировку.
 	lockFlag.clear(std::memory_order_release);
 
+	// Если есть ген порога размножения, извлечём его значение.
+	if (species->getGenotype()->getGenotypeLength() > 1) 
+		breedingReserve = 2 + species->getGeneValueByName("BreedingReserve");
+
 	// Откорректируем статистику.
 	if (isAlive())
 		ourSpecies->incAliveCount();
@@ -168,7 +172,7 @@ bool Organism::makeTick()
 		}
 
 		// Возвратим истину, если готовы делиться.
-		return vitality >= 2;
+		return vitality >= breedingReserve;
 	}
 	else {
 		// Реакция не прошла, вычитаем энергию на метаболизм.
