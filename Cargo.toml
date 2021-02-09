@@ -1,0 +1,15 @@
+[package]
+name = "demi"
+version = "0.1.0"
+authors = ["Artem Khomenko <_mag12@yahoo.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+iced = { version = "0.2", features = ["canvas", "tokio", "debug"] }
+# iced = { path = "../..", features = ["canvas", "tokio", "debug"] }
+tokio = { version = "0.3.0", features = ["sync"] }
+itertools = "0.10.0"
+rustc-hash = "1.1"
+
