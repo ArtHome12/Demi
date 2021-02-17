@@ -1,6 +1,6 @@
 /* ===============================================================================
-Моделирование эволюции живого мира.
-Окно с настройками.
+РњРѕРґРµР»РёСЂРѕРІР°РЅРёРµ СЌРІРѕР»СЋС†РёРё Р¶РёРІРѕРіРѕ РјРёСЂР°.
+РћРєРЅРѕ СЃ РЅР°СЃС‚СЂРѕР№РєР°РјРё.
 27 may 2016.
 ----------------------------------------------------------------------------
 Licensed under the terms of the GPL version 3.
@@ -16,12 +16,12 @@ public:
 	SettingsStorage();
 	~SettingsStorage();
 
-	// Внешние ресурсы.
+	// Р’РЅРµС€РЅРёРµ СЂРµСЃСѓСЂСЃС‹.
 	clan::FileResourceDocument fileResDoc;
 	clan::XMLResourceDocument XMLResDoc;
 	clan::ResourceManager resManager;
 
-	// Положение и состояние главного окна.
+	// РџРѕР»РѕР¶РµРЅРёРµ Рё СЃРѕСЃС‚РѕСЏРЅРёРµ РіР»Р°РІРЅРѕРіРѕ РѕРєРЅР°.
 	const clan::Rectf getMainWindowPosition();
 	const clan::WindowShowType getMainWindowState();
 	const bool getIsFullScreen();
@@ -29,13 +29,13 @@ public:
 		const clan::WindowShowType state, 
 		bool isFullScreen);
 
-	// Состояние панели меню.
+	// РЎРѕСЃС‚РѕСЏРЅРёРµ РїР°РЅРµР»Рё РјРµРЅСЋ.
 	const bool getTopMenuIsSettingsWindowVisible();
 	void setTopMenuIsSettingsWindowVisible(bool newValue);
 	const bool getTopMenuIsModelIlluminated();
 	void setTopMenuIsModelIlluminated(bool newValue);
 
-	// Имя текущего проекта и чекбоксы
+	// РРјСЏ С‚РµРєСѓС‰РµРіРѕ РїСЂРѕРµРєС‚Р° Рё С‡РµРєР±РѕРєСЃС‹
 	const std::string getProjectFilename();
 	const bool getProjectAutorun();
 	const bool getProjectAutosave();
@@ -45,20 +45,20 @@ public:
 	void setProjectAutosave(bool newValue);
 	void setProjectAutosaveHourly(bool newValue);
 
-	// Возвращает строку по заданному ключу либо сам ключ, если не найдена.
+	// Р’РѕР·РІСЂР°С‰Р°РµС‚ СЃС‚СЂРѕРєСѓ РїРѕ Р·Р°РґР°РЅРЅРѕРјСѓ РєР»СЋС‡Сѓ Р»РёР±Рѕ СЃР°Рј РєР»СЋС‡, РµСЃР»Рё РЅРµ РЅР°Р№РґРµРЅР°.
 	std::string LocaleStr(const std::string &key);
 
 private:
-	// Разделы XML-файла.
-	clan::DomElement sectionMainWindowApperance;			// Раздел с параметрами главного окна.
-	clan::DomElement sectionMainWindowTopMenu;				// Раздел с параметрами меню главного окна.
-	clan::DomElement sectionProjectName;					// Раздел с названием файлов проекта.
-	clan::DomElement sectionProjectCheckBoxes;				// Раздел с настройками проекта.
+	// Р Р°Р·РґРµР»С‹ XML-С„Р°Р№Р»Р°.
+	clan::DomElement sectionMainWindowApperance;			// Р Р°Р·РґРµР» СЃ РїР°СЂР°РјРµС‚СЂР°РјРё РіР»Р°РІРЅРѕРіРѕ РѕРєРЅР°.
+	clan::DomElement sectionMainWindowTopMenu;				// Р Р°Р·РґРµР» СЃ РїР°СЂР°РјРµС‚СЂР°РјРё РјРµРЅСЋ РіР»Р°РІРЅРѕРіРѕ РѕРєРЅР°.
+	clan::DomElement sectionProjectName;					// Р Р°Р·РґРµР» СЃ РЅР°Р·РІР°РЅРёРµРј С„Р°Р№Р»РѕРІ РїСЂРѕРµРєС‚Р°.
+	clan::DomElement sectionProjectCheckBoxes;				// Р Р°Р·РґРµР» СЃ РЅР°СЃС‚СЂРѕР№РєР°РјРё РїСЂРѕРµРєС‚Р°.
 
-	// Локализованные строковые ресурсы.
+	// Р›РѕРєР°Р»РёР·РѕРІР°РЅРЅС‹Рµ СЃС‚СЂРѕРєРѕРІС‹Рµ СЂРµСЃСѓСЂСЃС‹.
 	std::map <std::string, std::string> langMap;
 
-	// Загружает локализованные строковые ресурсы из файла.
+	// Р—Р°РіСЂСѓР¶Р°РµС‚ Р»РѕРєР°Р»РёР·РѕРІР°РЅРЅС‹Рµ СЃС‚СЂРѕРєРѕРІС‹Рµ СЂРµСЃСѓСЂСЃС‹ РёР· С„Р°Р№Р»Р°.
 	void LoadLocaleStrings(const std::string &lang);
 };
 

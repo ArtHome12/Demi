@@ -1,12 +1,149 @@
 /* ===============================================================================
-Моделирование эволюции живого мира.
-Настройки модели и экземпляра программы.
-27 Jan 2021.
+Simulation of the evolution of the animal world.
+Project controls.
+13 Feb 2021.
 ----------------------------------------------------------------------------
 Licensed under the terms of the GPL version 3.
 http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
+
+use iced::button::{self, Button};
+use iced::{Checkbox, Align, Command, Element, Row, Text,};
+use crate::style;
+
+
+#[derive(Default)]
+pub struct Controls {
+   paused: bool,
+   autosave: bool,
+   autorun: bool,
+   illuminate: bool,
+
+   new_button: button::State,
+   open_button: button::State,
+   save_button: button::State,
+   save_as_button: button::State,
+   restart_button: button::State,
+   pause_button: button::State,
+}
+
+impl Controls {
+
+   pub fn update(&mut self, message: Message) -> Command<Message> {
+      match message {
+         Message::Pause => self.paused = !self.paused,
+         Message::ToggleAutosave(checked) => self.autosave = checked,
+         Message::ToggleAutorun(checked) => self.autorun = checked,
+         Message::ToggleIllumination(checked) => self.illuminate = checked,
+         _ => ()
+      }
+      Command::none()
+   }
+
+   pub fn view<'a>(
+      &'a mut self,
+   ) -> Element<'a, Message> {
+      // Project controls
+      let buttons = Row::new()
+      .padding(10)
+      .spacing(10)
+      .align_items(Align::Center)
+
+      .push(
+         Button::new(
+               &mut self.new_button,
+               Text::new("New"),
+         )
+         .on_press(Message::New)
+         .style(style::Button),
+      )
+
+      .push(
+         Button::new(
+               &mut self.open_button,
+               Text::new("Open"),
+         )
+         .on_press(Message::Open)
+         .style(style::Button),
+      )
+
+      .push(
+         Button::new(
+               &mut self.save_button,
+               Text::new("Save"),
+         )
+         .on_press(Message::Save)
+         .style(style::Button),
+      )
+
+      .push(
+         Button::new(
+               &mut self.save_as_button,
+               Text::new("Save as"),
+         )
+         .on_press(Message::SaveAs)
+         .style(style::Button),
+      )
+
+      .push(
+         Button::new(
+               &mut self.restart_button,
+               Text::new("Restart"),
+         )
+         .on_press(Message::Restart)
+         .style(style::Button),
+      )
+
+      .push(
+         Button::new(
+               &mut self.pause_button,
+               Text::new(if self.paused {"Resume"} else {"Pause"}),
+         )
+         .on_press(Message::Pause)
+         .style(style::Button),
+      )
+
+      .push(
+         Checkbox::new(self.autosave, "Autosave", Message::ToggleAutosave)
+         .size(16)
+         .spacing(5)
+         .text_size(16),
+      )
+
+      .push(
+         Checkbox::new(self.autorun, "Autorun", Message::ToggleAutorun)
+         .size(16)
+         .spacing(5)
+         .text_size(16),
+      )
+
+      .push(
+         Checkbox::new(self.illuminate, "Illumination", Message::ToggleIllumination)
+         .size(16)
+         .spacing(5)
+         .text_size(16),
+      );
+
+      buttons.into()
+
+   }
+}
+
+#[derive(Debug, Clone)]
+pub enum Message {
+   New,
+   Open,
+   Save,
+   SaveAs,
+   Restart,
+   Pause,
+   ToggleAutosave(bool),
+   ToggleAutorun(bool),
+   ToggleIllumination(bool),
+}
+
+
 
 /*pub struct Globals {
    world_size: WorldSize,
@@ -37,146 +174,3 @@ pub struct Point {
    visible: bool,
    illuminate: bool,
 } */
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Preset {
-    Custom,
-    XKCD,
-    /* Glider,
-    SmallExploder,
-    Exploder,
-    TenCellRow,
-    LightweightSpaceship,
-    Tumbler,
-    GliderGun,
-    Acorn, */
-}
-
-/* pub static ALL: &[Preset] = &[
-    Preset::Custom,
-    Preset::XKCD,
-    Preset::Glider,
-    Preset::SmallExploder,
-    Preset::Exploder,
-    Preset::TenCellRow,
-    Preset::LightweightSpaceship,
-    Preset::Tumbler,
-    Preset::GliderGun,
-    Preset::Acorn,
-]; */
-
-impl Preset {
-    pub fn life(self) -> Vec<(isize, isize)> {
-        #[rustfmt::skip]
-        let cells = match self {
-            Preset::Custom => vec![],
-            Preset::XKCD => vec![
-                "  xxx  ",
-                "  x x  ",
-                "  x x  ",
-                "   x   ",
-                "x xxx  ",
-                " x x x ",
-                "   x  x",
-                "  x x  ",
-                "  x x  ",
-            ],
-            /* Preset::Glider => vec![
-                " x ",
-                "  x",
-                "xxx"
-            ],
-            Preset::SmallExploder => vec![
-                " x ",
-                "xxx",
-                "x x",
-                " x ",
-            ],
-            Preset::Exploder => vec![
-                "x x x",
-                "x   x",
-                "x   x",
-                "x   x",
-                "x x x",
-            ],
-            Preset::TenCellRow => vec![
-                "xxxxxxxxxx",
-            ],
-            Preset::LightweightSpaceship => vec![
-                " xxxxx",
-                "x    x",
-                "     x",
-                "x   x ",
-            ],
-            Preset::Tumbler => vec![
-                " xx xx ",
-                " xx xx ",
-                "  x x  ",
-                "x x x x",
-                "x x x x",
-                "xx   xx",
-            ],
-            Preset::GliderGun => vec![
-                "                        x           ",
-                "                      x x           ",
-                "            xx      xx            xx",
-                "           x   x    xx            xx",
-                "xx        x     x   xx              ",
-                "xx        x   x xx    x x           ",
-                "          x     x       x           ",
-                "           x   x                    ",
-                "            xx                      ",
-            ],
-            Preset::Acorn => vec![
-                " x     ",
-                "   x   ",
-                "xx  xxx",
-            ], */
-        };
-
-        let start_row = -(cells.len() as isize / 2);
-
-        cells
-            .into_iter()
-            .enumerate()
-            .flat_map(|(i, cells)| {
-                let start_column = -(cells.len() as isize / 2);
-
-                cells
-                    .chars()
-                    .enumerate()
-                    .filter(|(_, c)| !c.is_whitespace())
-                    .map(move |(j, _)| {
-                        (start_row + i as isize, start_column + j as isize)
-                    })
-            })
-            .collect()
-    }
-}
-
-impl Default for Preset {
-    fn default() -> Preset {
-        Preset::XKCD
-    }
-}
-
-impl std::fmt::Display for Preset {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Preset::Custom => "Custom",
-                Preset::XKCD => "xkcd #2293",
-                /* Preset::Glider => "Glider",
-                Preset::SmallExploder => "Small Exploder",
-                Preset::Exploder => "Exploder",
-                Preset::TenCellRow => "10 Cell Row",
-                Preset::LightweightSpaceship => "Lightweight spaceship",
-                Preset::Tumbler => "Tumbler",
-                Preset::GliderGun => "Gosper Glider Gun",
-                Preset::Acorn => "Acorn", */
-            }
-        )
-    }
-}

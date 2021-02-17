@@ -1,6 +1,6 @@
 /* ===============================================================================
-Моделирование эволюции живого мира.
-Окно с настройками.
+РњРѕРґРµР»РёСЂРѕРІР°РЅРёРµ СЌРІРѕР»СЋС†РёРё Р¶РёРІРѕРіРѕ РјРёСЂР°.
+РћРєРЅРѕ СЃ РЅР°СЃС‚СЂРѕР№РєР°РјРё.
 27 may 2016.
 ----------------------------------------------------------------------------
 Licensed under the terms of the GPL version 3.
@@ -11,10 +11,10 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 #include "precomp.h"
 #include "settings_storage.h"
 
-// Файл с настройками программы
+// Р¤Р°Р№Р» СЃ РЅР°СЃС‚СЂРѕР№РєР°РјРё РїСЂРѕРіСЂР°РјРјС‹
 auto cSettingsXML = "ThemeAero/settings.xml";
 
-// Местоположение главного окна
+// РњРµСЃС‚РѕРїРѕР»РѕР¶РµРЅРёРµ РіР»Р°РІРЅРѕРіРѕ РѕРєРЅР°
 auto cMainWindowSectionAppearance = "MainWindow/Appearance";
 auto cMainWindowSectionLeft = "left";
 auto cMainWindowSectionTop = "top";
@@ -23,22 +23,22 @@ auto cMainWindowSectionHeight = "height";
 auto cMainWindowSectionState = "state";
 auto cMainWindowSectionFullScreen = "is_fullscreen";
 
-// Состояние панели меню
+// РЎРѕСЃС‚РѕСЏРЅРёРµ РїР°РЅРµР»Рё РјРµРЅСЋ
 auto cMainWindowSectionMenu = "MainWindow/TopMenuState";
 auto cMainWindowSectionSettingsWindowVisible = "SettingsWindowVisible";
 auto cMainWindowSectionModelIlluminated = "ModelIlluminated";
 
-// Язык интерфейса.
+// РЇР·С‹Рє РёРЅС‚РµСЂС„РµР№СЃР°.
 auto cMainWindowSectionLocale = "MainWindow/Locale";
 auto cMainWindowSectionLanguage = "Language";
 auto cLangSection = "Language";
 auto cLangType = "lang";
 
-// Информация о проекте
+// РРЅС„РѕСЂРјР°С†РёСЏ Рѕ РїСЂРѕРµРєС‚Рµ
 auto cProjectSectionName = "Project/ProjectName";
 auto cProjectSectionNameFilename = "filename";
 
-// Чекбоксы проекта
+// Р§РµРєР±РѕРєСЃС‹ РїСЂРѕРµРєС‚Р°
 auto cProjectSectionCheckboxes = "Project/Checkboxes";
 auto cProjectSectionAutorun = "autorun";
 auto cProjectSectionAutosave = "autosave";
@@ -54,25 +54,25 @@ SettingsStorage::SettingsStorage() :
 	XMLResDoc(cSettingsXML), 
 	fileResDoc(clan::FileSystem("ThemeAero"))
 {
-	// Язык интерфейса.
+	// РЇР·С‹Рє РёРЅС‚РµСЂС„РµР№СЃР°.
 	auto sectionLocale = XMLResDoc.get_resource(cMainWindowSectionLocale).get_element();
 	auto &lang = sectionLocale.get_attribute(cMainWindowSectionLanguage, "Eng");
 
-	// Загрузим строковые ресурсы с учётом языка.
+	// Р—Р°РіСЂСѓР·РёРј СЃС‚СЂРѕРєРѕРІС‹Рµ СЂРµСЃСѓСЂСЃС‹ СЃ СѓС‡С‘С‚РѕРј СЏР·С‹РєР°.
 	LoadLocaleStrings(lang);
 }
 
 SettingsStorage::~SettingsStorage()
 {
-	// Сохраняем изменения на диске.
+	// РЎРѕС…СЂР°РЅСЏРµРј РёР·РјРµРЅРµРЅРёСЏ РЅР° РґРёСЃРєРµ.
 	XMLResDoc.save(cSettingsXML);
 }
 
 
-// Возвращает местоположение и размеры главного окна программы.
+// Р’РѕР·РІСЂР°С‰Р°РµС‚ РјРµСЃС‚РѕРїРѕР»РѕР¶РµРЅРёРµ Рё СЂР°Р·РјРµСЂС‹ РіР»Р°РІРЅРѕРіРѕ РѕРєРЅР° РїСЂРѕРіСЂР°РјРјС‹.
 const clan::Rectf SettingsStorage::getMainWindowPosition()
 {
-	// Положение и размеры окна
+	// РџРѕР»РѕР¶РµРЅРёРµ Рё СЂР°Р·РјРµСЂС‹ РѕРєРЅР°
 	int mainWindowLeft = sectionMainWindowApperance.get_attribute_int(cMainWindowSectionLeft, 0);
 	int mainWindowTop = sectionMainWindowApperance.get_attribute_int(cMainWindowSectionTop, 0);
 	int mainWindowWidth = sectionMainWindowApperance.get_attribute_int(cMainWindowSectionWidth, 800);
@@ -82,12 +82,12 @@ const clan::Rectf SettingsStorage::getMainWindowPosition()
 }
 
 
-// Обновляет значения местоположения и состояния главного окна программы.
+// РћР±РЅРѕРІР»СЏРµС‚ Р·РЅР°С‡РµРЅРёСЏ РјРµСЃС‚РѕРїРѕР»РѕР¶РµРЅРёСЏ Рё СЃРѕСЃС‚РѕСЏРЅРёСЏ РіР»Р°РІРЅРѕРіРѕ РѕРєРЅР° РїСЂРѕРіСЂР°РјРјС‹.
 void SettingsStorage::setMainWindowSettings(const clan::Rectf & rect, 
 	const clan::WindowShowType state, 
 	bool isFullScreen)
 {
-	// Размеры меняем только если окно в нормальном состоянии.
+	// Р Р°Р·РјРµСЂС‹ РјРµРЅСЏРµРј С‚РѕР»СЊРєРѕ РµСЃР»Рё РѕРєРЅРѕ РІ РЅРѕСЂРјР°Р»СЊРЅРѕРј СЃРѕСЃС‚РѕСЏРЅРёРё.
 	if ((state != clan::WindowShowType::maximize) && (state != clan::WindowShowType::minimize) && !isFullScreen) {
 		sectionMainWindowApperance.set_attribute_int(cMainWindowSectionLeft, int(rect.left));
 		sectionMainWindowApperance.set_attribute_int(cMainWindowSectionTop, int(rect.top));
@@ -106,88 +106,88 @@ const bool SettingsStorage::getIsFullScreen()
 
 const clan::WindowShowType SettingsStorage::getMainWindowState()
 {
-	// Состояние гравного окна.
+	// РЎРѕСЃС‚РѕСЏРЅРёРµ РіСЂР°РІРЅРѕРіРѕ РѕРєРЅР°.
 	return clan::WindowShowType(sectionMainWindowApperance.get_attribute_int(cMainWindowSectionState, int(clan::WindowShowType::show_default)));
 }
 
 const bool SettingsStorage::getTopMenuIsModelIlluminated()
 {
-	// Постоянная подсветка модели.
+	// РџРѕСЃС‚РѕСЏРЅРЅР°СЏ РїРѕРґСЃРІРµС‚РєР° РјРѕРґРµР»Рё.
 	return sectionMainWindowTopMenu.get_attribute_bool(cMainWindowSectionModelIlluminated, false);
 }
 
 
 void SettingsStorage::setTopMenuIsModelIlluminated(bool newValue)
 {
-	// Постоянная подсветка модели.
+	// РџРѕСЃС‚РѕСЏРЅРЅР°СЏ РїРѕРґСЃРІРµС‚РєР° РјРѕРґРµР»Рё.
 	sectionMainWindowTopMenu.set_attribute_bool(cMainWindowSectionModelIlluminated, newValue);
 }
 
 const bool SettingsStorage::getTopMenuIsSettingsWindowVisible()
 {
-	// Отображение панели с настройками.
+	// РћС‚РѕР±СЂР°Р¶РµРЅРёРµ РїР°РЅРµР»Рё СЃ РЅР°СЃС‚СЂРѕР№РєР°РјРё.
 	return sectionMainWindowTopMenu.get_attribute_bool(cMainWindowSectionSettingsWindowVisible, true);
 }
 
 
 void SettingsStorage::setTopMenuIsSettingsWindowVisible(bool newValue)
 {
-	// Отображение панели с настройками.
+	// РћС‚РѕР±СЂР°Р¶РµРЅРёРµ РїР°РЅРµР»Рё СЃ РЅР°СЃС‚СЂРѕР№РєР°РјРё.
 	sectionMainWindowTopMenu.set_attribute_bool(cMainWindowSectionSettingsWindowVisible, newValue);
 }
 
-// Имя текущего проекта и чекбоксы
+// РРјСЏ С‚РµРєСѓС‰РµРіРѕ РїСЂРѕРµРєС‚Р° Рё С‡РµРєР±РѕРєСЃС‹
 const std::string SettingsStorage::getProjectFilename()
 {
-	// Имя текущего проекта и чекбоксы
+	// РРјСЏ С‚РµРєСѓС‰РµРіРѕ РїСЂРѕРµРєС‚Р° Рё С‡РµРєР±РѕРєСЃС‹
 	return sectionProjectName.get_attribute(cProjectSectionNameFilename, "");
 }
 
 const bool SettingsStorage::getProjectAutorun()
 {
-	// Имя текущего проекта и чекбоксы
+	// РРјСЏ С‚РµРєСѓС‰РµРіРѕ РїСЂРѕРµРєС‚Р° Рё С‡РµРєР±РѕРєСЃС‹
 	return sectionProjectCheckBoxes.get_attribute_bool(cProjectSectionAutorun, false);
 }
 
 const bool SettingsStorage::getProjectAutosave()
 {
-	// Имя текущего проекта и чекбоксы
+	// РРјСЏ С‚РµРєСѓС‰РµРіРѕ РїСЂРѕРµРєС‚Р° Рё С‡РµРєР±РѕРєСЃС‹
 	return sectionProjectCheckBoxes.get_attribute_bool(cProjectSectionAutosave, false);
 }
 
 const bool SettingsStorage::getProjectAutosaveHourly()
 {
-	// Имя текущего проекта и чекбоксы
+	// РРјСЏ С‚РµРєСѓС‰РµРіРѕ РїСЂРѕРµРєС‚Р° Рё С‡РµРєР±РѕРєСЃС‹
 	return sectionProjectCheckBoxes.get_attribute_bool(cProjectSectionAutosaveHourly, false);
 }
 
 void SettingsStorage::setProjectFilename(const std::string &newValue)
 {
-	// Имя текущего проекта и чекбоксы
+	// РРјСЏ С‚РµРєСѓС‰РµРіРѕ РїСЂРѕРµРєС‚Р° Рё С‡РµРєР±РѕРєСЃС‹
 	sectionProjectName.set_attribute(cProjectSectionNameFilename, newValue);
 }
 
 void SettingsStorage::setProjectAutorun(bool newValue)
 {
-	// Имя текущего проекта и чекбоксы
+	// РРјСЏ С‚РµРєСѓС‰РµРіРѕ РїСЂРѕРµРєС‚Р° Рё С‡РµРєР±РѕРєСЃС‹
 	sectionProjectCheckBoxes.set_attribute_bool(cProjectSectionAutorun, newValue);
 }
 
 void SettingsStorage::setProjectAutosave(bool newValue)
 {
-	// Имя текущего проекта и чекбоксы
+	// РРјСЏ С‚РµРєСѓС‰РµРіРѕ РїСЂРѕРµРєС‚Р° Рё С‡РµРєР±РѕРєСЃС‹
 	sectionProjectCheckBoxes.set_attribute_bool(cProjectSectionAutosave, newValue);
 }
 
 void SettingsStorage::setProjectAutosaveHourly(bool newValue)
 {
-	// Имя текущего проекта и чекбоксы
+	// РРјСЏ С‚РµРєСѓС‰РµРіРѕ РїСЂРѕРµРєС‚Р° Рё С‡РµРєР±РѕРєСЃС‹
 	sectionProjectCheckBoxes.set_attribute_bool(cProjectSectionAutosaveHourly, newValue);
 }
 
 std::string SettingsStorage::LocaleStr(const std::string &key)
 {
-	// Возвращает строку по заданному ключу либо сам ключ, если не найдена.
+	// Р’РѕР·РІСЂР°С‰Р°РµС‚ СЃС‚СЂРѕРєСѓ РїРѕ Р·Р°РґР°РЅРЅРѕРјСѓ РєР»СЋС‡Сѓ Р»РёР±Рѕ СЃР°Рј РєР»СЋС‡, РµСЃР»Рё РЅРµ РЅР°Р№РґРµРЅР°.
 	try {
 		return langMap.at(key);
 	}
@@ -196,31 +196,31 @@ std::string SettingsStorage::LocaleStr(const std::string &key)
 	}
 }
 
-// Загружает ресурсы из файла.
+// Р—Р°РіСЂСѓР¶Р°РµС‚ СЂРµСЃСѓСЂСЃС‹ РёР· С„Р°Р№Р»Р°.
 void SettingsStorage::LoadLocaleStrings(const std::string &lang)
 {
-	// Названия ресурсов.
+	// РќР°Р·РІР°РЅРёСЏ СЂРµСЃСѓСЂСЃРѕРІ.
 	const std::vector<std::string>& names = XMLResDoc.get_resource_names_of_type(cLangType, cLangSection);
 
-	// Количество ресурсов.
+	// РљРѕР»РёС‡РµСЃС‚РІРѕ СЂРµСЃСѓСЂСЃРѕРІ.
 	size_t elemCount = names.size();
 
-	// Считываем ресурсы.
+	// РЎС‡РёС‚С‹РІР°РµРј СЂРµСЃСѓСЂСЃС‹.
 	for (size_t i = 0; i != elemCount; ++i) {
 
-		// Строковый ресурс с разными языками.
+		// РЎС‚СЂРѕРєРѕРІС‹Р№ СЂРµСЃСѓСЂСЃ СЃ СЂР°Р·РЅС‹РјРё СЏР·С‹РєР°РјРё.
 		clan::XMLResourceNode &res = XMLResDoc.get_resource(names[i]);
 
-		// Свойства элемента.
+		// РЎРІРѕР№СЃС‚РІР° СЌР»РµРјРµРЅС‚Р°.
 		clan::DomElement &prop = res.get_element();
 
-		// Ключ.
+		// РљР»СЋС‡.
 		auto &strKey = res.get_name();
 
-		// Значение на нужном языке.
+		// Р—РЅР°С‡РµРЅРёРµ РЅР° РЅСѓР¶РЅРѕРј СЏР·С‹РєРµ.
 		auto &strVal = prop.get_attribute(lang);
 
-		// Сохраняем пару ключ-значение для нужного языка.
+		// РЎРѕС…СЂР°РЅСЏРµРј РїР°СЂСѓ РєР»СЋС‡-Р·РЅР°С‡РµРЅРёРµ РґР»СЏ РЅСѓР¶РЅРѕРіРѕ СЏР·С‹РєР°.
 		langMap[strKey] = strVal;
 	}
 }

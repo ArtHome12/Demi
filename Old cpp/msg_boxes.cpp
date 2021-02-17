@@ -1,6 +1,6 @@
 /* ===============================================================================
-Моделирование эволюции живого мира.
-Платформонезависимые диалоги.
+РњРѕРґРµР»РёСЂРѕРІР°РЅРёРµ СЌРІРѕР»СЋС†РёРё Р¶РёРІРѕРіРѕ РјРёСЂР°.
+РџР»Р°С‚С„РѕСЂРјРѕРЅРµР·Р°РІРёСЃРёРјС‹Рµ РґРёР°Р»РѕРіРё.
 26 september 2018.
 ----------------------------------------------------------------------------
 Licensed under the terms of the GPL version 3.
@@ -13,7 +13,7 @@ Copyright (c) 2013-2016 by Artem Khomenko _mag12@yahoo.com.
 #include "settings_storage.h"
 #include "Theme/theme.h"
 
-// Строковые ресурсы
+// РЎС‚СЂРѕРєРѕРІС‹Рµ СЂРµСЃСѓСЂСЃС‹
 auto cMsgBoxOk = "MsgBoxOk";
 auto cMsgBoxCancel = "MsgBoxCancel";
 
@@ -28,32 +28,32 @@ MsgBox::MsgBox(SettingsStorage* pSettings, const std::string& text, const std::s
 	set_title(caption);
 	rootView->style()->set("flex-direction: row; background: rgb(240,240,240); padding: 11px");
 
-	// Иконка в левой части диалога (появится только если был вызов loadIcons().
+	// РРєРѕРЅРєР° РІ Р»РµРІРѕР№ С‡Р°СЃС‚Рё РґРёР°Р»РѕРіР° (РїРѕСЏРІРёС‚СЃСЏ С‚РѕР»СЊРєРѕ РµСЃР»Рё Р±С‹Р» РІС‹Р·РѕРІ loadIcons().
 	leftIcon->style()->set("padding-right: 11px");
 	rootView->add_child(leftIcon);
 
-	// Узнаем ширину текущего окна, чтобы соотнести с размером диалога.
-	// Получим размеры для отображения.
+	// РЈР·РЅР°РµРј С€РёСЂРёРЅСѓ С‚РµРєСѓС‰РµРіРѕ РѕРєРЅР°, С‡С‚РѕР±С‹ СЃРѕРѕС‚РЅРµСЃС‚Рё СЃ СЂР°Р·РјРµСЂРѕРј РґРёР°Р»РѕРіР°.
+	// РџРѕР»СѓС‡РёРј СЂР°Р·РјРµСЂС‹ РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ.
 	int primaryScreenIndex = 0;
 	std::vector<clan::Rectf> screenRects = clan::ScreenInfo().get_screen_geometries(primaryScreenIndex);
 	int screenWidth = int(screenRects.at(size_t(primaryScreenIndex)).get_width());
 
-	// Ширина диалога не должна быть менее 300 точек и более четверти экрана.
+	// РЁРёСЂРёРЅР° РґРёР°Р»РѕРіР° РЅРµ РґРѕР»Р¶РЅР° Р±С‹С‚СЊ РјРµРЅРµРµ 300 С‚РѕС‡РµРє Рё Р±РѕР»РµРµ С‡РµС‚РІРµСЂС‚Рё СЌРєСЂР°РЅР°.
 	screenWidth = std::max<int>(300, screenWidth / 4); //-V112
 
-	// Рамка для текста и кнопок правее иконки.
+	// Р Р°РјРєР° РґР»СЏ С‚РµРєСЃС‚Р° Рё РєРЅРѕРїРѕРє РїСЂР°РІРµРµ РёРєРѕРЅРєРё.
 	auto rightPanel = std::make_shared<clan::View>();
 	rightPanel->style()->set("flex-direction: column; width: " + std::to_string(screenWidth) + "px");
 	//rightPanel->style()->set("border: 1px solid red");
 	rootView->add_child(rightPanel);
 
-	// Текст.
+	// РўРµРєСЃС‚.
 	auto span = Theme::create_span();
 	span->style()->set("padding: 11px; margin-bottom: 11px");
 	span->add_text(text);
 	rightPanel->add_child(span);
 
-	// Подрамка справа внизу с кнопками, но только если кнопки есть.
+	// РџРѕРґСЂР°РјРєР° СЃРїСЂР°РІР° РІРЅРёР·Сѓ СЃ РєРЅРѕРїРєР°РјРё, РЅРѕ С‚РѕР»СЊРєРѕ РµСЃР»Рё РєРЅРѕРїРєРё РµСЃС‚СЊ.
 	auto rightBottomPanel = std::make_shared<clan::View>();
 	if (mbType != cMbNone) {
 		rightBottomPanel->style()->set("flex-direction: row; height: 32px; justify-content: center");
@@ -74,7 +74,7 @@ MsgBox::MsgBox(SettingsStorage* pSettings, const std::string& text, const std::s
 		};
 	}
 	else
-		// Для обработчика клавиатуры.
+		// Р”Р»СЏ РѕР±СЂР°Р±РѕС‚С‡РёРєР° РєР»Р°РІРёР°С‚СѓСЂС‹.
 		bOk->set_hidden();
 
 	if (mbType == cMbOkCancel || mbType == cMbCancel) {
@@ -89,13 +89,13 @@ MsgBox::MsgBox(SettingsStorage* pSettings, const std::string& text, const std::s
 		};
 	}
 
-	// Уберём возможность менять размеры диалогового окна.
+	// РЈР±РµСЂС‘Рј РІРѕР·РјРѕР¶РЅРѕСЃС‚СЊ РјРµРЅСЏС‚СЊ СЂР°Р·РјРµСЂС‹ РґРёР°Р»РѕРіРѕРІРѕРіРѕ РѕРєРЅР°.
 	set_resizable(false);
 }
 
 MsgBox::~MsgBox()
 {
-	// Вызываем обработчик для уведомления о выборе пользователя.
+	// Р’С‹Р·С‹РІР°РµРј РѕР±СЂР°Р±РѕС‚С‡РёРє РґР»СЏ СѓРІРµРґРѕРјР»РµРЅРёСЏ Рѕ РІС‹Р±РѕСЂРµ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ.
 	if (onProcessResult)
 		onProcessResult(result);
 }
@@ -106,10 +106,10 @@ void MsgBox::initWindow(const clan::FileSystem& fs)
 	auto& canvas = rootView->canvas();
 
 	rootView->slots.connect(rootView->sig_key_press(), [&](clan::KeyEvent &e) { on_input_down(e); });
-	// Без вызова этой функции события клавиатуры не приходят.
+	// Р‘РµР· РІС‹Р·РѕРІР° СЌС‚РѕР№ С„СѓРЅРєС†РёРё СЃРѕР±С‹С‚РёСЏ РєР»Р°РІРёР°С‚СѓСЂС‹ РЅРµ РїСЂРёС…РѕРґСЏС‚.
 	rootView->set_focus();
 
-	// Загружаем иконки.
+	// Р—Р°РіСЂСѓР¶Р°РµРј РёРєРѕРЅРєРё.
 	leftIcon->set_image(clan::Image(canvas, "Exclamation.png", fs));
 	bOk->image_view()->set_image(clan::Image(canvas, "Ok.png", fs));
 	bCancel->image_view()->set_image(clan::Image(canvas, "Cancel.png", fs));

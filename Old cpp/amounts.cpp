@@ -1,6 +1,6 @@
 /* ===============================================================================
-Моделирование эволюции живого мира.
-Модуль для подсчёта количества элементов и организмов с целью отображения.
+РњРѕРґРµР»РёСЂРѕРІР°РЅРёРµ СЌРІРѕР»СЋС†РёРё Р¶РёРІРѕРіРѕ РјРёСЂР°.
+РњРѕРґСѓР»СЊ РґР»СЏ РїРѕРґСЃС‡С‘С‚Р° РєРѕР»РёС‡РµСЃС‚РІР° СЌР»РµРјРµРЅС‚РѕРІ Рё РѕСЂРіР°РЅРёР·РјРѕРІ СЃ С†РµР»СЊСЋ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ.
 12 september 2018.
 ----------------------------------------------------------------------------
 Licensed under the terms of the GPL version 3.
@@ -15,35 +15,35 @@ Copyright (c) 2013-2018 by Artem Khomenko _mag12@yahoo.com.
 #include "reactions.h"
 #include "world.h"
 
-// Инициализация класса. Его инициализация должна происходить после инициализации массивов в World, когда модель готова к первому тику.
+// РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РєР»Р°СЃСЃР°. Р•РіРѕ РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РґРѕР»Р¶РЅР° РїСЂРѕРёСЃС…РѕРґРёС‚СЊ РїРѕСЃР»Рµ РёРЅРёС†РёР°Р»РёР·Р°С†РёРё РјР°СЃСЃРёРІРѕРІ РІ World, РєРѕРіРґР° РјРѕРґРµР»СЊ РіРѕС‚РѕРІР° Рє РїРµСЂРІРѕРјСѓ С‚РёРєСѓ.
 void Amounts::Init()
 {
 	const size_t elemCount = globalWorld.getElemCount();
 
-	// Выделим память под элементы.
+	// Р’С‹РґРµР»РёРј РїР°РјСЏС‚СЊ РїРѕРґ СЌР»РµРјРµРЅС‚С‹.
 	delete[] arResAmounts;
 	arResAmounts = new unsigned long long[elemCount];
 
-	// Очистим старые значения.
+	// РћС‡РёСЃС‚РёРј СЃС‚Р°СЂС‹Рµ Р·РЅР°С‡РµРЅРёСЏ.
 	memset(arResAmounts, 0, sizeof(unsigned long long) * elemCount);
 
-	// Перебираем все точки и сохраняем количества.
-	demi::Dot *cur = globalWorld.getDotsArray();						// Первая точка массива.
+	// РџРµСЂРµР±РёСЂР°РµРј РІСЃРµ С‚РѕС‡РєРё Рё СЃРѕС…СЂР°РЅСЏРµРј РєРѕР»РёС‡РµСЃС‚РІР°.
+	demi::Dot *cur = globalWorld.getDotsArray();						// РџРµСЂРІР°СЏ С‚РѕС‡РєР° РјР°СЃСЃРёРІР°.
 	const clan::Size& worldSize = globalWorld.getWorldSize();
-	demi::Dot *last = cur + worldSize.width * worldSize.height;		// Точка после последней точки массива.
+	demi::Dot *last = cur + worldSize.width * worldSize.height;		// РўРѕС‡РєР° РїРѕСЃР»Рµ РїРѕСЃР»РµРґРЅРµР№ С‚РѕС‡РєРё РјР°СЃСЃРёРІР°.
 	while (cur < last) {
 
-		// Суммируем ресурсы каждой точки.
+		// РЎСѓРјРјРёСЂСѓРµРј СЂРµСЃСѓСЂСЃС‹ РєР°Р¶РґРѕР№ С‚РѕС‡РєРё.
 		for (size_t i = 0; i != elemCount; ++i)
 			arResAmounts[i] += cur->getElemAmount(i);
 
-		// Если в точке есть организм, посчитаем ресурсы в нём.
+		// Р•СЃР»Рё РІ С‚РѕС‡РєРµ РµСЃС‚СЊ РѕСЂРіР°РЅРёР·Рј, РїРѕСЃС‡РёС‚Р°РµРј СЂРµСЃСѓСЂСЃС‹ РІ РЅС‘Рј.
 		demi::Organism* organism = cur->organism;
 		if (organism) {
 			organismAmounts_t::const_iterator itAmounts = organism->getLeftReagentAmounts().begin();
 			const demi::ChemReaction &reaction = *organism->getChemReaction().get();
 			for (auto &reagent : reaction.leftReagents) {
-				// Текущее имеющееся значение во "рту" организма.
+				// РўРµРєСѓС‰РµРµ РёРјРµСЋС‰РµРµСЃСЏ Р·РЅР°С‡РµРЅРёРµ РІРѕ "СЂС‚Сѓ" РѕСЂРіР°РЅРёР·РјР°.
 				organismAmount_t amnt = *itAmounts++;
 				if (amnt != 0)
 					arResAmounts[reagent.elementIndex] += amnt;

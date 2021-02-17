@@ -8,7 +8,7 @@
          "type": "lldb",
          "request": "launch",
          "name": "Debug",
-         "program": "${workspaceFolder}/target/debug/demi.exe",
+         "program": "${workspaceFolder}/target/debug/demi",
          "args": [],
          "cwd": "${workspaceFolder}"
       }

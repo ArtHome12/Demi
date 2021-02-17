@@ -1,6 +1,6 @@
 /* ===============================================================================
-Моделирование эволюции живого мира.
-Главное окно программы.
+РњРѕРґРµР»РёСЂРѕРІР°РЅРёРµ СЌРІРѕР»СЋС†РёРё Р¶РёРІРѕРіРѕ РјРёСЂР°.
+Р“Р»Р°РІРЅРѕРµ РѕРєРЅРѕ РїСЂРѕРіСЂР°РјРјС‹.
 25 may 2016.
 ----------------------------------------------------------------------------
 Licensed under the terms of the GPL version 3.
@@ -22,43 +22,43 @@ public:
 	MainWindow();
 	~MainWindow();
 
-	// Завершающая часть настройки, которой требуется окно.
+	// Р—Р°РІРµСЂС€Р°СЋС‰Р°СЏ С‡Р°СЃС‚СЊ РЅР°СЃС‚СЂРѕР№РєРё, РєРѕС‚РѕСЂРѕР№ С‚СЂРµР±СѓРµС‚СЃСЏ РѕРєРЅРѕ.
 	void initWindow(clan::WindowManager* wManager);
 
 private:
 	friend class App;
 
-	// Надпись для отображения FPS
+	// РќР°РґРїРёСЃСЊ РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ FPS
 	std::shared_ptr<clan::LabelView> pLabelFPS;
 
-	// Надпись для отображения времени модели.
+	// РќР°РґРїРёСЃСЊ РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ РІСЂРµРјРµРЅРё РјРѕРґРµР»Рё.
 	demi::DemiTime lastModelTime;
 	std::shared_ptr<clan::LabelView> pLabelModelTime;
 
-	// Кнопка-надпись левого верхнего угла координат мира.
+	// РљРЅРѕРїРєР°-РЅР°РґРїРёСЃСЊ Р»РµРІРѕРіРѕ РІРµСЂС…РЅРµРіРѕ СѓРіР»Р° РєРѕРѕСЂРґРёРЅР°С‚ РјРёСЂР°.
 	clan::Point lastTopLeftWorld;
 	std::shared_ptr<clan::ButtonView> pButtonTopLeftModelCoordinate;
 
-	// Кнопка-надпись масштаба координат мира.
+	// РљРЅРѕРїРєР°-РЅР°РґРїРёСЃСЊ РјР°СЃС€С‚Р°Р±Р° РєРѕРѕСЂРґРёРЅР°С‚ РјРёСЂР°.
 	float lastScaleWorld = 0.0f;
 	std::string scaleLabelTemplate;
 	std::shared_ptr<clan::ButtonView> pButtonScaleModel;
 
-	// Кнопка-надпись постоянного освещения мира.
+	// РљРЅРѕРїРєР°-РЅР°РґРїРёСЃСЊ РїРѕСЃС‚РѕСЏРЅРЅРѕРіРѕ РѕСЃРІРµС‰РµРЅРёСЏ РјРёСЂР°.
 	bool lastIlluminatedWorld = false;
 	std::shared_ptr<clan::ButtonView> pButtonIlluminatedModel;
 
-	// Флаги для переключения в оконный/полноэкранный режим.
+	// Р¤Р»Р°РіРё РґР»СЏ РїРµСЂРµРєР»СЋС‡РµРЅРёСЏ РІ РѕРєРѕРЅРЅС‹Р№/РїРѕР»РЅРѕСЌРєСЂР°РЅРЅС‹Р№ СЂРµР¶РёРј.
 	bool fullscreen_requested = false;
 	bool is_fullscreen = false;
 
-	// Кнопка меню - если нажата, то отображается панель настроек.
+	// РљРЅРѕРїРєР° РјРµРЅСЋ - РµСЃР»Рё РЅР°Р¶Р°С‚Р°, С‚Рѕ РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ РїР°РЅРµР»СЊ РЅР°СЃС‚СЂРѕРµРє.
 	std::shared_ptr<clan::ButtonView> pMenuButton;
 
-	// Окно настроек
+	// РћРєРЅРѕ РЅР°СЃС‚СЂРѕРµРє
 	std::shared_ptr<WindowsSettings> pWindowSettings;
 
-	// Окно модели
+	// РћРєРЅРѕ РјРѕРґРµР»Рё
 	std::shared_ptr<ModelRender> pModelRender;
 
 	void on_input_down(const clan::KeyEvent &e);
@@ -79,18 +79,18 @@ public:
 
 private:
 
-	// Настройки программы
+	// РќР°СЃС‚СЂРѕР№РєРё РїСЂРѕРіСЂР°РјРјС‹
 	std::shared_ptr<SettingsStorage> pSettings;
 
 	clan::UIThread ui_thread;
 
-	// Главное окно.
+	// Р“Р»Р°РІРЅРѕРµ РѕРєРЅРѕ.
 	std::shared_ptr<MainWindow> pMainWindow;
 
-	// Счётчик времени.
+	// РЎС‡С‘С‚С‡РёРє РІСЂРµРјРµРЅРё.
 	clan::GameTime game_time;
 
-	// Звуковая подсистема.
+	// Р—РІСѓРєРѕРІР°СЏ РїРѕРґСЃРёСЃС‚РµРјР°.
 	std::shared_ptr<clan::SoundOutput> pSoundOutput;
 
 	clan::WindowManager windowManager;
