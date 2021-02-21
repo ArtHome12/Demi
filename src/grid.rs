@@ -18,6 +18,8 @@ use rustc_hash::FxHashSet;
 use std::ops::RangeInclusive;
 use std::time::Duration;
 
+use crate::World;
+
 pub struct Grid {
    state: State,
    interaction: Interaction,
@@ -27,6 +29,7 @@ pub struct Grid {
    scaling: f32,
    last_tick_duration: Duration,
    last_queued_ticks: usize,
+   world: World,
 }
 
 #[derive(Debug, Clone)]
@@ -50,6 +53,8 @@ impl Default for Grid {
          scaling: 1.0,
          last_tick_duration: Duration::default(),
          last_queued_ticks: 0,
+         // world: World::default(),
+         world: World::new(100, 100, 1),
       }
    }
 }
@@ -233,13 +238,20 @@ impl<'a> canvas::Program<Message> for Grid {
 
             let region = self.visible_region(frame.size());
 
-            for cell in region.cull(self.state.cells()) {
+            for cell in region.all() {
                   frame.fill_rectangle(
                      Point::new(cell.j as f32, cell.i as f32),
                      Size::UNIT,
                      Color::WHITE,
                   );
             }
+            /* for cell in region.cull(self.state.cells()) {
+                  frame.fill_rectangle(
+                     Point::new(cell.j as f32, cell.i as f32),
+                     Size::UNIT,
+                     Color::WHITE,
+                  );
+            } */
          });
       });
 
@@ -387,9 +399,9 @@ impl State {
       self.life.contains(cell) || self.births.contains(cell)
    }
 
-   fn cells(&self) -> impl Iterator<Item = &Cell> {
+   /* fn cells(&self) -> impl Iterator<Item = &Cell> {
       self.life.iter().chain(self.births.iter())
-   }
+   } */
 
    fn populate(&mut self, cell: Cell) {
       if self.is_ticking {
@@ -430,9 +442,9 @@ impl Life {
       let _ = self.cells.remove(cell);
    }
 
-   pub fn iter(&self) -> impl Iterator<Item = &Cell> {
+   /* pub fn iter(&self) -> impl Iterator<Item = &Cell> {
       self.cells.iter()
-   }
+   } */
 }
 
 impl std::iter::FromIterator<Cell> for Life {
@@ -497,7 +509,7 @@ impl Region {
       first_column..=first_column + visible_columns
    }
 
-   fn cull<'a>(
+   /* fn cull<'a>(
       &self,
       cells: impl Iterator<Item = &'a Cell>,
    ) -> impl Iterator<Item = &'a Cell> {
@@ -507,6 +519,13 @@ impl Region {
       cells.filter(move |cell| {
          rows.contains(&cell.i) && columns.contains(&cell.j)
       })
+   } */
+
+   fn all(&self) -> impl Iterator<Item = Cell> {
+      let rows = self.rows();
+      let columns = self.columns();
+
+      itertools::iproduct!(rows, columns).map(|(i, j)| Cell{i, j})
    }
 }
 

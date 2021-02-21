@@ -11,10 +11,13 @@ Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 mod project;
 mod style;
 mod grid;
+mod dot;
+mod world;
 
 use grid::Grid;
 use iced::executor;
 use iced::{Application, Column, Command, Container, Element, Length, Settings,};
+use world::World;
 
 pub fn main() -> iced::Result {
    Demi::run(Settings {
