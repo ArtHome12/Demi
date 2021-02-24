@@ -8,19 +8,40 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-type Amounts = Vec<f64>;
-pub type Dots = Vec<Vec<Dot>>;
+use iced::Color;
 
+type Amounts = Vec<f64>;
+pub type Bits = Vec<Vec<Bit>>;
+
+// Internal representation for calculations
 #[derive(Debug, Clone)]
-pub struct Dot {
+pub struct Bit {
+   // Location
+   x: usize,
+   y: usize,
+
    // The amount of minerals, gas, etc
    elements: Amounts,
 }
 
-impl Dot {
-   pub fn new(elements_number: usize) -> Self {
-      Dot {
+impl Bit {
+   pub fn new(x: usize, y: usize, elements_number: usize) -> Self {
+      Bit {
+         x,
+         y,
          elements : vec![0.0; elements_number],
       }
    }
 }
+
+// Representation for display
+#[derive(Debug, Clone)]
+pub struct Dot {
+   // Location
+   pub x: usize,
+   pub y: usize,
+
+   // Color for display
+   pub color: Color,
+}
+

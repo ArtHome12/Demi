@@ -15,10 +15,10 @@ use iced::{
    Size, Vector, VerticalAlignment,
 };
 use rustc_hash::FxHashSet;
-use std::ops::RangeInclusive;
+use std::{ops::RangeInclusive, usize};
 use std::time::Duration;
 
-use crate::World;
+use crate::world::{World,};
 
 pub struct Grid {
    state: State,
@@ -89,8 +89,10 @@ impl Grid {
       let height = size.height / self.scaling;
 
       Region {
-         x: -self.translation.x - width / 2.0,
-         y: -self.translation.y - height / 2.0,
+         // x: -self.translation.x - width / 2.0,
+         // y: -self.translation.y - height / 2.0,
+         x: -self.translation.x,
+         y: -self.translation.y,
          width,
          height,
       }
@@ -164,10 +166,7 @@ impl<'a> canvas::Program<Message> for Grid {
                      Interaction::Drawing => populate,
                      Interaction::Erasing => unpopulate,
                      Interaction::Panning { translation, start } => {
-                        self.translation = translation
-                              + (cursor_position - start)
-                                 * (1.0 / self.scaling);
-
+                        self.translation = translation + (cursor_position - start) * (1.0 / self.scaling);
                         self.life_cache.clear();
                         self.grid_cache.clear();
 
@@ -184,30 +183,21 @@ impl<'a> canvas::Program<Message> for Grid {
                   (event_status, message)
             }
             mouse::Event::WheelScrolled { delta } => match delta {
-                  mouse::ScrollDelta::Lines { y, .. }
-                  | mouse::ScrollDelta::Pixels { y, .. } => {
-                     if y < 0.0 && self.scaling > Self::MIN_SCALING
-                        || y > 0.0 && self.scaling < Self::MAX_SCALING
-                     {
+                  mouse::ScrollDelta::Lines { y, .. } | mouse::ScrollDelta::Pixels { y, .. } => {
+                     if y < 0.0 && self.scaling > Self::MIN_SCALING || y > 0.0 && self.scaling < Self::MAX_SCALING {
                         let old_scaling = self.scaling;
 
-                        self.scaling = (self.scaling
-                              * (1.0 + y / 30.0))
-                              .max(Self::MIN_SCALING)
-                              .min(Self::MAX_SCALING);
+                        self.scaling = (self.scaling * (1.0 + y / 30.0))
+                        .max(Self::MIN_SCALING)
+                        .min(Self::MAX_SCALING);
 
-                        if let Some(cursor_to_center) =
-                              cursor.position_from(bounds.center())
-                        {
+                        if let Some(cursor_to_center) = cursor.position() {
                               let factor = self.scaling - old_scaling;
 
-                              self.translation = self.translation
-                                 - Vector::new(
-                                    cursor_to_center.x * factor
-                                          / (old_scaling * old_scaling),
-                                    cursor_to_center.y * factor
-                                          / (old_scaling * old_scaling),
-                                 );
+                              self.translation = self.translation - Vector::new(
+                                 cursor_to_center.x * factor / (old_scaling * old_scaling),
+                                 cursor_to_center.y * factor / (old_scaling * old_scaling),
+                              );
                         }
 
                         self.life_cache.clear();
@@ -224,34 +214,46 @@ impl<'a> canvas::Program<Message> for Grid {
    }
 
    fn draw(&self, bounds: Rectangle, cursor: Cursor) -> Vec<Geometry> {
-      let center = Vector::new(bounds.width / 2.0, bounds.height / 2.0);
+      // let center = Vector::new(bounds.width / 2.0, bounds.height / 2.0);
 
       let life = self.life_cache.draw(bounds.size(), |frame| {
          let background = Path::rectangle(Point::ORIGIN, frame.size());
          frame.fill(&background, Color::from_rgb8(0x40, 0x44, 0x4B));
 
          frame.with_save(|frame| {
-            frame.translate(center);
+            // frame.translate(center);
             frame.scale(self.scaling);
             frame.translate(self.translation);
             frame.scale(Cell::SIZE as f32);
 
+            // Region to draw
             let region = self.visible_region(frame.size());
 
-            for cell in region.all() {
-                  frame.fill_rectangle(
-                     Point::new(cell.j as f32, cell.i as f32),
-                     Size::UNIT,
-                     Color::WHITE,
-                  );
+            // Draw each point from the region
+            for point in itertools::iproduct!(region.columns(), region.rows()) {
+               // Get dot for point (allow display dot outside its real x and y)
+               let (x, y) = point;
+               let dot = self.world.dot(x, y);
+
+               // Fill cell's area with a primary color
+               frame.fill_rectangle(
+                  Point::new(x as f32, y as f32),
+                  Size::UNIT,
+                  dot.color,
+               );
+
+               // Draw the text if it fits
+               if self.scaling >= 3.0 {
+                  frame.with_save(|frame| {
+                     frame.translate(Vector::new(0.03, 0.03));
+                     frame.fill_text(Text {
+                        content: format!("({}, {})", dot.x, dot.y),
+                        position: Point::new(x as f32, y as f32),
+                        ..Text::default()
+                     });
+                  });
+               }
             }
-            /* for cell in region.cull(self.state.cells()) {
-                  frame.fill_rectangle(
-                     Point::new(cell.j as f32, cell.i as f32),
-                     Size::UNIT,
-                     Color::WHITE,
-                  );
-            } */
          });
       });
 
@@ -269,7 +271,7 @@ impl<'a> canvas::Program<Message> for Grid {
 
          if let Some(cell) = hovered_cell {
             frame.with_save(|frame| {
-                  frame.translate(center);    // move center of coordinates from default top left to center of frame
+                  // frame.translate(center);    // move center of coordinates from default top left to center of frame
                   frame.scale(self.scaling);             // scale to user's choice
                   frame.translate(self.translation);     // consider the offset of the displayed area
                   frame.scale(Cell::SIZE as f32);        // scale so that the cell with its dimensions occupies exactly one unit
@@ -287,7 +289,7 @@ impl<'a> canvas::Program<Message> for Grid {
          }
 
          let text = Text {
-            color: Color::WHITE,
+            // color: Color::WHITE,
             size: 14.0,
             position: Point::new(frame.width(), frame.height()),
             horizontal_alignment: HorizontalAlignment::Right,
@@ -297,8 +299,9 @@ impl<'a> canvas::Program<Message> for Grid {
 
          if let Some(cell) = hovered_cell {
             frame.fill_text(Text {
-                  content: format!("({}, {})", cell.j, cell.i),
-                  position: text.position - Vector::new(0.0, 16.0),
+               // content: format!("({}, {})", cell.j, cell.i),
+               content: format!("Translation ({}, {}), cell ({}, {})", self.translation.x, self.translation.y, cell.i, cell.j),
+               position: text.position - Vector::new(0.0, 16.0),
                   ..text
             });
          }
@@ -323,7 +326,7 @@ impl<'a> canvas::Program<Message> for Grid {
          vec![life, overlay]
       } else {
          let grid = self.grid_cache.draw(bounds.size(), |frame| {
-            frame.translate(center);
+            // frame.translate(center);
             frame.scale(self.scaling);
             frame.translate(self.translation);
             frame.scale(Cell::SIZE as f32);
@@ -335,11 +338,15 @@ impl<'a> canvas::Program<Message> for Grid {
                   (rows.clone().count(), columns.clone().count());
             let width = 2.0 / Cell::SIZE as f32;
             let color = Color::from_rgb8(70, 74, 83);
+            let special_color = Color::from_rgb8(255, 74, 83);
 
             frame.translate(Vector::new(-width / 2.0, -width / 2.0));
 
             for row in region.rows() {
-                  frame.fill_rectangle(
+               // There must be a special border when crossing the edge of the world
+               let color = if row == 0 {special_color} else {color};
+
+               frame.fill_rectangle(
                      Point::new(*columns.start() as f32, row as f32),
                      Size::new(total_columns as f32, width),
                      color,
@@ -347,11 +354,14 @@ impl<'a> canvas::Program<Message> for Grid {
             }
 
             for column in region.columns() {
-                  frame.fill_rectangle(
-                     Point::new(column as f32, *rows.start() as f32),
-                     Size::new(width, total_rows as f32),
-                     color,
-                  );
+               // There must be a special border when crossing the edge of the world
+               let color = if column == 0 {special_color} else {color};
+
+               frame.fill_rectangle(
+                  Point::new(column as f32, *rows.start() as f32),
+                  Size::new(width, total_rows as f32),
+                  color,
+               );
             }
          });
 
@@ -509,24 +519,23 @@ impl Region {
       first_column..=first_column + visible_columns
    }
 
-   /* fn cull<'a>(
-      &self,
-      cells: impl Iterator<Item = &'a Cell>,
-   ) -> impl Iterator<Item = &'a Cell> {
-      let rows = self.rows();
-      let columns = self.columns();
-
-      cells.filter(move |cell| {
-         rows.contains(&cell.i) && columns.contains(&cell.j)
-      })
-   } */
-
-   fn all(&self) -> impl Iterator<Item = Cell> {
+   /*fn dots(&self) -> impl Iterator<Item = Cell> {
       let rows = self.rows();
       let columns = self.columns();
 
       itertools::iproduct!(rows, columns).map(|(i, j)| Cell{i, j})
-   }
+   }*/
+   /* fn cull<'a>(
+      &self,
+      cells: impl Iterator<Item = &'a Cell>,
+  ) -> impl Iterator<Item = &'a Cell> {
+      let rows = self.rows();
+      let columns = self.columns();
+
+      cells.filter(move |cell| {
+          rows.contains(&cell.i) && columns.contains(&cell.j)
+      })
+  } */
 }
 
 enum Interaction {
@@ -535,3 +544,4 @@ enum Interaction {
    Erasing,
    Panning { translation: Vector, start: Point },
 }
+

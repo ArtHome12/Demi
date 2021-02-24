@@ -17,7 +17,6 @@ mod world;
 use grid::Grid;
 use iced::executor;
 use iced::{Application, Column, Command, Container, Element, Length, Settings,};
-use world::World;
 
 pub fn main() -> iced::Result {
    Demi::run(Settings {
