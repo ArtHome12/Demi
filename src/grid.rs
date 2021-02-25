@@ -10,9 +10,9 @@ Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 
 use iced::{
    canvas::event::{self, Event},
-   canvas::{self, Cache, Canvas, Cursor, Frame, Geometry, Path, Text},
+   canvas::{self, Cache, Canvas, Cursor, Frame, Geometry, Path, Text, Stroke, },
    mouse, Color, Element, HorizontalAlignment, Length, Point, Rectangle,
-   Size, Vector, VerticalAlignment,
+   Size, Vector, VerticalAlignment, 
 };
 use rustc_hash::FxHashSet;
 use std::{ops::RangeInclusive, usize};
@@ -106,6 +106,17 @@ impl Grid {
          position.y / self.scaling + region.y,
       )
    }
+
+   fn set_translation(&mut self, new_translation: Vector) {
+      self.translation = new_translation;
+
+      // To prevent overflow translation in coninious world
+      if self.translation.x <= 0.0 {self.translation.x += 3000.0}
+      else if self.translation.x >= 3000.0 {self.translation.x -= 3000.0}
+
+      if self.translation.y <= 0.0 {self.translation.y += 3000.0}
+      else if self.translation.y >= 3000.0 {self.translation.y -= 3000.0}
+   }
 }
 
 impl<'a> canvas::Program<Message> for Grid {
@@ -166,7 +177,7 @@ impl<'a> canvas::Program<Message> for Grid {
                      Interaction::Drawing => populate,
                      Interaction::Erasing => unpopulate,
                      Interaction::Panning { translation, start } => {
-                        self.translation = translation + (cursor_position - start) * (1.0 / self.scaling);
+                        self.set_translation(translation + (cursor_position - start) * (1.0 / self.scaling));
                         self.life_cache.clear();
                         self.grid_cache.clear();
 
@@ -194,10 +205,10 @@ impl<'a> canvas::Program<Message> for Grid {
                         if let Some(cursor_to_center) = cursor.position() {
                               let factor = self.scaling - old_scaling;
 
-                              self.translation = self.translation - Vector::new(
+                              self.set_translation(self.translation - Vector::new(
                                  cursor_to_center.x * factor / (old_scaling * old_scaling),
                                  cursor_to_center.y * factor / (old_scaling * old_scaling),
-                              );
+                              ));
                         }
 
                         self.life_cache.clear();
@@ -299,8 +310,8 @@ impl<'a> canvas::Program<Message> for Grid {
 
          if let Some(cell) = hovered_cell {
             frame.fill_text(Text {
-               // content: format!("({}, {})", cell.j, cell.i),
-               content: format!("Translation ({}, {}), cell ({}, {})", self.translation.x, self.translation.y, cell.i, cell.j),
+               content: format!("({}, {})", cell.j, cell.i),
+               // content: format!("Translation ({}, {}), cell ({}, {})", self.translation.x, self.translation.y, cell.i, cell.j),
                position: text.position - Vector::new(0.0, 16.0),
                   ..text
             });
@@ -322,51 +333,99 @@ impl<'a> canvas::Program<Message> for Grid {
          frame.into_geometry()
       };
 
-      if self.scaling < 0.2 {
-         vec![life, overlay]
-      } else {
-         let grid = self.grid_cache.draw(bounds.size(), |frame| {
-            // frame.translate(center);
-            frame.scale(self.scaling);
-            frame.translate(self.translation);
-            frame.scale(Cell::SIZE as f32);
+      let grid = self.grid_cache.draw(bounds.size(), |frame| {
+         // frame.translate(center);
+         frame.scale(self.scaling);
+         frame.translate(self.translation);
+         frame.scale(Cell::SIZE as f32);
 
-            let region = self.visible_region(frame.size());
-            let rows = region.rows();
-            let columns = region.columns();
-            let (total_rows, total_columns) =
-                  (rows.clone().count(), columns.clone().count());
+         let region = self.visible_region(frame.size());
+         let rows = region.rows();
+         let columns = region.columns();
+         let (total_rows, total_columns) = (rows.clone().count(), columns.clone().count());
+         let (rows_start, columns_start) = (*rows.start() as f32, *columns.start() as f32);
+
+         // Amount of lines for border around the world
+         let outer_rows = total_rows / 100;
+         let outer_columns = total_columns / 100;
+
+         // Color for world's borders
+         let special_color = Color::from_rgb8(255, 74, 83);
+
+         // No grid at small scale, only outer border
+         if self.scaling < 0.2 {
+            // Prepare style
+            let stroke = Stroke {
+               width: 1.0,
+               color: special_color,
+               ..Stroke::default()
+           };
+
+           // Draw horizontal lines
+           for row in 0..=outer_rows {
+               let from = Point::new(columns_start, row as f32 * 100.0);
+               let to = Point::new(total_columns as f32, row as f32 * 100.0);
+               frame.stroke(&Path::line(from, to), stroke);
+            }
+
+            // Draw vertical lines
+            for column in 0..=outer_columns {
+               let from = Point::new(column as f32 * 100.0, rows_start);
+               let to = Point::new(column as f32 * 100.0, total_rows as f32);
+               frame.stroke(&Path::line(from, to), stroke);
+            }
+         } else {
+            // Draw the inner grid
             let width = 2.0 / Cell::SIZE as f32;
             let color = Color::from_rgb8(70, 74, 83);
-            let special_color = Color::from_rgb8(255, 74, 83);
 
             frame.translate(Vector::new(-width / 2.0, -width / 2.0));
 
-            for row in region.rows() {
-               // There must be a special border when crossing the edge of the world
-               let color = if row == 0 {special_color} else {color};
-
-               frame.fill_rectangle(
-                     Point::new(*columns.start() as f32, row as f32),
+           // Draw horizontal lines
+           for row in rows {
+               // There must be a special border when crossing the edge of the world, skipping for optimization
+               if row != 0 {
+                  frame.fill_rectangle(
+                     Point::new(columns_start, row as f32),
                      Size::new(total_columns as f32, width),
                      color,
                   );
+               }
             }
 
-            for column in region.columns() {
-               // There must be a special border when crossing the edge of the world
-               let color = if column == 0 {special_color} else {color};
+            // Draw vertical lines
+            for column in columns {
+               // There must be a special border when crossing the edge of the world, skipping for optimization
+               if column != 0 {
+                  frame.fill_rectangle(
+                     Point::new(column as f32, rows_start),
+                     Size::new(width, total_rows as f32),
+                     color,
+                  );
+               }
+            }
 
+            // Draw outer borders - horizontal lines
+            for row in 0..=outer_rows {
                frame.fill_rectangle(
-                  Point::new(column as f32, *rows.start() as f32),
-                  Size::new(width, total_rows as f32),
-                  color,
+                  Point::new(columns_start, row as f32 * 100.0),
+                  Size::new(total_columns as f32, width),
+                  special_color,
                );
             }
-         });
 
-         vec![life, grid, overlay]
-      }
+            // Draw outer borders - vertical lines
+            for column in 0..=outer_columns {
+               frame.fill_rectangle(
+                  Point::new(column as f32 * 100.0, rows_start),
+                  Size::new(width, total_rows as f32),
+                  special_color,
+               );
+            }
+         }
+      });
+
+      vec![life, grid, overlay]
    }
 
    fn mouse_interaction(

@@ -16,7 +16,7 @@ mod world;
 
 use grid::Grid;
 use iced::executor;
-use iced::{Application, Column, Command, Container, Element, Length, Settings,};
+use iced::{Application, Column, Command, Container, Element, Length, Settings, };
 
 pub fn main() -> iced::Result {
    Demi::run(Settings {
@@ -74,18 +74,17 @@ impl Application for Demi {
       // Place project controls
       let controls = self.controls.view().map(Message::ProjectMessage);
 
+      // Client area
+      let grid_area = self.grid.view().map(move |message| Message::Grid(message));
+
       let content = Column::new()
-         .push(controls)
-         .push(
-            self.grid
-            .view()
-            .map(move |message| Message::Grid(message)),
-         );
+      .push(controls)
+      .push(grid_area);
 
       Container::new(content)
-         .width(Length::Fill)
-         .height(Length::Fill)
-         .style(style::Container)
-         .into()
+      .width(Length::Fill)
+      .height(Length::Fill)
+      .style(style::Container)
+      .into()
     }
 }
