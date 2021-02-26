@@ -8,8 +8,11 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
+use std::usize;
+
 use iced::Color;
-use crate::dot::{Dot, Bit, Bits,};
+use crate::dot::{Bit, Bits,};
+pub use crate::dot::Dot;
 
 pub struct World {
    width: usize,
@@ -37,21 +40,6 @@ impl World {
       }
    }
 
-   /* pub fn dots(&self, region: WorldRegion) -> impl Iterator<Item = Dot> {
-      let width = self.width as isize;
-      let height = self.height as isize;
-   
-      itertools::iproduct!(region.h_range, region.v_range).map(move |(mut x, mut y)| {
-         // The world must be continuous, the first point goes to the right (or bottom) of the last point again
-         while x < 0 {x += width;}
-         while x > width {x -= width;}
-         while y < 0 {y += height;}
-         while y > height {y -= height;}
-
-         Dot{x: x as usize, y: y as usize, color: Color::WHITE,}
-      })
-   } */
-
    // Return dot for display position
    // The world must be continuous, the first point goes to the right (or bottom) of the last point again
    pub fn dot(&self, display_x: isize, display_y: isize) -> Dot {
@@ -61,11 +49,28 @@ impl World {
       let mut y = display_y;
    
       while x < 0 {x += width;}
-      while x > width {x -= width;}
+      while x >= width {x -= width;}
       while y < 0 {y += height;}
-      while y > height {y -= height;}
+      while y >= height {y -= height;}
 
-      Dot{x: x as usize, y: y as usize, color: Color::WHITE,}
+      let x = x as usize;
+      let y = y as usize;
+
+      // Corresponding bit of the world
+      let bit = &self.bits[x][y];
+      let color = if bit.amount(0) != 0.0 {Color::WHITE} else {Color::TRANSPARENT};
+
+      Dot{x, y, color,}
+   }
+
+   // Temporary for testing
+   pub fn populate(&mut self, dot: &Dot) {
+      let bit = &mut self.bits[dot.x][dot.y];
+      bit.set_amount(0, 1.0);
+   }
+   pub fn unpopulate(&mut self, dot: &Dot) {
+      let bit = &mut self.bits[dot.x][dot.y];
+      bit.set_amount(0, 0.0);
    }
 }
 

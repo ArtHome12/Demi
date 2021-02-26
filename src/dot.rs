@@ -32,6 +32,13 @@ impl Bit {
          elements : vec![0.0; elements_number],
       }
    }
+
+   pub fn amount(&self, element_index: usize) -> f64 {
+      self.elements[element_index]
+   }
+   pub fn set_amount(&mut self, element_index: usize, amount: f64) {
+      self.elements[element_index] = amount;
+   }
 }
 
 // Representation for display

@@ -470,6 +470,7 @@ dependencies = [
  "itertools",
  "rustc-hash",
  "tokio",
+ "toml",
 ]
 
 [[package]]

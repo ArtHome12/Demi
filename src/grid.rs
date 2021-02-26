@@ -18,7 +18,7 @@ use rustc_hash::FxHashSet;
 use std::{ops::RangeInclusive, usize};
 use std::time::Duration;
 
-use crate::world::{World,};
+use crate::world::{World, Dot};
 
 pub struct Grid {
    state: State,
@@ -34,8 +34,8 @@ pub struct Grid {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-   Populate(Cell),
-   Unpopulate(Cell),
+   Populate(Dot),
+   Unpopulate(Dot),
 }
 
 impl Default for Grid {
@@ -66,12 +66,12 @@ impl Grid {
 
    pub fn update(&mut self, message: Message) {
       match message {
-         Message::Populate(cell) => {
-            self.state.populate(cell);
+         Message::Populate(dot) => {
+            self.world.populate(&dot);
             self.life_cache.clear();
          }
-         Message::Unpopulate(cell) => {
-            self.state.unpopulate(&cell);
+         Message::Unpopulate(dot) => {
+            self.world.unpopulate(&dot);
             self.life_cache.clear();
          }
       }
@@ -107,6 +107,12 @@ impl Grid {
       )
    }
 
+   fn project_to_world(&self, position_in_units: Point) -> (isize, isize) {
+      let x = (position_in_units.x / Cell::SIZE as f32).floor() as isize;
+      let y = (position_in_units.y / Cell::SIZE as f32).floor() as isize;
+      (x, y)
+   }
+
    fn set_translation(&mut self, new_translation: Vector) {
       self.translation = new_translation;
 
@@ -130,20 +136,19 @@ impl<'a> canvas::Program<Message> for Grid {
          self.interaction = Interaction::None;
       }
 
-      let cursor_position =
-         if let Some(position) = cursor.position_in(&bounds) {
-            position
-         } else {
-            return (event::Status::Ignored, None);
-         };
+      let cursor_position = if let Some(position) = cursor.position_in(&bounds) {position} 
+      else {
+         return (event::Status::Ignored, None);
+      };
 
-      let cell = Cell::at(self.project(cursor_position, bounds.size()));
-      let is_populated = self.state.contains(&cell);
-
+      let (x, y) = self.project_to_world(self.project(cursor_position, bounds.size()));
+      let dot = self.world.dot(x as isize, y as isize);
+      let is_populated = dot.color == Color::WHITE;
+      
       let (populate, unpopulate) = if is_populated {
-         (None, Some(Message::Unpopulate(cell)))
+         (None, Some(Message::Unpopulate(dot)))
       } else {
-         (Some(Message::Populate(cell)), None)
+         (Some(Message::Populate(dot)), None)
       };
 
       match event {
@@ -449,7 +454,6 @@ impl<'a> canvas::Program<Message> for Grid {
 struct State {
    life: Life,
    births: FxHashSet<Cell>,
-   is_ticking: bool,
 }
 
 impl State {
@@ -463,30 +467,6 @@ impl State {
    fn cell_count(&self) -> usize {
       self.life.len() + self.births.len()
    }
-
-   fn contains(&self, cell: &Cell) -> bool {
-      self.life.contains(cell) || self.births.contains(cell)
-   }
-
-   /* fn cells(&self) -> impl Iterator<Item = &Cell> {
-      self.life.iter().chain(self.births.iter())
-   } */
-
-   fn populate(&mut self, cell: Cell) {
-      if self.is_ticking {
-         self.births.insert(cell);
-      } else {
-         self.life.populate(cell);
-      }
-   }
-
-   fn unpopulate(&mut self, cell: &Cell) {
-      if self.is_ticking {
-         let _ = self.births.remove(cell);
-      } else {
-         self.life.unpopulate(cell);
-      }
-   }
 }
 
 #[derive(Clone, Default)]
@@ -498,22 +478,6 @@ impl Life {
    fn len(&self) -> usize {
       self.cells.len()
    }
-
-   fn contains(&self, cell: &Cell) -> bool {
-      self.cells.contains(cell)
-   }
-
-   fn populate(&mut self, cell: Cell) {
-      self.cells.insert(cell);
-   }
-
-   fn unpopulate(&mut self, cell: &Cell) {
-      let _ = self.cells.remove(cell);
-   }
-
-   /* pub fn iter(&self) -> impl Iterator<Item = &Cell> {
-      self.cells.iter()
-   } */
 }
 
 impl std::iter::FromIterator<Cell> for Life {
@@ -577,24 +541,6 @@ impl Region {
 
       first_column..=first_column + visible_columns
    }
-
-   /*fn dots(&self) -> impl Iterator<Item = Cell> {
-      let rows = self.rows();
-      let columns = self.columns();
-
-      itertools::iproduct!(rows, columns).map(|(i, j)| Cell{i, j})
-   }*/
-   /* fn cull<'a>(
-      &self,
-      cells: impl Iterator<Item = &'a Cell>,
-  ) -> impl Iterator<Item = &'a Cell> {
-      let rows = self.rows();
-      let columns = self.columns();
-
-      cells.filter(move |cell| {
-          rows.contains(&cell.i) && columns.contains(&cell.j)
-      })
-  } */
 }
 
 enum Interaction {

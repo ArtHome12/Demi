@@ -8,8 +8,8 @@ edition = "2018"
 
 [dependencies]
 iced = { version = "0.2", features = ["canvas", "tokio", "debug"] }
-# iced = { path = "../..", features = ["canvas", "tokio", "debug"] }
 tokio = { version = "0.3.0", features = ["sync"] }
 itertools = "0.10.0"
 rustc-hash = "1.1"
+toml = "0.5.8"
 
