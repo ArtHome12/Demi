@@ -12,13 +12,14 @@ use iced::{
    canvas::event::{self, Event},
    canvas::{self, Cache, Canvas, Cursor, Frame, Geometry, Path, Text, Stroke, },
    mouse, Color, Element, HorizontalAlignment, Length, Point, Rectangle,
-   Size, Vector, VerticalAlignment, 
+   Size, Vector, VerticalAlignment,
 };
 use rustc_hash::FxHashSet;
 use std::{ops::RangeInclusive, usize};
 use std::time::Duration;
 
-use crate::world::{World, Dot};
+use crate::world::{World, Dot,};
+use crate::project_toml;
 
 pub struct Grid {
    state: State,
@@ -38,8 +39,15 @@ pub enum Message {
    Unpopulate(Dot),
 }
 
-impl Default for Grid {
-   fn default() -> Self {
+impl Grid {
+   const MIN_SCALING: f32 = 0.1;
+   const MAX_SCALING: f32 = 200.0;
+
+   pub fn new(project: &project_toml::TOML) -> Self {
+      // World's dimension
+      let width = project.width;
+      let height = (width as f32 * project.height_ratio) as usize;
+
       Self {
          state: State::with_life(vec![]
                   .into_iter()
@@ -53,16 +61,10 @@ impl Default for Grid {
          scaling: 1.0,
          last_tick_duration: Duration::default(),
          last_queued_ticks: 0,
-         // world: World::default(),
-         world: World::new(100, 100, 1),
+
+         world: World::new(width, height, 1),
       }
    }
-}
-
-impl Grid {
-   const MIN_SCALING: f32 = 0.1;
-   const MAX_SCALING: f32 = 200.0;
-
 
    pub fn update(&mut self, message: Message) {
       match message {
@@ -89,8 +91,6 @@ impl Grid {
       let height = size.height / self.scaling;
 
       Region {
-         // x: -self.translation.x - width / 2.0,
-         // y: -self.translation.y - height / 2.0,
          x: -self.translation.x,
          y: -self.translation.y,
          width,
@@ -116,12 +116,15 @@ impl Grid {
    fn set_translation(&mut self, new_translation: Vector) {
       self.translation = new_translation;
 
+      // World size in pixels
+      let w = (self.world.width * Cell::SIZE) as f32;
+      let h = (self.world.height * Cell::SIZE) as f32;
       // To prevent overflow translation in coninious world
-      if self.translation.x <= 0.0 {self.translation.x += 3000.0}
-      else if self.translation.x >= 3000.0 {self.translation.x -= 3000.0}
+      if self.translation.x <= 0.0 {self.translation.x += w}
+      else if self.translation.x >= w {self.translation.x -= w}
 
-      if self.translation.y <= 0.0 {self.translation.y += 3000.0}
-      else if self.translation.y >= 3000.0 {self.translation.y -= 3000.0}
+      if self.translation.y <= 0.0 {self.translation.y += h}
+      else if self.translation.y >= h {self.translation.y -= h}
    }
 }
 
@@ -144,7 +147,7 @@ impl<'a> canvas::Program<Message> for Grid {
       let (x, y) = self.project_to_world(self.project(cursor_position, bounds.size()));
       let dot = self.world.dot(x as isize, y as isize);
       let is_populated = dot.color == Color::WHITE;
-      
+
       let (populate, unpopulate) = if is_populated {
          (None, Some(Message::Unpopulate(dot)))
       } else {
@@ -203,7 +206,7 @@ impl<'a> canvas::Program<Message> for Grid {
                      if y < 0.0 && self.scaling > Self::MIN_SCALING || y > 0.0 && self.scaling < Self::MAX_SCALING {
                         let old_scaling = self.scaling;
 
-                        self.scaling = (self.scaling * (1.0 + y / 30.0))
+                        self.scaling = (self.scaling * (1.0 + y / Cell::SIZE as f32))
                         .max(Self::MIN_SCALING)
                         .min(Self::MAX_SCALING);
 
@@ -351,8 +354,8 @@ impl<'a> canvas::Program<Message> for Grid {
          let (rows_start, columns_start) = (*rows.start() as f32, *columns.start() as f32);
 
          // Amount of lines for border around the world
-         let outer_rows = total_rows / 100;
-         let outer_columns = total_columns / 100;
+         let outer_rows = total_rows / self.world.height;
+         let outer_columns = total_columns / self.world.width;
 
          // Color for world's borders
          let special_color = Color::from_rgb8(255, 74, 83);
@@ -368,15 +371,15 @@ impl<'a> canvas::Program<Message> for Grid {
 
            // Draw horizontal lines
            for row in 0..=outer_rows {
-               let from = Point::new(columns_start, row as f32 * 100.0);
-               let to = Point::new(total_columns as f32, row as f32 * 100.0);
+               let from = Point::new(columns_start, (row * self.world.height) as f32);
+               let to = Point::new(total_columns as f32, (row * self.world.height) as f32);
                frame.stroke(&Path::line(from, to), stroke);
             }
 
             // Draw vertical lines
             for column in 0..=outer_columns {
-               let from = Point::new(column as f32 * 100.0, rows_start);
-               let to = Point::new(column as f32 * 100.0, total_rows as f32);
+               let from = Point::new((column * self.world.width) as f32, rows_start);
+               let to = Point::new((column * self.world.width) as f32, total_rows as f32);
                frame.stroke(&Path::line(from, to), stroke);
             }
          } else {
@@ -413,7 +416,7 @@ impl<'a> canvas::Program<Message> for Grid {
             // Draw outer borders - horizontal lines
             for row in 0..=outer_rows {
                frame.fill_rectangle(
-                  Point::new(columns_start, row as f32 * 100.0),
+                  Point::new(columns_start, (row * self.world.height) as f32),
                   Size::new(total_columns as f32, width),
                   special_color,
                );
@@ -422,7 +425,7 @@ impl<'a> canvas::Program<Message> for Grid {
             // Draw outer borders - vertical lines
             for column in 0..=outer_columns {
                frame.fill_rectangle(
-                  Point::new(column as f32 * 100.0, rows_start),
+                  Point::new((column * self.world.width) as f32, rows_start),
                   Size::new(width, total_rows as f32),
                   special_color,
                );

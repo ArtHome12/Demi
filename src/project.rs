@@ -143,34 +143,3 @@ pub enum Message {
    ToggleIllumination(bool),
 }
 
-
-
-/*pub struct Globals {
-   world_size: WorldSize,
-}
-
-pub struct WorldSize {
-   with: usize,
-   height_ratio: f64,
-}*/
-
-/* pub struct Locals {
-   // appearance: WindowState,
-   top_menu: TopMenuState,
-} */
-
-/*pub enum WindowState {
-   Windowed(Point, Point), // Position (left, top) and size (with, height)
-   Maximized,
-   Minimized,
-}
-
-pub struct Point {
-   x: isize,
-   y: isize,
-}*/
-
-/* pub struct TopMenuState {
-   visible: bool,
-   illuminate: bool,
-} */

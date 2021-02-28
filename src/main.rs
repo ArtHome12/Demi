@@ -13,6 +13,7 @@ mod style;
 mod grid;
 mod dot;
 mod world;
+mod project_toml;
 
 use grid::Grid;
 use iced::executor;
@@ -32,7 +33,6 @@ enum Message {
    Grid(grid::Message),
 }
 
-#[derive(Default)]
 struct Demi {
    grid: Grid,
    controls: project::Controls,
@@ -44,9 +44,11 @@ impl Application for Demi {
    type Flags = ();
 
    fn new(_flags: ()) -> (Self, Command<Message>) {
+      let project = project_toml::TOML::new("./demi.toml");
       (
          Self {
-            ..Self::default()
+            grid: Grid::new(&project),
+            controls: project::Controls::default(),
          },
          Command::none(),
       )

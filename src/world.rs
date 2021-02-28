@@ -15,8 +15,8 @@ use crate::dot::{Bit, Bits,};
 pub use crate::dot::Dot;
 
 pub struct World {
-   width: usize,
-   height: usize,
+   pub width: usize,
+   pub height: usize,
    bits: Bits,
 }
 
@@ -47,7 +47,7 @@ impl World {
       let height = self.height as isize;
       let mut x = display_x;
       let mut y = display_y;
-   
+
       while x < 0 {x += width;}
       while x >= width {x -= width;}
       while y < 0 {y += height;}
