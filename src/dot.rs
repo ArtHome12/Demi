@@ -10,7 +10,7 @@ Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 
 use iced::Color;
 
-type Amounts = Vec<f64>;
+pub type Amounts = Vec<f64>;
 pub type Bits = Vec<Vec<Bit>>;
 
 // Internal representation for calculations
@@ -21,15 +21,15 @@ pub struct Bit {
    y: usize,
 
    // The amount of minerals, gas, etc
-   elements: Amounts,
+   pub elements: Amounts,
 }
 
 impl Bit {
-   pub fn new(x: usize, y: usize, elements_number: usize) -> Self {
+   pub fn new(x: usize, y: usize, elements: Amounts) -> Self {
       Bit {
          x,
          y,
-         elements : vec![0.0; elements_number],
+         elements,
       }
    }
 

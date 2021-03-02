@@ -31,7 +31,7 @@ impl World {
 
       for x in 0..width {
          // Create vec for items
-         let row = (0..height).into_iter().map(|y| Bit::new(x, y, elements_number)).collect();
+         let row = (0..height).into_iter().map(|y| Bit::new(x, y, elements_number.clone())).collect();
 
          // Put items into result vector
          bits.push(row);
@@ -43,7 +43,7 @@ impl World {
       }
    }
 
-   // Return dot for display position
+   // Return dot at display position
    // The world must be continuous, the first point goes to the right (or bottom) of the last point again
    pub fn dot(&self, display_x: isize, display_y: isize) -> Dot {
       let width = self.project.width as isize;
@@ -64,6 +64,27 @@ impl World {
       let color = if bit.amount(0) != 0.0 {self.project.elements[0].color} else {Color::TRANSPARENT};
 
       Dot{x, y, color,}
+   }
+
+   // Return the corresponding bit for the point
+   fn bit(&self, dot: &Dot) -> &Bit {
+      &self.bits[dot.x][dot.y]
+   }
+
+   // Text to describe a point with a size constraint
+   pub fn description(&self, dot: &Dot, max_lines: usize, delimiter: char) -> String {
+      self.project.elements.iter()
+      .take(max_lines - 1) // -1 for energy
+      .enumerate()
+      .fold(format!("Energy: {}%", 0.0), |acc, (i, element)| {
+         let bit = self.bit(dot);
+         format!("{}{}{}: {}", acc, delimiter, element.name, bit.elements[i])
+      })
+      // .map(|(i, element)| {
+      //    let bit = self.bit(dot);
+      //    format!("{}: {}\n", element.name, bit.elements[i])
+      // })
+      // .collect()
    }
 
    // Temporary for testing

@@ -8,8 +8,11 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use std::{collections::HashMap, fs};
+use std::collections::{HashMap, BTreeMap};
+use std::fs;
 use serde_derive::Deserialize;
+
+use crate::dot::Amounts;
 
 // Content of a toml project file
 #[derive(Deserialize)]
@@ -21,7 +24,7 @@ struct Toml {
    // geothermal: HashMap<String, Positions>,
    colors: HashMap<String, Colors>,
 
-   elements: HashMap<String, ElementAttributes>,
+   elements: BTreeMap<String, ElementAttributes>,
 }
 
 type Colors = (u8, u8, u8);//Vec::<u8>;
@@ -32,6 +35,7 @@ type Colors = (u8, u8, u8);//Vec::<u8>;
 struct ElementAttributes {
    color: String,
    volatility: f32,
+   amount: usize,
 }
 
 impl Toml {
@@ -53,6 +57,7 @@ pub struct Element {
    pub name: String,
    pub color: iced::Color,
    pub volatility: f32,
+   pub amount: f64,
 }
 
 impl Project {
@@ -73,11 +78,12 @@ impl Project {
          } else {
             iced::Color::BLACK
          };
-         
+
          Element {
             name: key.into(),
             volatility: val.volatility,
             color,
+            amount: val.amount as f64,
          }
       }).collect();
 
@@ -88,7 +94,7 @@ impl Project {
       }
    }
 
-   pub fn elements_number(&self) -> usize {
-      self.elements.len()
+   pub fn elements_number(&self) -> Amounts {
+      self.elements.iter().map(|f| f.amount).collect()
    }
 }

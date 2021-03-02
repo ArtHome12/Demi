@@ -7,17 +7,18 @@ resolution = 0.1 # number of dots calculated for each tick. Actually determines 
 # Elements of inanimate nature
 [elements]
    # Water is the basis of everything, and as a basis its volatility is less than that of solids
-   Water = { color="cornflowerblue", volatility=0.01 }
+   # Title starts with 0 for correct sorting
+   0Water = { color="cornflowerblue", volatility=0.01, amount=10000000 }
 
    # Gases
-   Oxygen = { color="green", volatility=0.01 }
-   CarbonDioxide = { color="yellow", volatility=0.12 }
-   Hydrogen = { color="darkgreen", volatility=0.12 }
-   Methane = { color="darkviolet", volatility=0.12 }
-   "Hydrogen sulfide" = { color="aliceblue", volatility=0.12 }
+   Oxygen = { color="green", volatility=0.01, amount=0 }
+   CarbonDioxide = { color="yellow", volatility=0.12, amount=2000000 }
+   Hydrogen = { color="darkgreen", volatility=0.12, amount=100000 }
+   Methane = { color="darkviolet", volatility=0.12, amount=0 }
+   "Hydrogen sulfide" = { color="aliceblue", volatility=0.12, amount=0 }
 
-      # Solids
-   Sulphur = { color="lightyellow", volatility=0.03 }
+   # Solids
+   Sulphur = { color="lightyellow", volatility=0.03, amount=10 }
 
 
 # Geothermal energy source position [x, y]
