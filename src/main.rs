@@ -8,12 +8,12 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-mod project;
+mod project_controls;
 mod style;
 mod grid;
 mod dot;
 mod world;
-mod project_toml;
+mod project;
 
 use grid::Grid;
 use iced::executor;
@@ -29,13 +29,13 @@ pub fn main() -> iced::Result {
 
 #[derive(Debug, Clone)]
 enum Message {
-   ProjectMessage(project::Message),
+   ProjectMessage(project_controls::Message),
    Grid(grid::Message),
 }
 
 struct Demi {
    grid: Grid,
-   controls: project::Controls,
+   controls: project_controls::Controls,
 }
 
 impl Application for Demi {
@@ -44,11 +44,11 @@ impl Application for Demi {
    type Flags = ();
 
    fn new(_flags: ()) -> (Self, Command<Message>) {
-      let project = project_toml::TOML::new("./demi.toml");
+      let project = project::Project::new("./demi.toml");
       (
          Self {
-            grid: Grid::new(&project),
-            controls: project::Controls::default(),
+            grid: Grid::new(project),
+            controls: project_controls::Controls::default(),
          },
          Command::none(),
       )

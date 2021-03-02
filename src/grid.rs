@@ -19,7 +19,7 @@ use std::{ops::RangeInclusive, usize};
 use std::time::Duration;
 
 use crate::world::{World, Dot,};
-use crate::project_toml;
+use crate::project;
 
 pub struct Grid {
    state: State,
@@ -43,10 +43,8 @@ impl Grid {
    const MIN_SCALING: f32 = 0.1;
    const MAX_SCALING: f32 = 200.0;
 
-   pub fn new(project: &project_toml::TOML) -> Self {
+   pub fn new(project: project::Project) -> Self {
       // World's dimension
-      let width = project.width;
-      let height = (width as f32 * project.height_ratio) as usize;
 
       Self {
          state: State::with_life(vec![]
@@ -62,7 +60,7 @@ impl Grid {
          last_tick_duration: Duration::default(),
          last_queued_ticks: 0,
 
-         world: World::new(width, height, 1),
+         world: World::new(project),
       }
    }
 
@@ -117,8 +115,8 @@ impl Grid {
       self.translation = new_translation;
 
       // World size in pixels
-      let w = (self.world.width * Cell::SIZE) as f32;
-      let h = (self.world.height * Cell::SIZE) as f32;
+      let w = (self.world.width() * Cell::SIZE) as f32;
+      let h = (self.world.height() * Cell::SIZE) as f32;
       // To prevent overflow translation in coninious world
       if self.translation.x <= 0.0 {self.translation.x += w}
       else if self.translation.x >= w {self.translation.x -= w}
@@ -352,10 +350,12 @@ impl<'a> canvas::Program<Message> for Grid {
          let columns = region.columns();
          let (total_rows, total_columns) = (rows.clone().count(), columns.clone().count());
          let (rows_start, columns_start) = (*rows.start() as f32, *columns.start() as f32);
+         let world_width = self.world.width();
+         let world_height = self.world.height();
 
          // Amount of lines for border around the world
-         let outer_rows = total_rows / self.world.height;
-         let outer_columns = total_columns / self.world.width;
+         let outer_rows = total_rows / world_height;
+         let outer_columns = total_columns / world_width;
 
          // Color for world's borders
          let special_color = Color::from_rgb8(255, 74, 83);
@@ -371,15 +371,15 @@ impl<'a> canvas::Program<Message> for Grid {
 
            // Draw horizontal lines
            for row in 0..=outer_rows {
-               let from = Point::new(columns_start, (row * self.world.height) as f32);
-               let to = Point::new(total_columns as f32, (row * self.world.height) as f32);
+               let from = Point::new(columns_start, (row * world_height) as f32);
+               let to = Point::new(total_columns as f32, (row * world_height) as f32);
                frame.stroke(&Path::line(from, to), stroke);
             }
 
             // Draw vertical lines
             for column in 0..=outer_columns {
-               let from = Point::new((column * self.world.width) as f32, rows_start);
-               let to = Point::new((column * self.world.width) as f32, total_rows as f32);
+               let from = Point::new((column * world_width) as f32, rows_start);
+               let to = Point::new((column * world_width) as f32, total_rows as f32);
                frame.stroke(&Path::line(from, to), stroke);
             }
          } else {
@@ -416,7 +416,7 @@ impl<'a> canvas::Program<Message> for Grid {
             // Draw outer borders - horizontal lines
             for row in 0..=outer_rows {
                frame.fill_rectangle(
-                  Point::new(columns_start, (row * self.world.height) as f32),
+                  Point::new(columns_start, (row * world_height) as f32),
                   Size::new(total_columns as f32, width),
                   special_color,
                );
@@ -425,7 +425,7 @@ impl<'a> canvas::Program<Message> for Grid {
             // Draw outer borders - vertical lines
             for column in 0..=outer_columns {
                frame.fill_rectangle(
-                  Point::new((column * self.world.width) as f32, rows_start),
+                  Point::new((column * world_width) as f32, rows_start),
                   Size::new(width, total_rows as f32),
                   special_color,
                );

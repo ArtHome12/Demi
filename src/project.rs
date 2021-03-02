@@ -1,145 +1,94 @@
 /* ===============================================================================
 Simulation of the evolution of the animal world.
-Project controls.
-13 Feb 2021.
+Project TOML file read/save/parse.
+28 Feb 2021.
 ----------------------------------------------------------------------------
 Licensed under the terms of the GPL version 3.
 http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use iced::button::{self, Button};
-use iced::{Checkbox, Align, Command, Element, Row, Text,};
-use crate::style;
+use std::{collections::HashMap, fs};
+use serde_derive::Deserialize;
 
+// Content of a toml project file
+#[derive(Deserialize)]
+struct Toml {
+   pub width: usize,
+   pub height_ratio: f32,
+   // resolution: f32,
 
-#[derive(Default)]
-pub struct Controls {
-   paused: bool,
-   autosave: bool,
-   autorun: bool,
-   illuminate: bool,
+   // geothermal: HashMap<String, Positions>,
+   colors: HashMap<String, Colors>,
 
-   new_button: button::State,
-   open_button: button::State,
-   save_button: button::State,
-   save_as_button: button::State,
-   restart_button: button::State,
-   pause_button: button::State,
+   elements: HashMap<String, ElementAttributes>,
 }
 
-impl Controls {
+type Colors = (u8, u8, u8);//Vec::<u8>;
+// type Positions = (usize, usize);
 
-   pub fn update(&mut self, message: Message) -> Command<Message> {
-      match message {
-         Message::Pause => self.paused = !self.paused,
-         Message::ToggleAutosave(checked) => self.autosave = checked,
-         Message::ToggleAutorun(checked) => self.autorun = checked,
-         Message::ToggleIllumination(checked) => self.illuminate = checked,
-         _ => ()
+
+#[derive(Deserialize)]
+struct ElementAttributes {
+   color: String,
+   volatility: f32,
+}
+
+impl Toml {
+   pub fn new(filename: &str) -> Self {
+      let data = fs::read_to_string(filename).expect("Unable to read project file");
+      // let path = Path::new(filename);
+      // let mut file = BufReader::new(File::open(&path)).expect;
+      toml::from_str(&data).unwrap()
+   }
+}
+
+pub struct Project {
+   pub width: usize,
+   pub height: usize,
+   pub elements: Vec<Element>,
+}
+
+pub struct Element {
+   pub name: String,
+   pub color: iced::Color,
+   pub volatility: f32,
+}
+
+impl Project {
+   pub fn new(filename: &str) -> Self {
+      // Read data from toml file
+      let toml = Toml::new(filename);
+      let width = toml.width;
+      let height = (width as f32 * toml.height_ratio) as usize;
+
+      // Map from Hash to Vec with colors in internal representation
+      let elements = toml.elements.iter().map(|(key, val)| {
+         // Color item from hash by name
+         let color = toml.colors.get(&val.color);
+
+         // Color from r, g, b array
+         let color = if let Some(color) = color {
+            iced::Color::from_rgb8(color.0, color.1, color.2)
+         } else {
+            iced::Color::BLACK
+         };
+         
+         Element {
+            name: key.into(),
+            volatility: val.volatility,
+            color,
+         }
+      }).collect();
+
+      Self {
+         width,
+         height,
+         elements,
       }
-      Command::none()
    }
 
-   pub fn view<'a>(
-      &'a mut self,
-   ) -> Element<'a, Message> {
-      // Project controls
-      let buttons = Row::new()
-      .padding(10)
-      .spacing(10)
-      .align_items(Align::Center)
-
-      .push(
-         Button::new(
-               &mut self.new_button,
-               Text::new("New"),
-         )
-         .on_press(Message::New)
-         .style(style::Button),
-      )
-
-      .push(
-         Button::new(
-               &mut self.open_button,
-               Text::new("Open"),
-         )
-         .on_press(Message::Open)
-         .style(style::Button),
-      )
-
-      .push(
-         Button::new(
-               &mut self.save_button,
-               Text::new("Save"),
-         )
-         .on_press(Message::Save)
-         .style(style::Button),
-      )
-
-      .push(
-         Button::new(
-               &mut self.save_as_button,
-               Text::new("Save as"),
-         )
-         .on_press(Message::SaveAs)
-         .style(style::Button),
-      )
-
-      .push(
-         Button::new(
-               &mut self.restart_button,
-               Text::new("Restart"),
-         )
-         .on_press(Message::Restart)
-         .style(style::Button),
-      )
-
-      .push(
-         Button::new(
-               &mut self.pause_button,
-               Text::new(if self.paused {"Resume"} else {"Pause"}),
-         )
-         .on_press(Message::Pause)
-         .style(style::Button),
-      )
-
-      .push(
-         Checkbox::new(self.autosave, "Autosave", Message::ToggleAutosave)
-         .size(16)
-         .spacing(5)
-         .text_size(16),
-      )
-
-      .push(
-         Checkbox::new(self.autorun, "Autorun", Message::ToggleAutorun)
-         .size(16)
-         .spacing(5)
-         .text_size(16),
-      )
-
-      .push(
-         Checkbox::new(self.illuminate, "Illumination", Message::ToggleIllumination)
-         .size(16)
-         .spacing(5)
-         .text_size(16),
-      );
-
-      buttons.into()
-
+   pub fn elements_number(&self) -> usize {
+      self.elements.len()
    }
 }
-
-#[derive(Debug, Clone)]
-pub enum Message {
-   New,
-   Open,
-   Save,
-   SaveAs,
-   Restart,
-   Pause,
-   ToggleAutosave(bool),
-   ToggleAutorun(bool),
-   ToggleIllumination(bool),
-}
-

@@ -13,15 +13,19 @@ use std::usize;
 use iced::Color;
 use crate::dot::{Bit, Bits,};
 pub use crate::dot::Dot;
+use crate::project;
 
 pub struct World {
-   pub width: usize,
-   pub height: usize,
+   project: project::Project,
    bits: Bits,
 }
 
 impl World {
-   pub fn new(width: usize, height: usize, elements_number: usize) -> Self {
+   pub fn new(project: project::Project) -> Self {
+      let width = project.width;
+      let height= project.height;
+      let elements_number = project.elements_number();
+
       // Create vec for rows
       let mut bits = vec![];
 
@@ -34,8 +38,7 @@ impl World {
       };
 
       Self {
-         width,
-         height,
+         project,
          bits,
       }
    }
@@ -43,8 +46,8 @@ impl World {
    // Return dot for display position
    // The world must be continuous, the first point goes to the right (or bottom) of the last point again
    pub fn dot(&self, display_x: isize, display_y: isize) -> Dot {
-      let width = self.width as isize;
-      let height = self.height as isize;
+      let width = self.project.width as isize;
+      let height = self.project.height as isize;
       let mut x = display_x;
       let mut y = display_y;
 
@@ -58,7 +61,7 @@ impl World {
 
       // Corresponding bit of the world
       let bit = &self.bits[x][y];
-      let color = if bit.amount(0) != 0.0 {Color::WHITE} else {Color::TRANSPARENT};
+      let color = if bit.amount(0) != 0.0 {self.project.elements[0].color} else {Color::TRANSPARENT};
 
       Dot{x, y, color,}
    }
@@ -72,11 +75,14 @@ impl World {
       let bit = &mut self.bits[dot.x][dot.y];
       bit.set_amount(0, 0.0);
    }
-}
 
-impl Default for World {
-   fn default() -> Self {
-       Self::new(0, 0, 0)
+   pub fn width(&self) -> usize {
+      self.project.width
+   }
+
+   pub fn height(&self) -> usize {
+      self.project.height
    }
 }
+
 
