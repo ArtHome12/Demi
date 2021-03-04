@@ -94,7 +94,7 @@ impl Project {
       }
    }
 
-   pub fn elements_number(&self) -> Amounts {
+   pub fn elements_amount(&self) -> Amounts {
       self.elements.iter().map(|f| f.amount).collect()
    }
 }

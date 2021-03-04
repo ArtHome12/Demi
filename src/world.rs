@@ -9,37 +9,42 @@ Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 use std::usize;
-
 use iced::Color;
-use crate::dot::{Bit, Bits,};
+
+use crate::{dot::{Bit, Bits,}, evolution::Evolution};
 pub use crate::dot::Dot;
 use crate::project;
 
 pub struct World {
    project: project::Project,
    bits: Bits,
+   evolution: Evolution,
 }
 
 impl World {
    pub fn new(project: project::Project) -> Self {
       let width = project.width;
       let height= project.height;
-      let elements_number = project.elements_number();
+      let elements_amount = project.elements_amount();
 
       // Create vec for rows
-      let mut bits = vec![];
+      let mut bits = Vec::with_capacity(height);
 
       for x in 0..width {
          // Create vec for items
-         let row = (0..height).into_iter().map(|y| Bit::new(x, y, elements_number.clone())).collect();
+         let row = (0..height).into_iter().map(|y| Bit::new(x, y, elements_amount.clone())).collect();
 
          // Put items into result vector
          bits.push(row);
       };
 
+      // Evolution algorithm
+      let evolution = Evolution::new(&bits);
+
       Self {
          project,
          bits,
+         evolution,
       }
    }
 
