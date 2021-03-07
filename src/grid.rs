@@ -26,7 +26,7 @@ pub struct Grid {
    grid_cache: Cache,
    translation: Vector,
    scaling: f32,
-   world: World,
+   pub world: World,
 }
 
 #[derive(Debug, Clone)]
@@ -155,28 +155,28 @@ impl<'a> canvas::Program<Message> for Grid {
       match event {
          Event::Mouse(mouse_event) => match mouse_event {
             mouse::Event::ButtonPressed(button) => {
-                  let message = match button {
-                     mouse::Button::Left => {
-                        self.interaction = if is_populated {
-                              Interaction::Erasing
-                        } else {
-                              Interaction::Drawing
-                        };
+               let message = match button {
+                  mouse::Button::Left => {
+                     self.interaction = if is_populated {
+                        Interaction::Erasing
+                     } else {
+                        Interaction::Drawing
+                     };
 
-                        populate.or(unpopulate)
-                     }
-                     mouse::Button::Right => {
-                        self.interaction = Interaction::Panning {
-                              translation: self.translation,
-                              start: cursor_position,
-                        };
+                     populate.or(unpopulate)
+                  }
+                  mouse::Button::Right => {
+                     self.interaction = Interaction::Panning {
+                           translation: self.translation,
+                           start: cursor_position,
+                     };
 
-                        None
-                     }
-                     _ => None,
-                  };
+                     None
+                  }
+                  _ => None,
+               };
 
-                  (event::Status::Captured, message)
+               (event::Status::Captured, message)
             }
             mouse::Event::CursorMoved { .. } => {
                   let message = match self.interaction {

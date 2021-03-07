@@ -11,14 +11,16 @@ Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 use std::usize;
 use iced::Color;
 
-use crate::{dot::{Bit, Bits,}, evolution::Evolution};
+use crate::{dot::{Bit, Bits,}, evolution::Evolution, update_rate::UpdateRate};
 pub use crate::dot::Dot;
 use crate::project;
+use crate::update_rate;
 
 pub struct World {
    project: project::Project,
    bits: Bits,
    evolution: Evolution,
+   fps: UpdateRate,
 }
 
 impl World {
@@ -45,6 +47,7 @@ impl World {
          project,
          bits,
          evolution,
+         fps: UpdateRate::default()
       }
    }
 
@@ -85,11 +88,6 @@ impl World {
          let bit = self.bit(dot);
          format!("{}{}{}: {}", acc, delimiter, element.name, bit.elements[i])
       })
-      // .map(|(i, element)| {
-      //    let bit = self.bit(dot);
-      //    format!("{}: {}\n", element.name, bit.elements[i])
-      // })
-      // .collect()
    }
 
    // Temporary for testing
@@ -108,6 +106,10 @@ impl World {
 
    pub fn height(&self) -> usize {
       self.project.height
+   }
+
+   pub fn toggle_pause(&self) {
+      self.evolution.toggle_pause()
    }
 }
 

@@ -15,7 +15,7 @@ use crate::style;
 
 #[derive(Default)]
 pub struct Controls {
-   paused: bool,
+   run: bool,
    autosave: bool,
    autorun: bool,
    illuminate: bool,
@@ -32,7 +32,7 @@ impl Controls {
 
    pub fn update(&mut self, message: Message) -> Command<Message> {
       match message {
-         Message::Pause => self.paused = !self.paused,
+         Message::ToggleRun => self.run = !self.run,
          Message::ToggleAutosave(checked) => self.autosave = checked,
          Message::ToggleAutorun(checked) => self.autorun = checked,
          Message::ToggleIllumination(checked) => self.illuminate = checked,
@@ -98,9 +98,9 @@ impl Controls {
       .push(
          Button::new(
                &mut self.pause_button,
-               Text::new(if self.paused {"Resume"} else {"Pause"}),
+               Text::new(if self.run {"Pause"} else {"Resume"}),
          )
-         .on_press(Message::Pause)
+         .on_press(Message::ToggleRun)
          .style(style::Button),
       )
 
@@ -137,7 +137,7 @@ pub enum Message {
    Save,
    SaveAs,
    Restart,
-   Pause,
+   ToggleRun,
    ToggleAutosave(bool),
    ToggleAutorun(bool),
    ToggleIllumination(bool),

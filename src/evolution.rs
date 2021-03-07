@@ -17,7 +17,6 @@ pub struct Evolution {
    // Thread for calculate evolution and control flag
    thread: JoinHandle<()>,
    run_flag: Arc<AtomicBool>, // running when true else paused
-   quit_flag: Arc<AtomicBool>, // terminate when true
 }
 
 impl Evolution {
@@ -25,13 +24,11 @@ impl Evolution {
       // Flags for thread control
       let run_flag = Arc::new(AtomicBool::new(false));
       let run_flag_threaded = Arc::clone(&run_flag);
-      let quit_flag = Arc::new(AtomicBool::new(false));
-      let quit_flag_threaded = Arc::clone(&run_flag);
-      
+
       // Thread for calculate evolution
       let thread = thread::spawn(move || {
-         // Running until quit signal
-         while !quit_flag_threaded.load(Ordering::Acquire) {
+         // Running until program not closed
+         loop {
 
             // Sleep if it paused
             if !run_flag_threaded.load(Ordering::Acquire) {
@@ -42,15 +39,23 @@ impl Evolution {
             Self::make_tick();
          }
       });
-     
+
       Self {
          thread,
          run_flag,
-         quit_flag,
       }
    }
 
    fn make_tick() {
 
+   }
+
+   pub fn toggle_pause(&self) {
+      // Transfer signal to thread
+      let flag = !self.run_flag.load(Ordering::Acquire);
+      self.run_flag.store(flag, Ordering::Release);
+
+      // If it has been suspended, wake up
+      if flag {self.thread.thread().unpark()}
    }
 }

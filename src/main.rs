@@ -15,8 +15,8 @@ mod dot;
 mod world;
 mod project;
 mod evolution;
+mod update_rate;
 
-use std::{thread, time};
 use grid::Grid;
 use iced::executor;
 use iced::{Application, Column, Command, Container, Element, Length, Settings, };
@@ -34,7 +34,6 @@ pub fn main() -> iced::Result {
 enum Message {
    ProjectMessage(project_controls::Message),
    Grid(grid::Message),
-   Executed(bool),
 }
 
 struct Demi {
@@ -64,22 +63,17 @@ impl Application for Demi {
 
    fn update(&mut self, message: Message) -> Command<Message> {
       match message {
-         Message::Grid(message) => {
-            self.grid.update(message);
-            Command::none()
-         }
-
+         Message::Grid(message) => self.grid.update(message),
          Message::ProjectMessage(message) => {
-            
+
             // Reflecting the interface change immediately
             self.controls.update(message.clone());
 
-            // Create a future for execute task a bit later
-            Command::perform(Self::project_control(message), Message::Executed)
+            // Handle the message
+            self.project_control(message)
          }
-
-         Message::Executed(_) => Command::none()
       }
+      Command::none()
    }
 
    fn view(&mut self) -> Element<Message> {
@@ -104,8 +98,10 @@ impl Application for Demi {
 
 impl Demi {
    // Project controls async handler
-   async fn project_control(message: project_controls::Message) -> bool {
+   fn project_control(&self, message: project_controls::Message) {
+      match message {
+         project_controls::Message::ToggleRun => self.grid.world.toggle_pause(),
          _ => (),
-      true
+      }
    }
 }
