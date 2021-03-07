@@ -105,7 +105,7 @@ impl Application for Demi {
 impl Demi {
    // Project controls async handler
    async fn project_control(message: project_controls::Message) -> bool {
-      thread::sleep(time::Duration::from_millis(10_000));
+         _ => (),
       true
    }
 }
