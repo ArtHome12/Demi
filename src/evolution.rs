@@ -8,15 +8,15 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use std::thread::{self, JoinHandle};
-use std::sync::{Arc, atomic::{Ordering, AtomicBool}};
+use std::{thread::{self, JoinHandle}};
+use std::sync::{Arc, atomic::{Ordering, AtomicBool, AtomicUsize,}};
 
 use crate::{dot::{/*Bit,*/ Bits,}};
 
 pub struct Evolution {
-   // Thread for calculate evolution and control flag
-   thread: JoinHandle<()>,
+   thread: JoinHandle<()>, // thread for calculate evolution and control flag
    run_flag: Arc<AtomicBool>, // running when true else paused
+   ticks_elapsed: Arc<AtomicUsize>, // model time - a number ticks elapsed from beginning
 }
 
 impl Evolution {
@@ -24,6 +24,10 @@ impl Evolution {
       // Flags for thread control
       let run_flag = Arc::new(AtomicBool::new(false));
       let run_flag_threaded = Arc::clone(&run_flag);
+
+      // The model time
+      let ticks_elapsed = Arc::new(AtomicUsize::new(0));
+      let ticks_elapsed_threaded = Arc::clone(&ticks_elapsed);
 
       // Thread for calculate evolution
       let thread = thread::spawn(move || {
@@ -36,6 +40,7 @@ impl Evolution {
             }
 
             // Calculate the tick of evolution
+            ticks_elapsed_threaded.fetch_add(1, Ordering::Relaxed);
             Self::make_tick();
          }
       });
@@ -43,6 +48,7 @@ impl Evolution {
       Self {
          thread,
          run_flag,
+         ticks_elapsed,
       }
    }
 
@@ -57,5 +63,10 @@ impl Evolution {
 
       // If it has been suspended, wake up
       if flag {self.thread.thread().unpark()}
+   }
+
+   // Returns model time - a number ticks elapsed from beginning
+   pub fn ticks_elapsed(&self) -> usize {
+      self.ticks_elapsed.load(Ordering::Relaxed)
    }
 }

@@ -15,10 +15,11 @@ use iced::{
    Size, Vector, VerticalAlignment,
 };
 use rustc_hash::FxHashSet;
-use std::{ops::RangeInclusive, usize};
+use std::{ops::RangeInclusive, usize, cell::RefCell};
 
 use crate::world::{World, Dot,};
 use crate::project;
+use crate::update_rate::*;
 
 pub struct Grid {
    interaction: Interaction,
@@ -27,6 +28,8 @@ pub struct Grid {
    translation: Vector,
    scaling: f32,
    pub world: World,
+   fps: RefCell<FPS>,  // screen refresh rate
+   tps: TPS, // model time rate, ticks per second
 }
 
 #[derive(Debug, Clone)]
@@ -59,8 +62,9 @@ impl Grid {
          grid_cache: Cache::default(),
          translation: Vector::default(),
          scaling: 1.0,
-
          world: World::new(project),
+         fps: RefCell::new(FPS::default()),
+         tps: TPS::default(),
       }
    }
 
@@ -123,6 +127,12 @@ impl Grid {
 
       if self.translation.y <= 0.0 {self.translation.y += h}
       else if self.translation.y >= h {self.translation.y -= h}
+   }
+
+   // Update rate counters
+   pub fn clock_chime(&mut self) {
+      self.fps.borrow_mut().clock_chime();
+      self.tps.clock_chime(self.world.ticks_elapsed())
    }
 }
 
@@ -278,6 +288,9 @@ impl<'a> canvas::Program<Message> for Grid {
          });
       });
 
+      // Update FPS, once upon refresh
+      self.fps.borrow_mut().make_tick();
+
       let overlay = {
          let mut frame = Frame::new(bounds.size());
 
@@ -292,6 +305,20 @@ impl<'a> canvas::Program<Message> for Grid {
                ..Color::BLACK
             }
          );
+
+         // Text object
+         let text = Text {
+            color: Color::WHITE,
+            vertical_alignment: VerticalAlignment::Bottom,
+            ..Text::default()
+         };
+
+         // Print FPS and model time
+         frame.fill_text(Text{
+            position: Point::new(3.0, frame_height - 3.0),
+            content: format!("{} FPS {} TPS", self.fps.borrow().rate, self.tps.rate),
+            ..text
+         });
 
          // Get dot below cursor
          if let Some(cursor_position) = cursor.position_in(&bounds) {
@@ -319,15 +346,11 @@ impl<'a> canvas::Program<Message> for Grid {
             // Output info at bottom left edge
             let dot = self.world.dot(x as isize, y as isize);
             let description = self.world.description(&dot, 30, ' ');
-            let text = Text {
-               color: Color::WHITE,
-               position: Point::new(3.0, frame_height - 3.0),
-               vertical_alignment: VerticalAlignment::Bottom,
-               content: format!("({}, {}) {}", dot.x, dot.y, description),
-               ..Text::default()
-            };
-
-            frame.fill_text(text);
+            frame.fill_text(Text{
+               position: Point::new(210.0, frame_height - 3.0),
+               content: format!("{}:{} {}", dot.x, dot.y, description),
+               ..text
+            });
          }
 
          frame.into_geometry()

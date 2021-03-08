@@ -11,16 +11,14 @@ Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 use std::usize;
 use iced::Color;
 
-use crate::{dot::{Bit, Bits,}, evolution::Evolution, update_rate::UpdateRate};
+use crate::{dot::{Bit, Bits,}, evolution::Evolution, };
 pub use crate::dot::Dot;
 use crate::project;
-use crate::update_rate;
 
 pub struct World {
    project: project::Project,
    bits: Bits,
    evolution: Evolution,
-   fps: UpdateRate,
 }
 
 impl World {
@@ -47,7 +45,6 @@ impl World {
          project,
          bits,
          evolution,
-         fps: UpdateRate::default()
       }
    }
 
@@ -110,6 +107,11 @@ impl World {
 
    pub fn toggle_pause(&self) {
       self.evolution.toggle_pause()
+   }
+
+   // Returns model time - a number ticks elapsed from beginning
+   pub fn ticks_elapsed(&self) -> usize {
+      self.evolution.ticks_elapsed()
    }
 }
 

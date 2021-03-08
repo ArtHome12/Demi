@@ -18,8 +18,10 @@ mod evolution;
 mod update_rate;
 
 use grid::Grid;
-use iced::executor;
-use iced::{Application, Column, Command, Container, Element, Length, Settings, };
+use iced::{Application, Column, Command, Container, Element, Length, Settings, 
+   Subscription, time, executor,
+};
+use std::time::{Duration, Instant};
 
 
 pub fn main() -> iced::Result {
@@ -34,6 +36,7 @@ pub fn main() -> iced::Result {
 enum Message {
    ProjectMessage(project_controls::Message),
    Grid(grid::Message),
+   OneSecond(Instant),  // to update FPS and model speed
 }
 
 struct Demi {
@@ -72,8 +75,16 @@ impl Application for Demi {
             // Handle the message
             self.project_control(message)
          }
+         Message::OneSecond(_) => {
+            self.grid.clock_chime();
+         }
       }
       Command::none()
+   }
+
+   fn subscription(&self) -> Subscription<Message> {
+      time::every(Duration::from_millis(1000))
+      .map(Message::OneSecond)
    }
 
    fn view(&mut self) -> Element<Message> {
