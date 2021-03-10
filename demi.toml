@@ -8,7 +8,7 @@ resolution = 0.1 # number of dots calculated for each tick. Actually determines 
 [elements]
    # Water is the basis of everything, and as a basis its volatility is less than that of solids
    # Title starts with 0 for correct sorting
-   0Water = { color="cornflowerblue", volatility=0.01, amount=10000000 }
+   Water = { color="cornflowerblue", volatility=0.01, amount=10000000 }
 
    # Gases
    Oxygen = { color="green", volatility=0.01, amount=0 }

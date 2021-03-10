@@ -8,65 +8,101 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use std::{thread::{self, JoinHandle}};
-use std::sync::{Arc, atomic::{Ordering, AtomicBool, AtomicUsize,}};
+use std::sync::{Arc, Mutex, };
 
-use crate::{dot::{/*Bit,*/ Bits,}};
+use crate::{dot::{/*Bit,*/ Bits, Coord,}};
 
 pub struct Evolution {
-   thread: JoinHandle<()>, // thread for calculate evolution and control flag
-   run_flag: Arc<AtomicBool>, // running when true else paused
-   ticks_elapsed: Arc<AtomicUsize>, // model time - a number ticks elapsed from beginning
+   // World size
+   width: usize,
+   height: usize,
+
+   pub bits: Bits, // points of the world with data for evaluate
+   mirror: Arc<Mutex<Bits>>, // for display
+
+	// The maximum illumination radius around the location of the Sun is 90% of the height of the world
+	light_radius: usize,
+
+   // The course of the Sun vertically, due to the inclination of the earth axis, approximately sin (23.5) = 0.4 or 10% on each side of the equator
+	tropic_height: f32,
 }
 
 impl Evolution {
-   pub fn new(bits: &Bits) -> Self {
-      // Flags for thread control
-      let run_flag = Arc::new(AtomicBool::new(false));
-      let run_flag_threaded = Arc::clone(&run_flag);
+   // Number of ticks per day and days per year
+   const TICKS_PER_DAY: f32 = 60.0*24.0;
+   const DAYS_PER_YEAR: f32 = 365.0;
+   const HALF_YEAR: f32 = Self::DAYS_PER_YEAR / 2.0;
 
-      // The model time
-      let ticks_elapsed = Arc::new(AtomicUsize::new(0));
-      let ticks_elapsed_threaded = Arc::clone(&ticks_elapsed);
 
-      // Thread for calculate evolution
-      let thread = thread::spawn(move || {
-         // Running until program not closed
-         loop {
-
-            // Sleep if it paused
-            if !run_flag_threaded.load(Ordering::Acquire) {
-               thread::park();
-            }
-
-            // Calculate the tick of evolution
-            ticks_elapsed_threaded.fetch_add(1, Ordering::Relaxed);
-            Self::make_tick();
-         }
-      });
+   pub fn new(mirror: Arc<Mutex<Bits>>, size: Coord) -> Self {
+      // Initial value from saves or project
+      let raw_bits = {mirror.lock().unwrap().clone()};
 
       Self {
-         thread,
-         run_flag,
-         ticks_elapsed,
+         width: size.x,
+         height: size.y,
+         bits: raw_bits,
+         mirror,
+         light_radius: (0.8 * size.y as f32 / 2.0) as usize,
+         tropic_height: size.y as f32 / 5.0
       }
    }
 
-   fn make_tick() {
+   pub fn make_tick(&mut self, tick: usize) {
+      // Sun position
+      let sun_pos = self.sun_position(tick);
 
+      let w = self.width as isize;
+      let r = self.light_radius as isize;
+      let rf = r as f64;
+
+      // Sun radiation
+      for x in -r..=r {
+         // From sun position to bit index with correction of the border
+         let mut i = x + sun_pos.x as isize;
+         if i < 0 {i += w}
+         else if i >= w {i -= w}
+
+         for y in -r..=r {
+            // Vertical index does not require correction
+            let j = y + sun_pos.y as isize;
+
+            // Distance from the center of the sun
+            let d = ((x * x + y * y) as f64).sqrt();
+
+            // Brightness is inversely proportional to distance
+            let b = if d < rf {(rf - d) / rf} else {0.0};
+
+            // Update energy in the bit
+            self.bits[i as usize][j as usize].energy = b;
+         }
+      }
+
+      // Transfer data to mirror if there no delay
+      if let Ok(ref mut mirror_bits) = self.mirror.try_lock() {
+         mirror_bits.clone_from_slice(self.bits.as_slice())
+      }
    }
 
-   pub fn toggle_pause(&self) {
-      // Transfer signal to thread
-      let flag = !self.run_flag.load(Ordering::Acquire);
-      self.run_flag.store(flag, Ordering::Release);
+   // Returns the position of the sun at the specified time
+   fn sun_position(&self, tick: usize) -> Coord {
+      // Times of Day
+      let day_tick = tick as f32 % Self::TICKS_PER_DAY;
 
-      // If it has been suspended, wake up
-      if flag {self.thread.thread().unpark()}
-   }
+      let w = self.width as f32;
+      let h = self.height as f32;
 
-   // Returns model time - a number ticks elapsed from beginning
-   pub fn ticks_elapsed(&self) -> usize {
-      self.ticks_elapsed.load(Ordering::Relaxed)
+      // The sun moves from east to west in proportion to the elapsed fraction of a day
+      let x = w * (1.0 - day_tick / (Self::TICKS_PER_DAY - 1.0));
+
+      // When the first half of the year goes, it is necessary to take a share from the equator, and when the second is to add
+      let day = tick as f32 % Self::DAYS_PER_YEAR;
+      let y = if day < Self::HALF_YEAR {
+		   (h - self.tropic_height) / 2.0 + day * self.tropic_height / Self::HALF_YEAR
+      } else {
+		   (h + self.tropic_height) / 2.0 - (day - Self::HALF_YEAR) * self.tropic_height / Self::HALF_YEAR
+      };
+
+      Coord::new(x as usize, y as usize)
    }
 }

@@ -20,8 +20,8 @@ pub struct Bit {
    x: usize,
    y: usize,
 
-   // The amount of minerals, gas, etc
-   pub elements: Amounts,
+   pub energy: f64, // sun or geothermal
+   pub elements: Amounts, // the amount of minerals, gas, etc
 }
 
 impl Bit {
@@ -29,6 +29,7 @@ impl Bit {
       Bit {
          x,
          y,
+         energy: 0.0,
          elements,
       }
    }
@@ -52,3 +53,14 @@ pub struct Dot {
    pub color: Color,
 }
 
+// Location separately from Bit, Dot
+pub struct Coord {
+   pub x: usize,
+   pub y: usize,
+}
+
+impl Coord {
+   pub fn new(x: usize, y: usize) -> Self {
+      Self {x, y}
+   }
+}
