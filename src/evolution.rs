@@ -34,7 +34,7 @@ impl Evolution {
    const HALF_YEAR: f32 = Self::DAYS_PER_YEAR / 2.0;
 
 
-   pub fn new(mirror: Arc<Mutex<Bits>>, size: Coord) -> Self {
+   pub fn new(mirror: Arc<Mutex<Bits>>, size: &Coord) -> Self {
       // Initial value from saves or project
       let raw_bits = {mirror.lock().unwrap().clone()};
 
@@ -74,7 +74,8 @@ impl Evolution {
             let b = if d < rf {(rf - d) / rf} else {0.0};
 
             // Update energy in the bit
-            self.bits[i as usize][j as usize].energy = b;
+            let coord = Coord{x: i as usize, y: j as usize};
+            self.bits.set_energy(&coord, b);
          }
       }
 

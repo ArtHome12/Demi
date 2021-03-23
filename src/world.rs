@@ -13,8 +13,8 @@ use iced::Color;
 use std::{thread::{self, JoinHandle}};
 use std::sync::{Arc, Mutex, atomic::{Ordering, AtomicBool, AtomicUsize,}};
 
-use crate::{dot::{Bit, Bits,}, evolution::Evolution, };
-pub use crate::dot::{Dot, Coord,};
+use crate::{dot::{Bits, }, evolution::Evolution, };
+pub use crate::dot::{Dot, Coord, Size};
 use crate::project;
 
 pub struct World {
@@ -27,24 +27,16 @@ pub struct World {
 
 impl World {
    pub fn new(project: project::Project) -> Self {
-      let width = project.width;
-      let height= project.height;
+      // Load initial amounts from project
       let elements_amount = project.elements_amount();
 
-      // Create vec for rows
-      let mut bits = Vec::with_capacity(height);
+      // Create bits with initial amounts
+      let bits = Bits::new(&project.size, &elements_amount);
 
-      for x in 0..width {
-         // Create vec for items
-         let row = (0..height).into_iter().map(|y| Bit::new(x, y, elements_amount.clone())).collect();
-
-         // Put items into result vector
-         bits.push(row);
-      };
       let mutex_bits = Arc::new(Mutex::new(bits));
 
       // Evolution algorithm
-      let mut evolution = Evolution::new(Arc::clone(&mutex_bits), Coord::new(width, height));
+      let mut evolution = Evolution::new(Arc::clone(&mutex_bits), &project.size);
 
       // Flags for thread control
       let run_flag = Arc::new(AtomicBool::new(false));
@@ -85,8 +77,10 @@ impl World {
    // Return dot at display position
    // The world must be continuous, the first point goes to the right (or bottom) of the last point again
    pub fn dot(&self, display_x: isize, display_y: isize) -> Dot {
-      let width = self.project.width as isize;
-      let height = self.project.height as isize;
+      let Size {x: width, y: height} = self.project.size;
+      let width = width as isize;
+      let height = height as isize;
+
       let mut x = display_x;
       let mut y = display_y;
 
@@ -99,7 +93,8 @@ impl World {
       let y = y as usize;
 
       // Corresponding bit of the world
-      let bit = &self.mutex_bits.lock().unwrap()[x][y];
+      let lock = self.mutex_bits.lock().unwrap();
+      let bit = lock.bit(x, y);
       let color = if bit.amount(0) != 0.0 {self.project.elements[0].color} else {Color::TRANSPARENT};
 
       Dot{x, y, color,}
@@ -113,7 +108,9 @@ impl World {
    // Text to describe a point with a size constraint
    pub fn description(&self, dot: &Dot, max_lines: usize, delimiter: char) -> String {
       // Underlying bit for dot
-      let bit = &self.mutex_bits.lock().unwrap()[dot.x][dot.y];
+      let Dot {x, y, ..} = *dot;
+      let lock = self.mutex_bits.lock().unwrap();
+      let bit = lock.bit(x, y);
 
       self.project.elements.iter()
       .take(max_lines - 1) // -1 for energy
@@ -125,20 +122,14 @@ impl World {
 
    // Temporary for testing
    pub fn populate(&mut self, dot: &Dot) {
-      let bit = &mut self.mutex_bits.lock().unwrap()[dot.x][dot.y];
-      bit.set_amount(0, 1.0);
+      let Dot {x, y, ..} = *dot;
+      let mut bits = self.mutex_bits.lock().unwrap();
+      bits.set_amount(&Coord{x, y}, 0, 1.0);
    }
    pub fn unpopulate(&mut self, dot: &Dot) {
-      let bit = &mut self.mutex_bits.lock().unwrap()[dot.x][dot.y];
-      bit.set_amount(0, 0.0);
-   }
-
-   pub fn width(&self) -> usize {
-      self.project.width
-   }
-
-   pub fn height(&self) -> usize {
-      self.project.height
+      let Dot {x, y, ..} = *dot;
+      let mut bits = self.mutex_bits.lock().unwrap();
+      bits.set_amount(&Coord{x, y}, 0, 0.0);
    }
 
    // Pause/resume evolutuon thread
@@ -154,6 +145,10 @@ impl World {
    // Returns model time - a number ticks elapsed from beginning
    pub fn ticks_elapsed(&self) -> usize {
       self.ticks_elapsed.load(Ordering::Relaxed)
+   }
+
+   pub fn size(&self) -> &Size {
+      &self.project.size
    }
 }
 

@@ -12,7 +12,7 @@ use std::collections::{HashMap, BTreeMap};
 use std::fs;
 use serde_derive::Deserialize;
 
-use crate::dot::Amounts;
+use crate::dot::{Amounts, Size};
 
 // Content of a toml project file
 #[derive(Deserialize)]
@@ -48,8 +48,7 @@ impl Toml {
 }
 
 pub struct Project {
-   pub width: usize,
-   pub height: usize,
+   pub size: Size,
    pub elements: Vec<Element>,
 }
 
@@ -65,7 +64,7 @@ impl Project {
       // Read data from toml file
       let toml = Toml::new(filename);
       let width = toml.width;
-      let height = (width as f32 * toml.height_ratio) as usize;
+      let size = Size::new(width, (width as f32 * toml.height_ratio) as usize);
 
       // Map from Hash to Vec with colors in internal representation
       let elements = toml.elements.iter().map(|(key, val)| {
@@ -88,8 +87,7 @@ impl Project {
       }).collect();
 
       Self {
-         width,
-         height,
+         size,
          elements,
       }
    }

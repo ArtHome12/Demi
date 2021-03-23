@@ -119,8 +119,9 @@ impl Grid {
       self.translation = new_translation;
 
       // World size in pixels
-      let w = self.world.width() as f32 * Self::CELL_SIZE;
-      let h = self.world.height() as f32 * Self::CELL_SIZE;
+      let crate::world::Size {x: w, y: h} = *self.world.size();
+      let w = w as f32 * Self::CELL_SIZE;
+      let h = h as f32 * Self::CELL_SIZE;
       // To prevent overflow translation in coninious world
       if self.translation.x <= 0.0 {self.translation.x += w}
       else if self.translation.x >= w {self.translation.x -= w}
@@ -370,8 +371,7 @@ impl<'a> canvas::Program<Message> for Grid {
          let columns = region.columns();
          let (total_rows, total_columns) = (rows.clone().count(), columns.clone().count());
          let (rows_start, columns_start) = (*rows.start() as f32, *columns.start() as f32);
-         let world_width = self.world.width();
-         let world_height = self.world.height();
+         let crate::world::Size {x: world_width, y: world_height} = self.world.size();
 
          // Amount of lines for border around the world
          let outer_rows = total_rows / world_height;

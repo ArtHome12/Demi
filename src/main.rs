@@ -36,12 +36,13 @@ pub fn main() -> iced::Result {
 enum Message {
    ProjectMessage(project_controls::Message),
    Grid(grid::Message),
-   OneSecond(Instant),  // to update FPS and model speed
+   Cadence(Instant), // called up to 25 times per second
 }
 
 struct Demi {
    grid: Grid,
    controls: project_controls::Controls,
+   last_one_second_time: Instant,
 }
 
 impl Application for Demi {
@@ -55,6 +56,7 @@ impl Application for Demi {
          Self {
             grid: Grid::new(project),
             controls: project_controls::Controls::default(),
+            last_one_second_time: Instant::now(),
          },
          Command::none(),
       )
@@ -75,16 +77,20 @@ impl Application for Demi {
             // Handle the message
             self.project_control(message)
          }
-         Message::OneSecond(_) => {
-            self.grid.clock_chime();
+         Message::Cadence(ts) => {
+            // Update rates once a second
+            if ts.duration_since(self.last_one_second_time) >= Duration::new(1, 0) {
+               self.last_one_second_time = ts;
+               self.grid.clock_chime();
+            }
          }
       }
       Command::none()
    }
 
    fn subscription(&self) -> Subscription<Message> {
-      time::every(Duration::from_millis(1000))
-      .map(Message::OneSecond)
+      time::every(Duration::from_millis(40))
+      .map(Message::Cadence)
    }
 
    fn view(&mut self) -> Element<Message> {
