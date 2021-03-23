@@ -10,7 +10,7 @@ Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 
 use iced::Color;
 
-pub type Amounts = Vec<f64>;
+pub type Amounts = Vec<usize>;
 
 // Internal representation for calculations
 #[derive(Debug, Clone)]
@@ -19,7 +19,7 @@ pub struct Bit {
    x: usize,
    y: usize,
 
-   pub energy: f64, // sun or geothermal
+   pub energy: usize, // sun or geothermal
    pub elements: Amounts, // the amount of minerals, gas, etc
 }
 
@@ -28,15 +28,15 @@ impl Bit {
       Bit {
          x,
          y,
-         energy: 0.0,
+         energy: 0,
          elements,
       }
    }
 
-   pub fn amount(&self, element_index: usize) -> f64 {
+   pub fn amount(&self, element_index: usize) -> usize {
       self.elements[element_index]
    }
-   pub fn set_amount(&mut self, element_index: usize, amount: f64) {
+   pub fn set_amount(&mut self, element_index: usize, amount: usize) {
       self.elements[element_index] = amount;
    }
 }
@@ -93,12 +93,12 @@ impl Bits {
       &self.stor[x][y]
    }
 
-   pub fn set_energy(&mut self, coord: &Coord, energy: f64) {
+   pub fn set_energy(&mut self, coord: &Coord, energy: usize) {
       let Coord{x, y} = *coord;
       self.stor[x][y].energy = energy;
    }
 
-   pub fn set_amount(&mut self, coord: &Coord, element_index: usize, new_amount: f64) {
+   pub fn set_amount(&mut self, coord: &Coord, element_index: usize, new_amount: usize) {
       let Coord{x, y} = *coord;
       self.stor[x][y].set_amount(element_index, new_amount);
    }

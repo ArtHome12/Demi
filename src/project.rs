@@ -8,7 +8,7 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use std::collections::{HashMap, BTreeMap};
+use std::collections::HashMap;
 use std::fs;
 use serde_derive::Deserialize;
 
@@ -24,7 +24,7 @@ struct Toml {
    // geothermal: HashMap<String, Positions>,
    colors: HashMap<String, Colors>,
 
-   elements: BTreeMap<String, ElementAttributes>,
+   elements: Vec<ElementAttributes>,
 }
 
 type Colors = (u8, u8, u8);//Vec::<u8>;
@@ -33,6 +33,7 @@ type Colors = (u8, u8, u8);//Vec::<u8>;
 
 #[derive(Deserialize)]
 struct ElementAttributes {
+   name: String,
    color: String,
    volatility: f32,
    amount: usize,
@@ -41,8 +42,6 @@ struct ElementAttributes {
 impl Toml {
    pub fn new(filename: &str) -> Self {
       let data = fs::read_to_string(filename).expect("Unable to read project file");
-      // let path = Path::new(filename);
-      // let mut file = BufReader::new(File::open(&path)).expect;
       toml::from_str(&data).unwrap()
    }
 }
@@ -56,7 +55,7 @@ pub struct Element {
    pub name: String,
    pub color: iced::Color,
    pub volatility: f32,
-   pub amount: f64,
+   pub amount: usize,
 }
 
 impl Project {
@@ -67,7 +66,7 @@ impl Project {
       let size = Size::new(width, (width as f32 * toml.height_ratio) as usize);
 
       // Map from Hash to Vec with colors in internal representation
-      let elements = toml.elements.iter().map(|(key, val)| {
+      let elements = toml.elements.iter().map(|val| {
          // Color item from hash by name
          let color = toml.colors.get(&val.color);
 
@@ -79,10 +78,10 @@ impl Project {
          };
 
          Element {
-            name: key.into(),
+            name: val.name.clone(),
             volatility: val.volatility,
             color,
-            amount: val.amount as f64,
+            amount: val.amount,
          }
       }).collect();
 

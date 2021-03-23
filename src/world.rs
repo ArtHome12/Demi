@@ -95,7 +95,10 @@ impl World {
       // Corresponding bit of the world
       let lock = self.mutex_bits.lock().unwrap();
       let bit = lock.bit(x, y);
-      let color = if bit.amount(0) != 0.0 {self.project.elements[0].color} else {Color::TRANSPARENT};
+      let mut color = if bit.amount(0) != 0 {self.project.elements[0].color} else {Color::TRANSPARENT};
+
+      // Adjust color to energy
+      color.a = bit.energy as f32 / 100.0;
 
       Dot{x, y, color,}
    }
@@ -124,12 +127,12 @@ impl World {
    pub fn populate(&mut self, dot: &Dot) {
       let Dot {x, y, ..} = *dot;
       let mut bits = self.mutex_bits.lock().unwrap();
-      bits.set_amount(&Coord{x, y}, 0, 1.0);
+      bits.set_amount(&Coord{x, y}, 0, 1);
    }
    pub fn unpopulate(&mut self, dot: &Dot) {
       let Dot {x, y, ..} = *dot;
       let mut bits = self.mutex_bits.lock().unwrap();
-      bits.set_amount(&Coord{x, y}, 0, 0.0);
+      bits.set_amount(&Coord{x, y}, 0, 0);
    }
 
    // Pause/resume evolutuon thread

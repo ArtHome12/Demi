@@ -36,7 +36,7 @@ pub fn main() -> iced::Result {
 enum Message {
    ProjectMessage(project_controls::Message),
    Grid(grid::Message),
-   Cadence(Instant), // called up to 25 times per second
+   Cadence(Instant), // called about 30 times per second for screen refresh
 }
 
 struct Demi {
@@ -89,7 +89,7 @@ impl Application for Demi {
    }
 
    fn subscription(&self) -> Subscription<Message> {
-      time::every(Duration::from_millis(40))
+      time::every(Duration::from_millis(30))
       .map(Message::Cadence)
    }
 
@@ -115,9 +115,10 @@ impl Application for Demi {
 
 impl Demi {
    // Project controls async handler
-   fn project_control(&self, message: project_controls::Message) {
+   fn project_control(&mut self, message: project_controls::Message) {
       match message {
          project_controls::Message::ToggleRun => self.grid.world.toggle_pause(),
+         project_controls::Message::ToggleIllumination(checked) => self.grid.toggle_illumination(checked),
          _ => (),
       }
    }

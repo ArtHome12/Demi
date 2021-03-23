@@ -30,6 +30,7 @@ pub struct Grid {
    pub world: World,
    fps: RefCell<FPS>,  // screen refresh rate
    tps: TPS, // model time rate, ticks per second
+   illumination: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -65,6 +66,7 @@ impl Grid {
          world: World::new(project),
          fps: RefCell::new(FPS::default()),
          tps: TPS::default(),
+         illumination: false,
       }
    }
 
@@ -134,6 +136,10 @@ impl Grid {
    pub fn clock_chime(&mut self) {
       self.fps.borrow_mut().clock_chime();
       self.tps.clock_chime(self.world.ticks_elapsed())
+   }
+
+   pub fn toggle_illumination(&mut self, checked: bool) {
+      self.illumination = checked;
    }
 }
 
@@ -247,7 +253,7 @@ impl<'a> canvas::Program<Message> for Grid {
          let mut frame = Frame::new(bounds.size());
 
          let background = Path::rectangle(Point::ORIGIN, frame.size());
-         frame.fill(&background, Color::from_rgb8(0x40, 0x44, 0x4B));
+         frame.fill(&background, Color::BLACK);
 
          frame.with_save(|frame| {
             frame.scale(self.scaling);
@@ -268,12 +274,16 @@ impl<'a> canvas::Program<Message> for Grid {
                // Get dot for point (allow display dot outside its real x and y)
                let (x, y) = point;
                let dot = self.world.dot(x, y);
+               let mut color = dot.color;
+               if self.illumination {
+                  color.a = 1.0;
+               }
 
                // Fill cell's area with a primary color
                frame.fill_rectangle(
                   Point::new(x as f32, y as f32),
                   Size::UNIT,
-                  dot.color,
+                  color,
                );
 
                // Draw the text if it fits

@@ -30,8 +30,8 @@ pub struct Evolution {
 impl Evolution {
    // Number of ticks per day and days per year
    const TICKS_PER_DAY: f32 = 60.0*24.0;
-   const DAYS_PER_YEAR: f32 = 365.0;
-   const HALF_YEAR: f32 = Self::DAYS_PER_YEAR / 2.0;
+   const DAYS_PER_YEAR: f32 = Self::TICKS_PER_DAY * 365.0;
+   const HALF_YEAR: f32 = Self::DAYS_PER_YEAR / 2.0 + 0.5;
 
 
    pub fn new(mirror: Arc<Mutex<Bits>>, size: &Coord) -> Self {
@@ -71,11 +71,11 @@ impl Evolution {
             let d = ((x * x + y * y) as f64).sqrt();
 
             // Brightness is inversely proportional to distance
-            let b = if d < rf {(rf - d) / rf} else {0.0};
+            let b = if d < rf {((rf - d) / rf * 100.0).round()} else {0.0};
 
             // Update energy in the bit
             let coord = Coord{x: i as usize, y: j as usize};
-            self.bits.set_energy(&coord, b);
+            self.bits.set_energy(&coord, b as usize);
          }
       }
 
@@ -94,7 +94,7 @@ impl Evolution {
       let h = self.height as f32;
 
       // The sun moves from east to west in proportion to the elapsed fraction of a day
-      let x = w * (1.0 - day_tick / (Self::TICKS_PER_DAY - 1.0));
+      let x = w * (1.0 - day_tick / (Self::TICKS_PER_DAY - 1.0) + 0.5);
 
       // When the first half of the year goes, it is necessary to take a share from the equator, and when the second is to add
       let day = tick as f32 % Self::DAYS_PER_YEAR;
