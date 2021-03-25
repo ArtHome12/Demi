@@ -12,14 +12,16 @@ use std::collections::HashMap;
 use std::fs;
 use serde_derive::Deserialize;
 
-use crate::dot::{Amounts, Size};
+use crate::dot::{Amounts};
+use crate::geom::*;
+
 
 // Content of a toml project file
 #[derive(Deserialize)]
 struct Toml {
    pub width: usize,
    pub height_ratio: f32,
-   // resolution: f32,
+   resolution: f32,
 
    // geothermal: HashMap<String, Positions>,
    colors: HashMap<String, Colors>,
@@ -48,6 +50,7 @@ impl Toml {
 
 pub struct Project {
    pub size: Size,
+   pub resolution: f32,
    pub elements: Vec<Element>,
 }
 
@@ -87,6 +90,7 @@ impl Project {
 
       Self {
          size,
+         resolution: toml.resolution,
          elements,
       }
    }

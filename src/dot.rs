@@ -10,6 +10,8 @@ Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 
 use iced::Color;
 
+use crate::geom::*;
+
 pub type Amounts = Vec<usize>;
 
 // Internal representation for calculations
@@ -39,10 +41,25 @@ impl Bit {
    pub fn set_amount(&mut self, element_index: usize, amount: usize) {
       self.elements[element_index] = amount;
    }
+
+   pub fn add_amount(&mut self, element_index: usize, amount: isize) {
+      let amount_ref = &mut self.elements[element_index];
+      *amount_ref = (*amount_ref as isize + amount) as usize;
+   }
 }
 
+impl From<&Bit> for Coord {
+   fn from(bit: &Bit) -> Coord {
+      Coord {
+         x: bit.x,
+         y: bit.y,
+      }
+   }
+}
+
+
 // Representation for display
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Dot {
    // Location
    pub x: usize,
@@ -52,23 +69,14 @@ pub struct Dot {
    pub color: Color,
 }
 
-// Location separately from Bit, Dot
-pub struct Size {
-   pub x: usize,
-   pub y: usize,
-}
-
-pub type Coord = Size;
-
-impl Size {
-   pub fn new(x: usize, y: usize) -> Self {
-      Self {x, y}
-   }
-}
-
 #[derive(Clone, Debug)]
 pub struct Bits {
    stor: Vec<Vec<Bit>>,
+
+   // Row length and overall number bits for random_bit()
+   width: usize,
+   height: usize,
+   bits_count: usize,
 }
 
 impl Bits {
@@ -86,21 +94,28 @@ impl Bits {
          stor.push(row);
       };
 
-      Self {stor}
+      Self {
+         stor,
+         width,
+         height,
+         bits_count: width * height,
+      }
    }
 
-   pub fn bit(&self, x: usize, y: usize) -> &Bit {
-      &self.stor[x][y]
+   pub fn bit(&self, coord: &Coord) -> &Bit {
+      &self.stor[coord.x][coord.y]
+   }
+
+   pub fn bit_mut(&mut self, coord: &Coord) -> &mut Bit {
+      &mut self.stor[coord.x][coord.y]
    }
 
    pub fn set_energy(&mut self, coord: &Coord, energy: usize) {
-      let Coord{x, y} = *coord;
-      self.stor[x][y].energy = energy;
+      self.stor[coord.x][coord.y].energy = energy;
    }
 
    pub fn set_amount(&mut self, coord: &Coord, element_index: usize, new_amount: usize) {
-      let Coord{x, y} = *coord;
-      self.stor[x][y].set_amount(element_index, new_amount);
+      self.stor[coord.x][coord.y].set_amount(element_index, new_amount);
    }
 
    pub fn as_slice(&self) -> &[Vec<Bit>] {
@@ -110,4 +125,54 @@ impl Bits {
    pub fn clone_from_slice(&mut self, slice: &[Vec<Bit>]) {
       self.stor.clone_from_slice(slice);
    }
+
+   pub fn coord_by_num(&self, num: usize) -> Coord {
+      Coord {
+         x: num % self.width,
+         y: num / self.width,
+      }
+   }
+
+   pub fn at_direction(&mut self, origin: &Coord, direction: Direction) -> Coord {
+      let Coord {x, y} = *origin;
+
+      let (x, y) = match direction {
+         Direction::North => (
+            x,
+            if y > 0 {y - 1} else {self.height - 1}
+         ),
+         Direction::Northeast => (
+            if x + 1 < self.width {x + 1} else {0},
+            if y > 0 {y - 1} else {self.height - 1}
+         ),
+         Direction::East => (
+            if x + 1 < self.width {x + 1} else {0},
+            y
+         ),
+         Direction::Southeast => (
+            if x + 1 < self.width {x + 1} else {0},
+            if y + 1 < self.height {y + 1} else {0},
+         ),
+         Direction::South => (
+            x,
+            if y + 1 < self.height {y + 1} else {0},
+         ),
+         Direction::Southwest => (
+            if x > 0 {x - 1} else {self.width - 1},
+            if y + 1 < self.height {y + 1} else {0},
+         ),
+         Direction::West => (
+            if x > 0 {x - 1} else {self.width - 1},
+            y
+         ),
+         Direction::Northwest => (
+            if x > 0 {x - 1} else {self.width - 1},
+            if y > 0 {y - 1} else {self.height - 1}
+         ),
+      };
+
+      Coord{x, y}
+   }
+
 }
+

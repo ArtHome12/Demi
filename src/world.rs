@@ -14,7 +14,8 @@ use std::{thread::{self, JoinHandle}};
 use std::sync::{Arc, Mutex, atomic::{Ordering, AtomicBool, AtomicUsize,}};
 
 use crate::{dot::{Bits, }, evolution::Evolution, };
-pub use crate::dot::{Dot, Coord, Size};
+pub use crate::dot::{Dot};
+use crate::geom::*;
 use crate::project;
 
 pub struct World {
@@ -36,7 +37,7 @@ impl World {
       let mutex_bits = Arc::new(Mutex::new(bits));
 
       // Evolution algorithm
-      let mut evolution = Evolution::new(Arc::clone(&mutex_bits), &project.size);
+      let mut evolution = Evolution::new(Arc::clone(&mutex_bits), &project);
 
       // Flags for thread control
       let run_flag = Arc::new(AtomicBool::new(false));
@@ -94,7 +95,7 @@ impl World {
 
       // Corresponding bit of the world
       let lock = self.mutex_bits.lock().unwrap();
-      let bit = lock.bit(x, y);
+      let bit = lock.bit(&Coord{x, y});
       let mut color = if bit.amount(0) != 0 {self.project.elements[0].color} else {Color::TRANSPARENT};
 
       // Adjust color to energy
@@ -112,8 +113,8 @@ impl World {
    pub fn description(&self, dot: &Dot, max_lines: usize, delimiter: char) -> String {
       // Underlying bit for dot
       let Dot {x, y, ..} = *dot;
-      let lock = self.mutex_bits.lock().unwrap();
-      let bit = lock.bit(x, y);
+      let locked = self.mutex_bits.lock().unwrap();
+      let bit = locked.bit(&Coord{x, y});
 
       self.project.elements.iter()
       .take(max_lines - 1) // -1 for energy
