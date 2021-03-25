@@ -19,13 +19,13 @@ mod update_rate;
 mod geom;
 
 use grid::Grid;
-use iced::{Application, Column, Command, Container, Element, Length, Settings, 
+use iced::{Application, Column, Command, Container, Element, Length, Settings,
    Subscription, time, executor,
 };
 use std::time::{Duration, Instant};
 
-
-pub fn main() -> iced::Result {
+#[tokio::main]
+async fn main() -> iced::Result {
    Demi::run(Settings {
       antialiasing: true,
       ..Settings::default()

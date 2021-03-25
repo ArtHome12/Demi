@@ -10,8 +10,9 @@ Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 
 use std::usize;
 use iced::Color;
-use std::{thread::{self, JoinHandle}};
+// use std::{thread::{self, JoinHandle}};
 use std::sync::{Arc, Mutex, atomic::{Ordering, AtomicBool, AtomicUsize,}};
+use std::time::Duration;
 
 use crate::{dot::{Bits, }, evolution::Evolution, };
 pub use crate::dot::{Dot};
@@ -21,7 +22,7 @@ use crate::project;
 pub struct World {
    project: project::Project,
    mutex_bits: Arc<Mutex<Bits>>,
-   thread: JoinHandle<()>, // thread for calculate evolution
+   // thread: tokio::task::JoinHandle<()>, // thread for calculate evolution
    run_flag: Arc<AtomicBool>, // running when true else paused
    ticks_elapsed: Arc<AtomicUsize>, // model time - a number ticks elapsed from beginning
 }
@@ -48,20 +49,22 @@ impl World {
       let ticks_elapsed_threaded = Arc::clone(&ticks_elapsed);
 
       // Thread for calculate evolution
-      let thread = thread::spawn(move || {
+      tokio::task::spawn_blocking(move || {
          // Running until program not closed
          loop {
 
             // Sleep if it paused
-            if !run_flag_threaded.load(Ordering::Acquire) {
-               thread::park();
+            if run_flag_threaded.load(Ordering::Acquire) {
+               // Increase model time
+               let tick = ticks_elapsed_threaded.fetch_add(1, Ordering::Relaxed);
+
+               // Calculate the tick of evolution
+               evolution.make_tick(tick);
+
+            // thread::park();
+            } else {
+               std::thread::sleep(Duration::from_millis(100));
             }
-
-            // Increase model time
-            let tick = ticks_elapsed_threaded.fetch_add(1, Ordering::Relaxed);
-
-            // Calculate the tick of evolution
-            evolution.make_tick(tick);
          }
       });
 
@@ -69,7 +72,7 @@ impl World {
          project,
          mutex_bits,
          // evolution,
-         thread,
+         // thread,
          run_flag,
          ticks_elapsed,
       }
@@ -143,7 +146,7 @@ impl World {
       self.run_flag.store(flag, Ordering::Release);
 
       // If it has been suspended, wake up
-      if flag {self.thread.thread().unpark()}
+      // if flag {self.thread.thread().unpark()}
    }
 
    // Returns model time - a number ticks elapsed from beginning
