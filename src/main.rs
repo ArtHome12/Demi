@@ -17,6 +17,7 @@ mod project;
 mod evolution;
 mod update_rate;
 mod geom;
+mod environment;
 
 use grid::Grid;
 use iced::{Application, Column, Command, Container, Element, Length, Settings,

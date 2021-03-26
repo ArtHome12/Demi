@@ -1,6 +1,7 @@
 # Default project demi app. Created by Artem Khomenko 26 Feb 2021
 
 # 25/03 TPS 12-14 when width=1000
+# 26/03 TPS 36-40 when width=1000 after change amounts to sheets
 width = 1000 # number of dots in width, max 30_000
 height_ratio = 0.4583 # proportion for height, for Merсator 24:11 or 0.4583
 resolution = 0.1 # number of dots calculated for each tick. Actually determines the speed of processes relative to the movement of the sun

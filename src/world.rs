@@ -14,31 +14,38 @@ use iced::Color;
 use std::sync::{Arc, Mutex, atomic::{Ordering, AtomicBool, AtomicUsize,}};
 use std::time::Duration;
 
-use crate::{dot::{Bits, }, evolution::Evolution, };
-pub use crate::dot::{Dot};
+use crate::{dot::{Sheets, Sheet, }, evolution::Evolution, environment::*};
+pub use crate::dot::{Dot, };
 use crate::geom::*;
 use crate::project;
 
 pub struct World {
    project: project::Project,
-   mutex_bits: Arc<Mutex<Bits>>,
+   mutex_sheets: Arc<Mutex<Sheets>>,
    // thread: tokio::task::JoinHandle<()>, // thread for calculate evolution
    run_flag: Arc<AtomicBool>, // running when true else paused
    ticks_elapsed: Arc<AtomicUsize>, // model time - a number ticks elapsed from beginning
+   env: Environment,
 }
 
 impl World {
    pub fn new(project: project::Project) -> Self {
-      // Load initial amounts from project
-      let elements_amount = project.elements_amount();
 
-      // Create bits with initial amounts
-      let bits = Bits::new(&project.size, &elements_amount);
+      let env = Environment::new(&project);
 
-      let mutex_bits = Arc::new(Mutex::new(bits));
+      // Create sheets with initial amounts
+      let mut sheets = project.elements.iter().map(|v| {
+         Sheet::new(project.size, v.amount, v.volatility)
+      }).collect::<Vec<Sheet>>();
+
+      // Energy first
+      let solar = Sheet::new(project.size, 0, 0.0);
+      sheets.insert(0, solar);
+
+      let mutex_sheets = Arc::new(Mutex::new(sheets));
 
       // Evolution algorithm
-      let mut evolution = Evolution::new(Arc::clone(&mutex_bits), &project);
+      let mut evolution = Evolution::new(Arc::clone(&mutex_sheets));
 
       // Flags for thread control
       let run_flag = Arc::new(AtomicBool::new(false));
@@ -59,7 +66,7 @@ impl World {
                let tick = ticks_elapsed_threaded.fetch_add(1, Ordering::Relaxed);
 
                // Calculate the tick of evolution
-               evolution.make_tick(tick);
+               evolution.make_tick(&env, tick);
 
             // thread::park();
             } else {
@@ -70,11 +77,12 @@ impl World {
 
       Self {
          project,
-         mutex_bits,
+         mutex_sheets,
          // evolution,
          // thread,
          run_flag,
          ticks_elapsed,
+         env,
       }
    }
 
@@ -97,46 +105,43 @@ impl World {
       let y = y as usize;
 
       // Corresponding bit of the world
-      let lock = self.mutex_bits.lock().unwrap();
-      let bit = lock.bit(&Coord{x, y});
-      let mut color = if bit.amount(0) != 0 {self.project.elements[0].color} else {Color::TRANSPARENT};
+      let serial_bit = self.env.serial(x, y);
+      let locked_sheets = self.mutex_sheets.lock().unwrap();
+      let energy = locked_sheets[0].get(serial_bit);
+      let amount = locked_sheets[1].get(serial_bit);
+      let mut color = if amount > 0 {self.project.elements[0].color} else {Color::TRANSPARENT};
 
       // Adjust color to energy
-      color.a = bit.energy as f32 / 100.0;
+      color.a = energy as f32 / 100.0;
 
       Dot{x, y, color,}
    }
 
-   // Return the corresponding bit for the point
-   /*fn bit(&self, dot: &Dot) -> &Bit {
-      &self.mutex_bits.lock().unwrap()[dot.x][dot.y]
-   }*/
-
    // Text to describe a point with a size constraint
    pub fn description(&self, dot: &Dot, max_lines: usize, delimiter: char) -> String {
-      // Underlying bit for dot
-      let Dot {x, y, ..} = *dot;
-      let locked = self.mutex_bits.lock().unwrap();
-      let bit = locked.bit(&Coord{x, y});
+      // Underlying bit serial number for dot
+      let serial_bit = self.env.serial(dot.x, dot.y);
+
+      let locked_sheets = self.mutex_sheets.lock().unwrap();
 
       self.project.elements.iter()
       .take(max_lines - 1) // -1 for energy
       .enumerate()
-      .fold(format!("Energy: {}%", bit.energy), |acc, (i, element)| {
-         format!("{}{}{}: {}", acc, delimiter, element.name, bit.elements[i])
+      .fold(format!("Energy: {}%", locked_sheets[0].get(serial_bit)), |acc, (i, element)| {
+         format!("{}{}{}: {}", acc, delimiter, element.name, locked_sheets[i + 1].get(serial_bit))
       })
    }
 
    // Temporary for testing
    pub fn populate(&mut self, dot: &Dot) {
-      let Dot {x, y, ..} = *dot;
-      let mut bits = self.mutex_bits.lock().unwrap();
-      bits.set_amount(&Coord{x, y}, 0, 1);
+      let serial_bit = self.env.serial(dot.x, dot.y);
+      let locked_sheets = &mut self.mutex_sheets.lock().unwrap();
+      locked_sheets[1].set(serial_bit, 1);
    }
    pub fn unpopulate(&mut self, dot: &Dot) {
-      let Dot {x, y, ..} = *dot;
-      let mut bits = self.mutex_bits.lock().unwrap();
-      bits.set_amount(&Coord{x, y}, 0, 0);
+      let serial_bit = self.env.serial(dot.x, dot.y);
+      let locked_sheets = &mut self.mutex_sheets.lock().unwrap();
+      locked_sheets[1].set(serial_bit, 0);
    }
 
    // Pause/resume evolutuon thread

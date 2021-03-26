@@ -12,7 +12,6 @@ use std::collections::HashMap;
 use std::fs;
 use serde_derive::Deserialize;
 
-use crate::dot::{Amounts};
 use crate::geom::*;
 
 
@@ -93,9 +92,5 @@ impl Project {
          resolution: toml.resolution,
          elements,
       }
-   }
-
-   pub fn elements_amount(&self) -> Amounts {
-      self.elements.iter().map(|f| f.amount).collect()
    }
 }
