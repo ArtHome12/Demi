@@ -39,6 +39,8 @@ impl Sheet {
       // Amount of points
       let prod = size.x * size.y;
 
+      let _ = std::vec::from_elem(0, 10);
+
       Self {
          matrix: vec![initial_amount; prod],
          volatility,
@@ -66,5 +68,14 @@ impl Sheet {
       let res = self.matrix[i] - new_val;
       self.matrix[i] = new_val;
       res
+   }
+
+   // Fast copy for mirroring
+   pub fn memcpy_from(&mut self, other: &Self) {
+      // self.matrix.clone_from_slice(other.matrix.as_slice())
+
+      unsafe {
+         core::intrinsics::copy_nonoverlapping(other.matrix.as_ptr(), self.matrix.as_mut_ptr(), self.matrix.len());
+      }
    }
 }

@@ -46,7 +46,9 @@ impl Evolution {
 
       // Transfer data to mirror if there no delay
       if let Ok(ref mut mirror_sheets) = self.mirror.try_lock() {
-         mirror_sheets.clone_from_slice(self.sheets.as_slice())
+         mirror_sheets.iter_mut()
+         .zip(self.sheets.iter())
+         .for_each(|(m, s)| m.memcpy_from(s));
       }
    }
 
