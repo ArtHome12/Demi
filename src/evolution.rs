@@ -9,8 +9,8 @@ Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 use std::{sync::{Arc, Mutex, }};
-use rand::{Rng, prelude::{ThreadRng}};
-
+use rand::{Rng, };
+use rayon::prelude::*;
 
 use crate::dot::*;
 use crate::environment::*;
@@ -21,38 +21,44 @@ pub struct Evolution {
    mirror: Arc<Mutex<Sheets>>, // for display
 
    // Elements
-   sheets: Sheets,
+   sheets: MutSheets,
 }
 
 impl Evolution {
 
    pub fn new(mirror: Arc<Mutex<Sheets>>) -> Self {
-      let raw_sheets = {mirror.lock().unwrap().clone()};
+      let sheets = MutSheets::new(&mirror.lock().unwrap());
       Self {
          mirror,
-         sheets: raw_sheets,
+         sheets: sheets,
       }
    }
 
    pub fn make_tick(&mut self, env: &Environment, tick: usize) {
-      // Irradiate with solar energy
-      Evolution::shine(env, &mut self.sheets[0], tick);
-
-      // Shuffle elements
-      let mut rng = rand::thread_rng();
-      (0..env.element_count).for_each(|i| {
-         Evolution::diffusion(env, &mut self.sheets[i + 1], &mut rng)
+      // Process inanimal
+      (0..=env.element_count).into_par_iter().for_each(|i| {
+         let mut sheet = self.sheets.data[i].lock().unwrap();
+         // Irradiate with solar energy or shuffle elements
+         if i == 0 {
+            Evolution::shine(env, &mut sheet, tick);
+         } else {
+            Evolution::diffusion(env, &mut sheet);
+         }
       });
 
       // Transfer data to mirror if there no delay
       if let Ok(ref mut mirror_sheets) = self.mirror.try_lock() {
-         mirror_sheets.iter_mut()
-         .zip(self.sheets.iter())
-         .for_each(|(m, s)| m.memcpy_from(s));
+         let mut s_iter = self.sheets.data.iter();
+         for m in mirror_sheets.iter_mut() {
+            let mut s = s_iter.next().unwrap().lock().unwrap();
+            m.memcpy_from(&mut s);
+         }
       }
    }
 
-   fn diffusion(env: &Environment, sheet: &mut Sheet, rng: &mut ThreadRng) {
+   fn diffusion(env: &Environment, sheet: &mut Sheet) {
+      let mut rng = rand::thread_rng();
+
       (0..env.num_points_to_diffuse).for_each(|_| {
          // Get a random point
          let origin_bit = rng.gen::<usize>() % env.bits_count;
