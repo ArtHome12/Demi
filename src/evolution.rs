@@ -30,13 +30,13 @@ impl Evolution {
       let sheets = MutSheets::new(&mirror.lock().unwrap());
       Self {
          mirror,
-         sheets: sheets,
+         sheets,
       }
    }
 
    pub fn make_tick(&mut self, env: &Environment, tick: usize) {
       // Process inanimal
-      (0..=env.element_count).into_par_iter().for_each(|i| {
+      (0..=env.elements_count).into_par_iter().for_each(|i| {
          let mut sheet = self.sheets.data[i].lock().unwrap();
          // Irradiate with solar energy or shuffle elements
          if i == 0 {

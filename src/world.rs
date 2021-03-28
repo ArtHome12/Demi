@@ -9,7 +9,6 @@ Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 use std::usize;
-use iced::Color;
 // use std::{thread::{self, JoinHandle}};
 use std::sync::{Arc, Mutex, atomic::{Ordering, AtomicBool, AtomicUsize,}};
 use std::time::Duration;
@@ -108,8 +107,18 @@ impl World {
       let serial_bit = self.env.serial(x, y);
       let locked_sheets = self.mutex_sheets.lock().unwrap();
       let energy = locked_sheets[0].get(serial_bit);
-      let amount = locked_sheets[1].get(serial_bit);
-      let mut color = if amount > 0 {self.project.elements[0].color} else {Color::TRANSPARENT};
+
+      // The dot color determines the element with non-zero amount
+      let mut non_zero_index = 1usize;
+      for i in 1..locked_sheets.len() {
+         // Relative concentration
+         let amount = locked_sheets[i].get(serial_bit);
+         if amount > 0 {
+            non_zero_index = i;
+            break;
+         }
+      }
+      let mut color = self.project.elements[non_zero_index - 1].color;
 
       // Adjust color to energy
       color.a = energy as f32 / 100.0;

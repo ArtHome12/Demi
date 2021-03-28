@@ -23,7 +23,7 @@ pub struct Environment {
 	pub tropic_height: f32,
 
    // Number of elements
-   pub element_count: usize,
+   pub elements_count: usize,
 
    // How many bits to move (diffusion) elements in one tick
    pub num_points_to_diffuse: usize,
@@ -51,7 +51,7 @@ impl Environment {
          world_size,
          light_radius: (0.8 * world_height as f32 / 2.0) as usize,
          tropic_height: world_height as f32 / 5.0,
-         element_count,
+         elements_count: element_count,
          num_points_to_diffuse,
          bits_count,
       }
