@@ -55,6 +55,7 @@ impl World {
       let ticks_elapsed_threaded = Arc::clone(&ticks_elapsed);
 
       // Thread for calculate evolution
+      let cloned_env = env.clone();
       tokio::task::spawn_blocking(move || {
          // Running until program not closed
          loop {
@@ -65,7 +66,7 @@ impl World {
                let tick = ticks_elapsed_threaded.fetch_add(1, Ordering::Relaxed);
 
                // Calculate the tick of evolution
-               evolution.make_tick(&env, tick);
+               evolution.make_tick(&cloned_env, tick);
 
             // thread::park();
             } else {

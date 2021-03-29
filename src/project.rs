@@ -22,14 +22,13 @@ struct Toml {
    pub height_ratio: f32,
    resolution: f32,
 
-   // geothermal: HashMap<String, Positions>,
+   geothermal: HashMap<String, Coord>,
    colors: HashMap<String, Colors>,
 
    elements: Vec<ElementAttributes>,
 }
 
-type Colors = (u8, u8, u8);//Vec::<u8>;
-// type Positions = (usize, usize);
+type Colors = (u8, u8, u8);
 
 
 #[derive(Deserialize)]
@@ -51,6 +50,7 @@ pub struct Project {
    pub size: Size,
    pub resolution: f32,
    pub elements: Vec<Element>,
+   pub geothermal: Vec<Coord>,
 }
 
 pub struct Element {
@@ -87,10 +87,14 @@ impl Project {
          }
       }).collect();
 
+      // Geothermal energy sources (take only position without names)
+      let geothermal = toml.geothermal.iter().map(|(_key, value)| value.clone()).collect();
+
       Self {
          size,
          resolution: toml.resolution,
          elements,
+         geothermal,
       }
    }
 }

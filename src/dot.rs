@@ -53,6 +53,13 @@ impl Sheet {
       self.matrix[i] = amount;
    }
 
+   // Set new value only of it not smaller that exist. Use for geothermal energy
+   pub fn set_if_bigger(&mut self, i: usize, amount: usize) {
+      if self.matrix[i] < amount {
+         self.matrix[i] = amount;
+      }
+   }
+
    // Returns how much is actually added
    pub fn add(&mut self, i: usize, amount: usize) -> usize {
       let new_val = self.matrix[i].saturating_add(amount);

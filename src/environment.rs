@@ -11,7 +11,7 @@ Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 use crate::geom::*;
 use crate::project::Project;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Environment {
    // World size
    pub world_size: Size,
@@ -30,6 +30,9 @@ pub struct Environment {
 
    // Range for serial number of all bits
    pub bits_count: usize,
+
+   // Geothermal energy sources
+   pub geothermal: Vec<Coord>,
 }
 
 impl Environment {
@@ -37,6 +40,7 @@ impl Environment {
    const TICKS_PER_DAY: f32 = 60.0*24.0;
    const DAYS_PER_YEAR: f32 = Self::TICKS_PER_DAY * 365.0;
    const HALF_YEAR: f32 = Self::DAYS_PER_YEAR / 2.0 + 0.5;
+   pub const GEOTHERMAL_RADIUS: usize = 12;
 
    pub fn new(project: &Project) -> Self {
       let element_count = project.elements.len();
@@ -54,6 +58,7 @@ impl Environment {
          elements_count: element_count,
          num_points_to_diffuse,
          bits_count,
+         geothermal: project.geothermal.clone(),
       }
    }
 
