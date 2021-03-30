@@ -22,7 +22,7 @@ mod resources;
 
 use grid::Grid;
 use iced::{Application, Column, Command, Container, Element, Length, Settings,
-   Subscription, time, executor,
+   Subscription, time, executor, PaneGrid, pane_grid, Scrollable, scrollable,
 };
 use std::time::{Duration, Instant};
 
@@ -45,7 +45,9 @@ enum Message {
 struct Demi {
    grid: Grid,
    controls: project_controls::Controls,
+   // panes: pane_grid::State<Scrollable>,
    last_one_second_time: Instant,
+   scroll: scrollable::State,
 }
 
 impl Application for Demi {
@@ -55,10 +57,15 @@ impl Application for Demi {
 
    fn new(_flags: ()) -> (Self, Command<Message>) {
       let project = project::Project::new("./demi.toml");
+      let controls = project_controls::Controls::new(resources::Resources::new("./res"));
+      // let (panes, _) = pane_grid::State::new(Scrollable::new(0));
+
       (
          Self {
             grid: Grid::new(project),
-            controls: project_controls::Controls::new(resources::Resources::new("./res")),
+            controls,
+            // panes,
+            scroll: scrollable::State::new(),
             last_one_second_time: Instant::now(),
          },
          Command::none(),
@@ -101,8 +108,16 @@ impl Application for Demi {
       // Place project controls
       let controls = self.controls.view().map(Message::ProjectMessage);
 
-      // Client area
+      // Grid with the world's dots
       let grid_area = self.grid.view().map(move |message| Message::Grid(message));
+
+      // Client area with filter at left or not
+      // let pane_grid = 
+      // let client_area = if self.controls.show_filter {
+
+      // } else {
+      //    grid_area
+      // };
 
       let content = Column::new()
       .push(controls)

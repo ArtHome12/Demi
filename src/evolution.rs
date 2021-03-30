@@ -115,7 +115,7 @@ impl Evolution {
       impl Iterator for SquareIter
       {
          type Item = (usize, usize);
-   
+
          fn next(&mut self) -> Option<Self::Item> {
 
             // Evaluate second coordinate
