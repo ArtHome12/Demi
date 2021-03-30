@@ -18,6 +18,7 @@ mod evolution;
 mod update_rate;
 mod geom;
 mod environment;
+mod resources;
 
 use grid::Grid;
 use iced::{Application, Column, Command, Container, Element, Length, Settings,
@@ -57,7 +58,7 @@ impl Application for Demi {
       (
          Self {
             grid: Grid::new(project),
-            controls: project_controls::Controls::default(),
+            controls: project_controls::Controls::new(resources::Resources::new("./res")),
             last_one_second_time: Instant::now(),
          },
          Command::none(),

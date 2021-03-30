@@ -12,8 +12,8 @@ use iced::button::{self, Button};
 use iced::{Checkbox, Align, Command, Element, Row, Text,};
 use crate::style;
 
+use crate::resources::Resources;
 
-#[derive(Default)]
 pub struct Controls {
    run: bool,
    autosave: bool,
@@ -26,9 +26,27 @@ pub struct Controls {
    save_as_button: button::State,
    restart_button: button::State,
    pause_button: button::State,
+
+   res: Resources,
 }
 
 impl Controls {
+
+   pub fn new(res: Resources) -> Self {
+      Self {
+         run: false,
+         autosave: false,
+         autorun: false,
+         illuminate: false,
+         new_button: button::State::default(),
+         open_button: button::State::default(),
+         save_button: button::State::default(),
+         save_as_button: button::State::default(),
+         restart_button: button::State::default(),
+         pause_button: button::State::default(),
+         res,
+      }
+   }
 
    pub fn update(&mut self, message: Message) -> Command<Message> {
       match message {
@@ -126,7 +144,6 @@ impl Controls {
       );
 
       buttons.into()
-
    }
 }
 
