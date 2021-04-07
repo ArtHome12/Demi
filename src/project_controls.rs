@@ -81,8 +81,6 @@ impl Controls {
                &mut self.illuminate_button,
                self.res.image(if self.illuminate {Images::IlluminateOn} else {Images::IlluminateOff}),
          )
-         .min_width(30)
-         .min_height(30)
          .on_press(Message::ToggleIllumination(!self.illuminate))
          .style(style::Button),
       )
@@ -92,8 +90,6 @@ impl Controls {
                &mut self.filter_button,
                self.res.image(if self.show_filter {Images::ShowFilter} else {Images::HideFilter}),
          )
-         .min_width(30)
-         .min_height(30)
          .on_press(Message::ToggleFilter(!self.show_filter))
          .style(style::Button),
       )
