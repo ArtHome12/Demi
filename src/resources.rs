@@ -15,6 +15,8 @@ pub enum Images {
    IlluminateOff,
    ShowFilter,
    HideFilter,
+   ModelPlay,
+   ModelPause,
 }
 
 pub struct Resources {
@@ -22,6 +24,8 @@ pub struct Resources {
    illuminate_off: Handle,
    show_filter: Handle,
    hide_filter: Handle,
+   model_play: Handle,
+   model_pause: Handle,
 }
 
 impl Resources {
@@ -31,6 +35,8 @@ impl Resources {
          illuminate_off: Handle::from_path(String::from(dir) + "/illuminate_off.png"),
          show_filter: Handle::from_path(String::from(dir) + "/show_filter.png"),
          hide_filter: Handle::from_path(String::from(dir) + "/hide_filter.png"),
+         model_play: Handle::from_path(String::from(dir) + "/model_play.png"),
+         model_pause: Handle::from_path(String::from(dir) + "/model_pause.png"),
       }
    }
 
@@ -40,6 +46,8 @@ impl Resources {
          Images::IlluminateOff => self.illuminate_off.clone(),
          Images::ShowFilter => self.show_filter.clone(),
          Images::HideFilter => self.hide_filter.clone(),
+         Images::ModelPlay => self.model_play.clone(),
+         Images::ModelPause => self.model_pause.clone(),
       };
       Image::new(handle)
    }

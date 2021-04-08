@@ -96,6 +96,15 @@ impl Controls {
 
       .push(
          Button::new(
+               &mut self.pause_button,
+               self.res.image(if self.run {Images::ModelPlay} else {Images::ModelPause}),
+         )
+         .on_press(Message::ToggleRun)
+         .style(style::Button),
+      )
+
+      .push(
+         Button::new(
                &mut self.new_button,
                Text::new("New"),
          )
@@ -136,15 +145,6 @@ impl Controls {
                Text::new("Restart"),
          )
          .on_press(Message::Restart)
-         .style(style::Button),
-      )
-
-      .push(
-         Button::new(
-               &mut self.pause_button,
-               Text::new(if self.run {"Pause"} else {"Resume"}),
-         )
-         .on_press(Message::ToggleRun)
          .style(style::Button),
       )
 
