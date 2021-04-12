@@ -138,7 +138,7 @@ impl Grid {
       self.tps.clock_chime(self.world.ticks_elapsed())
    }
 
-   pub fn toggle_illumination(&mut self, checked: bool) {
+   pub fn set_illumination(&mut self, checked: bool) {
       self.illumination = checked;
    }
 }
