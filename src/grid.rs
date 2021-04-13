@@ -70,19 +70,6 @@ impl Grid {
       }
    }
 
-   pub fn update(&mut self, message: Message) {
-      match message {
-         Message::Populate(dot) => {
-            self.world.populate(&dot);
-            self.life_cache.clear();
-         }
-         Message::Unpopulate(dot) => {
-            self.world.unpopulate(&dot);
-            self.life_cache.clear();
-         }
-      }
-   }
-
    pub fn view<'a>(&'a mut self) -> Element<'a, Message> {
       Canvas::new(self)
          .width(Length::Fill)

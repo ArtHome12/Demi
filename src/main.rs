@@ -39,22 +39,26 @@ async fn main() -> iced::Result {
 
 #[derive(Debug, Clone)]
 enum Message {
-   ProjectMessage(project_controls::Message),
-   Grid(grid::Message),
+   ProjectMessage(project_controls::Message), // Messages from project controls at top line
+   GridMessage(grid::Message), // Messages from grid
+   FilterMessage(elements_control::Message), // Messages from filter pane at right
+
    Cadence(Instant), // called about 30 times per second for screen refresh
 
-   Dragged(pane_grid::DragEvent),
-   Resized(pane_grid::ResizeEvent),
-   Filter(elements_control::Message),
-}
+   Resized(pane_grid::ResizeEvent), // Message from panes
 
+   // Commands to execute
+   ShowFilter(bool),
+   Illuminate(bool),
+   ToggleRun,
+}
 
 
 struct Demi {
    controls: project_controls::Controls,
    panes: pane_grid::State<Content>,
    grid_pane: Pane,
-   last_one_second_time: Instant,
+   last_one_second_time: Instant,   // for FPS/TPS evaluations
 }
 
 impl Application for Demi {
@@ -70,9 +74,9 @@ impl Application for Demi {
       let (panes, grid_pane) = pane_grid::State::new(Content::new(PaneContent::Grid(Grid::new(project))));
       (
          Self {
-            grid_pane,
             controls,
             panes,
+            grid_pane,
             last_one_second_time: Instant::now(),
          },
          Command::none(),
@@ -85,15 +89,29 @@ impl Application for Demi {
 
    fn update(&mut self, message: Message) -> Command<Message> {
       match message {
-         Message::Grid(message) => self.grid_mut().update(message),
          Message::ProjectMessage(message) => {
 
             // Reflecting the interface change immediately
             self.controls.update(message.clone());
 
-            // Handle the message
-            self.project_control(message)
+            // Translate from project message to own and create new command
+            let cmd = match message {
+               project_controls::Message::ToggleRun => Some(Message::ToggleRun),
+               project_controls::Message::ToggleIllumination(is_on) => Some(Message::Illuminate(is_on)),
+               project_controls::Message::ToggleFilter(show) => Some(Message::ShowFilter(show)),
+               _ => None,
+            };
+
+            // Create a new command if it necessary
+            if let Some(cmd) = cmd {
+               return Command::perform(async {}, move |_| cmd.clone())
+            };
          }
+
+         Message::GridMessage(_message) => (),
+
+         Message::FilterMessage(_message) => (),
+
          Message::Cadence(ts) => {
             // Update rates once a second
             if ts.duration_since(self.last_one_second_time) >= Duration::new(1, 0) {
@@ -105,21 +123,24 @@ impl Application for Demi {
          Message::Resized(pane_grid::ResizeEvent { split, ratio }) => {
             self.panes.resize(&split, ratio);
          }
-         Message::Dragged(pane_grid::DragEvent::Dropped {
-            pane,
-            target,
-         }) => {
-            self.panes.swap(&pane, &target);
-         }
-         Message::Dragged(_) => {}
-         Message::Filter(_message) => {
 
-            // Reflecting the interface change immediately
-            // self.controls.update(message.clone());
-
-            // Handle the message
-            // self.project_control(message)
+         Message::ShowFilter(show) => {
+            if show {
+               self.panes.split(Axis::Vertical, &self.grid_pane, Content::new(PaneContent::Filter(elements_control::Controls::new())));
+            } else {
+               // Find filter pane from panes for closing
+               let filter_pane = self.panes.iter()
+               .find(|p| p.0 != &self.grid_pane)
+               .unwrap()
+               .0.clone();
+               
+               self.panes.close(&filter_pane);
+            }
          }
+
+         Message::Illuminate(is_on) => self.grid_mut().set_illumination(is_on),
+
+         Message::ToggleRun => self.grid_mut().world.toggle_run(),
       }
       Command::none()
    }
@@ -131,25 +152,20 @@ impl Application for Demi {
 
    fn view(&mut self) -> Element<Message> {
 
-      // Place project controls
+      // Place project controls at top line
       let controls = self.controls.view().map(Message::ProjectMessage);
 
-      // Grid with the world's dots
-      // let grid_area = self.grid().view().map(move |message| Message::Grid(message));
-
+      // Client area contains grid with the world's dots and sometimes filter for showing elements
       let pane_grid = PaneGrid::new(&mut self.panes, |_pane, content| {
          pane_grid::Content::new(content.view())
       })
       .width(Length::Fill)
       .height(Length::Fill)
-      .spacing(10)
-      .on_drag(Message::Dragged)
       .on_resize(10, Message::Resized);
 
       let content = Column::new()
       .push(controls)
       .push(pane_grid);
-      // .push(grid_area);
 
       Container::new(content)
       .width(Length::Fill)
@@ -160,28 +176,6 @@ impl Application for Demi {
 }
 
 impl Demi {
-   // Project controls async handler
-   fn project_control(&mut self, message: project_controls::Message) {
-      match message {
-         project_controls::Message::ToggleRun => self.grid_mut().world.toggle_pause(),
-         project_controls::Message::ToggleIllumination(is_on) => self.grid_mut().set_illumination(is_on),
-         project_controls::Message::ToggleFilter(show) => {
-            if show {
-               self.panes.split(Axis::Vertical, &self.grid_pane, Content::new(PaneContent::Filter(elements_control::Controls::new())));
-            } else {
-               let filter_pane = self.panes.iter()
-               .skip_while(|p| p.0 != &self.grid_pane)
-               .last()
-               .unwrap()
-               .0.clone();
-               
-               self.panes.close(&filter_pane);
-            }
-         }
-         _ => (),
-      }
-   }
-
    fn grid_mut(&mut self) -> &mut Grid {
       match self.panes.get_mut(&self.grid_pane).unwrap().content {
          PaneContent::Grid(ref mut grid) => grid,
@@ -206,12 +200,10 @@ impl Content {
        }
    }
    fn view(&mut self,) -> Element<Message> {
-
       match &mut self.content {
-         PaneContent::Grid(grid) => grid.view().map(move |message| Message::Grid(message)),
-         PaneContent::Filter(filter) => filter.view().map(move |message| Message::Filter(message)),
+         PaneContent::Grid(grid) => grid.view().map(move |message| Message::GridMessage(message)),
+         PaneContent::Filter(filter) => filter.view().map(move |message| Message::FilterMessage(message)),
       }
-
    }
 }
 

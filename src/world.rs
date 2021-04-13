@@ -142,26 +142,11 @@ impl World {
       })
    }
 
-   // Temporary for testing
-   pub fn populate(&mut self, dot: &Dot) {
-      let serial_bit = self.env.serial(dot.x, dot.y);
-      let locked_sheets = &mut self.mutex_sheets.lock().unwrap();
-      locked_sheets[1].set(serial_bit, 1);
-   }
-   pub fn unpopulate(&mut self, dot: &Dot) {
-      let serial_bit = self.env.serial(dot.x, dot.y);
-      let locked_sheets = &mut self.mutex_sheets.lock().unwrap();
-      locked_sheets[1].set(serial_bit, 0);
-   }
-
    // Pause/resume evolutuon thread
-   pub fn toggle_pause(&self) {
+   pub fn toggle_run(&self) {
       // Transfer signal to thread
       let flag = !self.run_flag.load(Ordering::Acquire);
       self.run_flag.store(flag, Ordering::Release);
-
-      // If it has been suspended, wake up
-      // if flag {self.thread.thread().unpark()}
    }
 
    // Returns model time - a number ticks elapsed from beginning
