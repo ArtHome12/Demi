@@ -27,6 +27,8 @@ use iced::{Application, Column, Command, Container, Element, Length, Settings,
    pane_grid::{Pane, Axis, },
 };
 use std::{time::{Duration, Instant}};
+use std::{rc::Rc, cell::RefCell, };
+
 
 #[tokio::main]
 async fn main() -> iced::Result {
@@ -58,6 +60,7 @@ struct Demi {
    controls: project_controls::Controls,
    panes: pane_grid::State<Content>,
    grid_pane: Pane,
+   grid_pane_ratio: f32, // Width of grid when filter visible too
    last_one_second_time: Instant,   // for FPS/TPS evaluations
 }
 
@@ -68,6 +71,7 @@ impl Application for Demi {
 
    fn new(_flags: ()) -> (Self, Command<Message>) {
       let project = project::Project::new("./demi.toml");
+      let project = Rc::new(RefCell::new(project));
       let controls = project_controls::Controls::new(resources::Resources::new("./res"));
 
       // Put the grid into pane and get back ref to it
@@ -77,6 +81,7 @@ impl Application for Demi {
             controls,
             panes,
             grid_pane,
+            grid_pane_ratio: 0.8,
             last_one_second_time: Instant::now(),
          },
          Command::none(),
@@ -121,12 +126,25 @@ impl Application for Demi {
          }
 
          Message::Resized(pane_grid::ResizeEvent { split, ratio }) => {
+            self.grid_pane_ratio = ratio;
             self.panes.resize(&split, ratio);
          }
 
          Message::ShowFilter(show) => {
             if show {
-               self.panes.split(Axis::Vertical, &self.grid_pane, Content::new(PaneContent::Filter(elements_control::Controls::new())));
+               // Get ref to the project from the grid
+               let project = self.grid_mut().world.project.clone();
+
+               // Construct filter pane
+               let content = elements_control::Controls::new(project);
+               let content = PaneContent::Filter(content);
+               let content = Content::new(content);
+               let pair = self.panes.split(Axis::Vertical, &self.grid_pane, content);
+
+               // Restore ratio
+               if let Some(pair) = pair {
+                  self.panes.resize(&pair.1, self.grid_pane_ratio);
+               }
             } else {
                // Find filter pane from panes for closing
                let filter_pane = self.panes.iter()

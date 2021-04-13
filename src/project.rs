@@ -51,13 +51,14 @@ pub struct Project {
    pub resolution: f32,
    pub elements: Vec<Element>,
    pub geothermal: Vec<Coord>,
+   pub vis_elem_indexes: Vec<usize>, // indexes of visible (non-filtered) elements
 }
 
 pub struct Element {
    pub name: String,
    pub color: iced::Color,
    pub volatility: f32,
-   pub amount: usize,
+   pub init_amount: usize,
 }
 
 impl Project {
@@ -83,18 +84,23 @@ impl Project {
             name: val.name.clone(),
             volatility: val.volatility,
             color,
-            amount: val.amount,
+            init_amount: val.amount,
          }
       }).collect();
 
       // Geothermal energy sources (take only position without names)
       let geothermal = toml.geothermal.iter().map(|(_key, value)| value.clone()).collect();
 
+      // At start all elements are visible
+      let len = toml.elements.len();
+      let vis_elem_indexes = (0..len).collect();
+
       Self {
          size,
          resolution: toml.resolution,
          elements,
          geothermal,
+         vis_elem_indexes,
       }
    }
 }

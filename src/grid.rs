@@ -15,9 +15,9 @@ use iced::{
    Size, Vector, VerticalAlignment,
 };
 use rustc_hash::FxHashSet;
-use std::{ops::RangeInclusive, usize, cell::RefCell};
+use std::{ops::RangeInclusive, rc::Rc, cell::RefCell};
 
-use crate::world::{World, Dot,};
+use crate::world::{World, };
 use crate::project;
 use crate::update_rate::*;
 
@@ -35,8 +35,6 @@ pub struct Grid {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-   Populate(Dot),
-   Unpopulate(Dot),
 }
 
 impl Grid {
@@ -54,7 +52,7 @@ impl Grid {
 
    const STATUS_BAR_HEIGHT: f32 = 30.0;
 
-   pub fn new(project: project::Project) -> Self {
+   pub fn new(project: Rc<RefCell<project::Project>>) -> Self {
       // World's dimension
 
       Self {
@@ -108,7 +106,7 @@ impl Grid {
       self.translation = new_translation;
 
       // World size in pixels
-      let crate::geom::Size {x: w, y: h} = *self.world.size();
+      let crate::geom::Size {x: w, y: h} = self.world.size();
       let w = w as f32 * Self::CELL_SIZE;
       let h = h as f32 * Self::CELL_SIZE;
       // To prevent overflow translation in coninious world
@@ -146,54 +144,29 @@ impl<'a> canvas::Program<Message> for Grid {
          return (event::Status::Ignored, None);
       };
 
-      let (x, y) = self.project_to_world(self.project(cursor_position, bounds.size()));
-      let dot = self.world.dot(x as isize, y as isize);
-      let is_populated = dot.color != Color::TRANSPARENT;
-
-      let (populate, unpopulate) = if is_populated {
-         (None, Some(Message::Unpopulate(dot)))
-      } else {
-         (Some(Message::Populate(dot)), None)
-      };
-
       match event {
          Event::Mouse(mouse_event) => match mouse_event {
             mouse::Event::ButtonPressed(button) => {
-               let message = match button {
-                  mouse::Button::Left => {
-                     self.interaction = if is_populated {
-                        Interaction::Erasing
-                     } else {
-                        Interaction::Drawing
-                     };
-
-                     populate.or(unpopulate)
-                  }
+               match button {
                   mouse::Button::Right => {
                      self.interaction = Interaction::Panning {
                            translation: self.translation,
                            start: cursor_position,
                      };
-
-                     None
                   }
-                  _ => None,
+                  _ => (),
                };
 
-               (event::Status::Captured, message)
+               (event::Status::Captured, None)
             }
             mouse::Event::CursorMoved { .. } => {
-                  let message = match self.interaction {
-                     Interaction::Drawing => populate,
-                     Interaction::Erasing => unpopulate,
+                  match self.interaction {
                      Interaction::Panning { translation, start } => {
                         self.set_translation(translation + (cursor_position - start) * (1.0 / self.scaling));
                         self.life_cache.clear();
                         self.grid_cache.clear();
-
-                        None
                      }
-                     _ => None,
+                     _ => (),
                   };
 
                   let event_status = match self.interaction {
@@ -201,7 +174,7 @@ impl<'a> canvas::Program<Message> for Grid {
                      _ => event::Status::Captured,
                   };
 
-                  (event_status, message)
+                  (event_status, None)
             }
             mouse::Event::WheelScrolled { delta } => match delta {
                   mouse::ScrollDelta::Lines { y, .. } | mouse::ScrollDelta::Pixels { y, .. } => {
@@ -455,16 +428,11 @@ impl<'a> canvas::Program<Message> for Grid {
 
    fn mouse_interaction(
       &self,
-      bounds: Rectangle,
-      cursor: Cursor,
+      _bounds: Rectangle,
+      _cursor: Cursor,
    ) -> mouse::Interaction {
       match self.interaction {
-         Interaction::Drawing => mouse::Interaction::Crosshair,
-         Interaction::Erasing => mouse::Interaction::Crosshair,
          Interaction::Panning { .. } => mouse::Interaction::Grabbing,
-         Interaction::None if cursor.is_over(&bounds) => {
-            mouse::Interaction::Crosshair
-         }
          _ => mouse::Interaction::default(),
       }
    }
@@ -527,8 +495,6 @@ impl Region {
 
 enum Interaction {
    None,
-   Drawing,
-   Erasing,
    Panning { translation: Vector, start: Point },
 }
 
