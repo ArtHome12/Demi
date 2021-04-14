@@ -19,7 +19,7 @@ mod update_rate;
 mod geom;
 mod environment;
 mod resources;
-mod elements_control;
+mod filter_control;
 
 use grid::Grid;
 use iced::{Application, Column, Command, Container, Element, Length, Settings,
@@ -43,7 +43,7 @@ async fn main() -> iced::Result {
 enum Message {
    ProjectMessage(project_controls::Message), // Messages from project controls at top line
    GridMessage(grid::Message), // Messages from grid
-   FilterMessage(elements_control::Message), // Messages from filter pane at right
+   FilterMessage(filter_control::Message), // Messages from filter pane at right
 
    Cadence(Instant), // called about 30 times per second for screen refresh
 
@@ -115,7 +115,7 @@ impl Application for Demi {
 
          Message::GridMessage(_message) => (),
 
-         Message::FilterMessage(_message) => (),
+         Message::FilterMessage(message) => self.filter_mut().update(message),
 
          Message::Cadence(ts) => {
             // Update rates once a second
@@ -136,7 +136,7 @@ impl Application for Demi {
                let project = self.grid_mut().world.project.clone();
 
                // Construct filter pane
-               let content = elements_control::Controls::new(project);
+               let content = filter_control::Controls::new(project);
                let content = PaneContent::Filter(content);
                let content = Content::new(content);
                let pair = self.panes.split(Axis::Vertical, &self.grid_pane, content);
@@ -146,12 +146,8 @@ impl Application for Demi {
                   self.panes.resize(&pair.1, self.grid_pane_ratio);
                }
             } else {
-               // Find filter pane from panes for closing
-               let filter_pane = self.panes.iter()
-               .find(|p| p.0 != &self.grid_pane)
-               .unwrap()
-               .0.clone();
-               
+               // Find filter pane from panes and close it
+               let filter_pane = self.filter_pane();
                self.panes.close(&filter_pane);
             }
          }
@@ -200,11 +196,27 @@ impl Demi {
          _ => panic!("grid_mut() Pane is not a grid"),
       }
    }
+
+   fn filter_pane(&self) -> Pane {
+      // Find filter pane from panes - it have to be not a grid pane
+      self.panes.iter()
+      .find(|p| p.0 != &self.grid_pane)
+      .unwrap()
+      .0.clone()
+   }
+
+   fn filter_mut(&mut self) -> &mut filter_control::Controls {
+      let pane = self.filter_pane();
+      match self.panes.get_mut(&pane).unwrap().content {
+         PaneContent::Filter(ref mut elements) => elements,
+         _ => panic!("filter_mut() Pane is not a filter_control::Controls"),
+      }
+   }
 }
 
 enum PaneContent {
    Grid(Grid),
-   Filter(elements_control::Controls),
+   Filter(filter_control::Controls),
 }
 
 struct Content {

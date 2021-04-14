@@ -130,14 +130,17 @@ impl World {
       // Underlying bit serial number for dot
       let serial_bit = self.env.serial(dot.x, dot.y);
 
+      // Sheets with amounts
       let locked_sheets = self.mutex_sheets.lock().unwrap();
 
-      self.project.borrow()
-      .elements.iter()
+      // For visible element names
+      let pr = self.project.borrow();
+
+      pr.vis_elem_indexes.iter()
       .take(max_lines - 1) // -1 for energy
       .enumerate()
-      .fold(format!("Energy: {}%", locked_sheets[0].get(serial_bit)), |acc, (i, element)| {
-         format!("{}{}{}: {}", acc, delimiter, element.name, locked_sheets[i + 1].get(serial_bit))
+      .fold(format!("Energy: {}%", locked_sheets[0].get(serial_bit)), |acc, (i, element_i)| {
+         format!("{}{}{}: {}", acc, delimiter, pr.elements[*element_i].name, locked_sheets[i + 1].get(serial_bit))
       })
    }
 
