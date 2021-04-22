@@ -8,11 +8,12 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use std::collections::HashMap;
+use std::{collections::HashMap, };
 use std::fs;
 use serde_derive::Deserialize;
 
 use crate::geom::*;
+use crate::chemical::*;
 
 
 // Content of a toml project file
@@ -22,10 +23,10 @@ struct Toml {
    pub height_ratio: f32,
    resolution: f32,
 
+   elements: Vec<ElementAttributes>,
+   chemical: Vec<ReactionAttributes>,
    geothermal: HashMap<String, Coord>,
    colors: HashMap<String, Colors>,
-
-   elements: Vec<ElementAttributes>,
 }
 
 type Colors = (u8, u8, u8);
@@ -39,6 +40,20 @@ struct ElementAttributes {
    amount: usize,
 }
 
+#[derive(Debug, Deserialize)]
+struct ReactionReagent {
+   element: String,
+   amount: usize,
+}
+
+#[derive(Deserialize)]
+struct ReactionAttributes {
+   name: String,
+   energy: usize,
+   vitality: usize,
+   left: Vec<ReactionReagent>,
+}
+
 impl Toml {
    pub fn new(filename: &str) -> Self {
       let data = fs::read_to_string(filename).expect("Unable to read project file");
@@ -50,6 +65,7 @@ pub struct Project {
    pub size: Size,
    pub resolution: f32,
    pub elements: Vec<Element>,
+   pub reactions: Vec<Reaction>,
    pub geothermal: Vec<Coord>,
    pub vis_elem_indexes: Vec<usize>, // indexes of visible (non-filtered) elements
 }
@@ -69,7 +85,7 @@ impl Project {
       let size = Size::new(width, (width as f32 * toml.height_ratio) as usize);
 
       // Map from Hash to Vec with colors in internal representation
-      let elements = toml.elements.iter().map(|val| {
+      let elements: Vec<Element> = toml.elements.iter().map(|val| {
          // Color item from hash by name
          let color = toml.colors.get(&val.color);
 
@@ -88,6 +104,32 @@ impl Project {
          }
       }).collect();
 
+      let reactions = toml.chemical.iter().map(|val| {
+
+         let left = val.left.iter().map(|reagent| {
+
+            // Element index from its name
+            let index = elements.iter().position(|v| v.name == reagent.element);
+            if index.is_none() {
+               panic!("Unknown chemical reagent {}", reagent.element);
+            };
+
+            Reagent {
+               index: index.unwrap(),
+               amount: reagent.amount,
+            }
+         }).collect();
+
+         let right = vec![];
+
+         Reaction {
+            energy: val.energy,
+            vitality: val.vitality,
+            left,
+            right,
+         }
+      }).collect();
+
       // Geothermal energy sources (take only position without names)
       let geothermal = toml.geothermal.iter().map(|(_key, value)| value.clone()).collect();
 
@@ -99,6 +141,7 @@ impl Project {
          size,
          resolution: toml.resolution,
          elements,
+         reactions,
          geothermal,
          vis_elem_indexes,
       }

@@ -20,6 +20,7 @@ mod geom;
 mod environment;
 mod resources;
 mod filter_control;
+mod chemical;
 
 use grid::Grid;
 use iced::{Application, Column, Command, Container, Element, Length, Settings,

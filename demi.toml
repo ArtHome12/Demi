@@ -9,60 +9,84 @@ height_ratio = 0.4583 # proportion for height, for Merсator 24:11 or 0.4583
 resolution = 0.1 # number of dots calculated for each tick. Actually determines the speed of processes relative to the movement of the sun
 
 # Elements of inanimate nature
-[[elements]]
-# Water is the basis of everything, and as a basis its volatility is less than that of solids
-# Title starts with 0 for correct sorting
-name="Water"
-color="cornflowerblue"
-volatility=0.01
-amount=10000000
+   [[elements]]
+   # Water is the basis of everything, and as a basis its volatility is less than that of solids
+   # Title starts with 0 for correct sorting
+   name="Water"
+   color="cornflowerblue"
+   volatility=0.01
+   amount=10000000
 
-# Gases
-[[elements]]
-name="Oxygen"
-color="green"
-volatility=0.01
-amount=0
+   # Gases
+   [[elements]]
+   name="Oxygen"
+   color="green"
+   volatility=0.01
+   amount=0
 
-[[elements]]
-name="CarbonDioxide"
-color="yellow"
-volatility=0.12
-amount=2000000
+   [[elements]]
+   name="CarbonDioxide"
+   color="yellow"
+   volatility=0.12
+   amount=2000000
 
-[[elements]]
-name="Hydrogen"
-color="darkgreen"
-volatility=0.12
-amount=100000
+   [[elements]]
+   name="Hydrogen"
+   color="darkgreen"
+   volatility=0.12
+   amount=100000
 
-[[elements]]
-name="Methane"
-color="darkviolet"
-volatility=0.12
-amount=0
+   [[elements]]
+   name="Methane"
+   color="darkviolet"
+   volatility=0.12
+   amount=0
 
-[[elements]]
-name="Hydrogen sulfide"
-color="aliceblue"
-volatility=0.12
-amount=0
+   [[elements]]
+   name="Hydrogen sulfide"
+   color="aliceblue"
+   volatility=0.12
+   amount=0
 
-# Solids
-[[elements]]
-name="Sulphur"
-color="lightyellow"
-volatility=0.03
-amount=10
+   # Solids
+   [[elements]]
+   name="Sulphur"
+   color="lightyellow"
+   volatility=0.03
+   amount=10
+
+
+# Chemical reactions in organisms with the absorption of energy and the production of vitality
+#
+   [[chemical]]
+   name="CO2+4H2=CH4+2H2O"
+   energy=1
+   vitality=5
+   left = [ { element = "CarbonDioxide", amount = 1 },
+            { element = "Hydrogen", amount = 4} ]
+   right = [ { element = "Methane", amount = 1 },
+            { element = "Water", amount = 2} ]
+
+   [[chemical]]
+   name="CH4+2H2O=CO2+4H2" # reverse reaction
+   energy=0
+   vitality=3
+   left = [ { element = "Methane", amount = 1 },
+            { element = "Water", amount = 2} ]
+   right = [ { element = "CarbonDioxide", amount = 1 },
+            { element = "Hydrogen", amount = 4} ]
 
 
 # Geothermal energy source position [x, y]
+#
 [geothermal]
    west = [300, 30]
    middle = [500, 21]
    east = [700, 39]
 
+
 # Available colors for elements
+#
 [colors]
    aliceblue=[240, 248, 255] # Hydrogen sulfide
    antiquewhite=[250, 235, 215]
