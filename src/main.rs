@@ -21,13 +21,15 @@ mod environment;
 mod resources;
 mod filter_control;
 mod chemical;
+mod genes;
+mod organism;
 
 use grid::Grid;
 use iced::{Application, Column, Command, Container, Element, Length, Settings,
-   Subscription, time, executor, PaneGrid, pane_grid, 
+   Subscription, time, executor, PaneGrid, pane_grid,
    pane_grid::{Pane, Axis, },
 };
-use std::{time::{Duration, Instant}};
+use std::time::{Duration, Instant};
 use std::{rc::Rc, cell::RefCell, };
 
 

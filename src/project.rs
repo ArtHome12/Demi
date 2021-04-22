@@ -48,10 +48,11 @@ struct ReactionReagent {
 
 #[derive(Deserialize)]
 struct ReactionAttributes {
-   name: String,
+   _name: String,
    energy: usize,
    vitality: usize,
    left: Vec<ReactionReagent>,
+   right: Vec<ReactionReagent>,
 }
 
 impl Toml {
@@ -79,12 +80,30 @@ pub struct Element {
 
 impl Project {
    pub fn new(filename: &str) -> Self {
-      // Read data from toml file
+
+      // Reads reactions reagents
+      fn reagents(elements: &Vec<Element>, part: &Vec<ReactionReagent>) -> Vec<Reagent> {
+         part.iter().map(|reagent| {
+
+            // Element index from its name
+            let index = elements.iter().position(|v| v.name == reagent.element);
+            if index.is_none() {
+               panic!("Unknown chemical reagent {}", reagent.element);
+            };
+
+            Reagent {
+               index: index.unwrap(),
+               amount: reagent.amount,
+            }
+         }).collect()
+      }
+
+      // Read general data from toml file
       let toml = Toml::new(filename);
       let width = toml.width;
       let size = Size::new(width, (width as f32 * toml.height_ratio) as usize);
 
-      // Map from Hash to Vec with colors in internal representation
+      // Map elements from Hash to Vec with colors in internal representation
       let elements: Vec<Element> = toml.elements.iter().map(|val| {
          // Color item from hash by name
          let color = toml.colors.get(&val.color);
@@ -104,36 +123,20 @@ impl Project {
          }
       }).collect();
 
+      // Read reactions
       let reactions = toml.chemical.iter().map(|val| {
-
-         let left = val.left.iter().map(|reagent| {
-
-            // Element index from its name
-            let index = elements.iter().position(|v| v.name == reagent.element);
-            if index.is_none() {
-               panic!("Unknown chemical reagent {}", reagent.element);
-            };
-
-            Reagent {
-               index: index.unwrap(),
-               amount: reagent.amount,
-            }
-         }).collect();
-
-         let right = vec![];
-
          Reaction {
             energy: val.energy,
             vitality: val.vitality,
-            left,
-            right,
+            left: reagents(&elements, &val.left),
+            right: reagents(&elements, &val.right),
          }
       }).collect();
 
       // Geothermal energy sources (take only position without names)
       let geothermal = toml.geothermal.iter().map(|(_key, value)| value.clone()).collect();
 
-      // At start all elements are visible
+      // At start all elements should be visible, collect its indexes
       let len = toml.elements.len();
       let vis_elem_indexes = (0..len).collect();
 

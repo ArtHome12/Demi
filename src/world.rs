@@ -68,8 +68,6 @@ impl World {
 
                // Calculate the tick of evolution
                evolution.make_tick(&cloned_env, tick);
-
-            // thread::park();
             } else {
                std::thread::sleep(Duration::from_millis(100));
             }

@@ -15,6 +15,7 @@ use rayon::prelude::*;
 use crate::dot::*;
 use crate::geom::*;
 use crate::environment::*;
+use crate::organism::*;
 
 
 pub struct Evolution {
@@ -23,15 +24,25 @@ pub struct Evolution {
 
    // Elements
    sheets: MutSheets,
+
+   organisms: Vec<Organism>,
 }
 
 impl Evolution {
 
    pub fn new(mirror: Arc<Mutex<Sheets>>) -> Self {
       let sheets = MutSheets::new(&mirror.lock().unwrap());
+
+      let luca = Organism {
+         center: Coord::new(0, 0),
+         vitality: 300,
+         birthday: 0,
+      };
+
       Self {
          mirror,
          sheets,
+         organisms: vec![luca],
       }
    }
 
@@ -46,6 +57,9 @@ impl Evolution {
             Evolution::diffusion(env, &mut sheet);
          }
       });
+
+      // Process animal
+      // self.organisms.into_par_iter()
 
       // Transfer data to mirror if there no delay
       if let Ok(ref mut mirror_sheets) = self.mirror.try_lock() {
@@ -161,7 +175,7 @@ impl Evolution {
                }
             }
          }
-      }  
+      }
 
       let r = env.light_radius as isize;
 
