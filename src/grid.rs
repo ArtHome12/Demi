@@ -53,8 +53,6 @@ impl Grid {
    const STATUS_BAR_HEIGHT: f32 = 30.0;
 
    pub fn new(project: Rc<RefCell<project::Project>>) -> Self {
-      // World's dimension
-
       Self {
          interaction: Interaction::None,
          life_cache: Cache::default(),

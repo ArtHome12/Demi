@@ -48,7 +48,7 @@ struct ReactionReagent {
 
 #[derive(Deserialize)]
 struct ReactionAttributes {
-   _name: String,
+   name: String,
    energy: usize,
    vitality: usize,
    left: Vec<ReactionReagent>,
