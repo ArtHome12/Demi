@@ -25,7 +25,6 @@ struct Toml {
 
    elements: Vec<ElementAttributes>,
    chemical: Vec<ReactionAttributes>,
-   geothermal: HashMap<String, Coord>,
    colors: HashMap<String, Colors>,
 }
 
@@ -67,7 +66,6 @@ pub struct Project {
    pub resolution: f32,
    pub elements: Vec<Element>,
    pub reactions: Vec<Reaction>,
-   pub geothermal: Vec<Coord>,
    pub vis_elem_indexes: Vec<usize>, // indexes of visible (non-filtered) elements
 }
 
@@ -133,9 +131,6 @@ impl Project {
          }
       }).collect();
 
-      // Geothermal energy sources (take only position without names)
-      let geothermal = toml.geothermal.iter().map(|(_key, value)| value.clone()).collect();
-
       // At start all elements should be visible, collect its indexes
       let len = toml.elements.len();
       let vis_elem_indexes = (0..len).collect();
@@ -145,7 +140,6 @@ impl Project {
          resolution: toml.resolution,
          elements,
          reactions,
-         geothermal,
          vis_elem_indexes,
       }
    }

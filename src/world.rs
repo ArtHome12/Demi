@@ -38,8 +38,8 @@ impl World {
          Sheet::new(pr.size, v.init_amount, v.volatility)
       }).collect::<Vec<Sheet>>();
 
-      // Energy first
-      let solar = Sheet::new(pr.size, 0, 0.0);
+      // Energy first with special volatility for identification
+      let solar = Sheet::new(pr.size, 0, -1.0);
       sheets.insert(0, solar);
 
       // Evolution algorithm

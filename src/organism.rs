@@ -8,10 +8,10 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use crate::geom::*;
+/* use crate::geom::*;
 
 pub struct Organism {
    pub center: Coord,
    pub vitality: usize,
    pub birthday: usize,
-}
+} */

@@ -15,30 +15,29 @@ use rayon::prelude::*;
 use crate::dot::*;
 use crate::geom::*;
 use crate::environment::*;
-use crate::organism::*;
-
+// use crate::organism::*;
 
 pub struct Evolution {
 
-   // Elements
+   // Solar energy, geothermal energy and elements
    pub sheets: Sheets,
 
-   organisms: Vec<Organism>,
+   // organisms: Vec<Organism>,
 }
 
 impl Evolution {
 
    pub fn new(sheets: Sheets) -> Self {
 
-      let luca = Organism {
+      /* let luca = Organism {
          center: Coord::new(0, 0),
          vitality: 300,
          birthday: 0,
-      };
+      }; */
 
       Self {
          sheets,
-         organisms: vec![luca],
+         // organisms: vec![luca],
       }
    }
 
@@ -47,10 +46,9 @@ impl Evolution {
       self.sheets
       .as_parallel_slice_mut()
       .into_par_iter()
-      .enumerate()
-      .for_each(|(i, mut sheet)| {
+      .for_each(|mut sheet| {
          // Irradiate with solar energy or shuffle elements
-         if i == 0 {
+         if sheet.volatility <= 0.0 {
             Evolution::shine(env, &mut sheet, tick);
          } else {
             Evolution::diffusion(env, &mut sheet);
@@ -186,14 +184,6 @@ impl Evolution {
       for bit in sun_area {
          sheet.set(bit.0, bit.1);
       }
-
-      // Geothermal energy
-      env.geothermal.iter().for_each(|pos| {
-         let area = SquareIter::new(Environment::GEOTHERMAL_RADIUS as isize, *pos, env.world_size);
-         for bit in area {
-            sheet.set_if_bigger(bit.0, bit.1);
-         }
-      });
    }
 }
 
