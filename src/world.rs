@@ -8,7 +8,7 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use std::{rc::Rc, cell::RefCell, };
+use std::{rc::Rc, cell::RefCell, ptr, };
 use std::sync::{Arc, Mutex, atomic::{Ordering, AtomicBool, AtomicUsize,}};
 use std::time::Duration;
 
@@ -23,6 +23,7 @@ pub struct World {
    run_flag: Arc<AtomicBool>, // running when true else paused
    ticks_elapsed: Arc<AtomicUsize>, // model time - a number ticks elapsed from beginning
    env: Environment,
+   // energy_sheet: *const Sheet,
 }
 
 impl World {
@@ -46,6 +47,8 @@ impl World {
 
       // Evolution algorithm
       let mut evolution = Evolution::new(Arc::clone(&mutex_sheets));
+
+      // let energy_sheet = ptr::addr_of!(evolution.sheets.data[0].lock().unwrap());
 
       // Flags for thread control
       let run_flag = Arc::new(AtomicBool::new(false));
@@ -80,6 +83,7 @@ impl World {
          run_flag,
          ticks_elapsed,
          env,
+         // energy_sheet,
       }
    }
 

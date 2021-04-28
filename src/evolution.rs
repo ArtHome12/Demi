@@ -23,7 +23,8 @@ pub struct Evolution {
    mirror: Arc<Mutex<Sheets>>, // for display
 
    // Elements
-   sheets: MutSheets,
+   // pub sheets: MutSheets,
+   sheets: Sheets,
 
    organisms: Vec<Organism>,
 }
@@ -31,7 +32,8 @@ pub struct Evolution {
 impl Evolution {
 
    pub fn new(mirror: Arc<Mutex<Sheets>>) -> Self {
-      let sheets = MutSheets::new(&mirror.lock().unwrap());
+
+      let sheets = mirror.lock().unwrap().clone();
 
       let luca = Organism {
          center: Coord::new(0, 0),
@@ -48,8 +50,11 @@ impl Evolution {
 
    pub fn make_tick(&mut self, env: &Environment, tick: usize) {
       // Process inanimal
-      (0..=env.elements_count).into_par_iter().for_each(|i| {
-         let mut sheet = self.sheets.data[i].lock().unwrap();
+      self.sheets
+      .as_parallel_slice_mut()
+      .into_par_iter()
+      .enumerate()
+      .for_each(|(i, mut sheet)| {
          // Irradiate with solar energy or shuffle elements
          if i == 0 {
             Evolution::shine(env, &mut sheet, tick);
@@ -58,14 +63,29 @@ impl Evolution {
          }
       });
 
+
+
+      /* (0..=env.elements_count).into_par_iter().for_each(|i| {
+         // let mut sheet = self.sheets.data[i].lock().unwrap();
+         let mut sheet = &self.sheets.as_parallel_slice_mut()[i];
+         // Irradiate with solar energy or shuffle elements
+         if i == 0 {
+            Evolution::shine(env, &mut sheet, tick);
+         } else {
+            Evolution::diffusion(env, &mut sheet);
+         }
+      }); */
+
       // Process animal
       // self.organisms.into_par_iter()
 
       // Transfer data to mirror if there no delay
       if let Ok(ref mut mirror_sheets) = self.mirror.try_lock() {
-         let mut s_iter = self.sheets.data.iter();
+         // let mut s_iter = self.sheets.data.iter();
+         let mut s_iter = self.sheets.iter();
          for m in mirror_sheets.iter_mut() {
-            let mut s = s_iter.next().unwrap().lock().unwrap();
+            // let mut s = s_iter.next().unwrap().lock().unwrap();
+            let mut s = s_iter.next().unwrap();
             m.memcpy_from(&mut s);
          }
       }

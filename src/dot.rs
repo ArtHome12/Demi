@@ -8,7 +8,6 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use std::sync::Mutex;
 use iced::Color;
 
 use crate::geom::*;
@@ -88,17 +87,3 @@ impl Sheet {
 
 pub type Sheets = Vec<Sheet>;
 
-pub struct MutSheets {
-   pub data: Vec<Mutex<Sheet>>,
-}
-
-impl MutSheets {
-   pub fn new(src: &Sheets) -> MutSheets {
-      let data = src.iter().map(|sheet| {
-         let cloned_sheet = sheet.clone();
-         Mutex::new(cloned_sheet)
-      }).collect();
-
-      MutSheets {data}
-   }
-}
