@@ -25,7 +25,7 @@ pub struct Dot {
 
 #[derive(Clone, Debug)]
 pub struct Sheet {
-   matrix: Vec<usize>,
+   pub matrix: Vec<usize>,
 
    // How much the fraction moves during diffusion, from 0 to 1
    pub volatility: f32,
@@ -73,15 +73,6 @@ impl Sheet {
       let res = self.matrix[i] - new_val;
       self.matrix[i] = new_val;
       res
-   }
-
-   // Fast copy for mirroring
-   pub fn memcpy_from(&mut self, other: &Self) {
-      // self.matrix.clone_from_slice(other.matrix.as_slice())
-
-      unsafe {
-         core::intrinsics::copy_nonoverlapping(other.matrix.as_ptr(), self.matrix.as_mut_ptr(), self.matrix.len());
-      }
    }
 }
 

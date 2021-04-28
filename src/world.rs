@@ -9,21 +9,20 @@ Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 use std::{rc::Rc, cell::RefCell, ptr, };
-use std::sync::{Arc, Mutex, atomic::{Ordering, AtomicBool, AtomicUsize,}};
+use std::sync::{Arc, atomic::{Ordering, AtomicBool, AtomicUsize,}};
 use std::time::Duration;
 
-use crate::{dot::{Sheets, Sheet, }, evolution::Evolution, environment::*};
+use crate::{dot::Sheet, evolution::Evolution, environment::*};
 pub use crate::dot::{Dot, };
 use crate::geom::*;
 use crate::project;
 
 pub struct World {
    pub project: Rc<RefCell<project::Project>>,
-   mutex_sheets: Arc<Mutex<Sheets>>,
    run_flag: Arc<AtomicBool>, // running when true else paused
    ticks_elapsed: Arc<AtomicUsize>, // model time - a number ticks elapsed from beginning
    env: Environment,
-   // energy_sheet: *const Sheet,
+   elements_sheets: Vec<*const usize>,
 }
 
 impl World {
@@ -43,12 +42,13 @@ impl World {
       let solar = Sheet::new(pr.size, 0, 0.0);
       sheets.insert(0, solar);
 
-      let mutex_sheets = Arc::new(Mutex::new(sheets));
-
       // Evolution algorithm
-      let mut evolution = Evolution::new(Arc::clone(&mutex_sheets));
+      let mut evolution = Evolution::new(sheets);
 
-      // let energy_sheet = ptr::addr_of!(evolution.sheets.data[0].lock().unwrap());
+      // Store raw pointers to elements
+      let elements_sheets = evolution.sheets.iter()
+      .map(|sheet| ptr::addr_of!(sheet.matrix[0]))
+      .collect();
 
       // Flags for thread control
       let run_flag = Arc::new(AtomicBool::new(false));
@@ -79,11 +79,10 @@ impl World {
 
       Self {
          project,
-         mutex_sheets,
          run_flag,
          ticks_elapsed,
          env,
-         // energy_sheet,
+         elements_sheets,
       }
    }
 
@@ -108,13 +107,12 @@ impl World {
 
       // Corresponding bit of the world
       let serial_bit = self.env.serial(x, y);
-      let locked_sheets = self.mutex_sheets.lock().unwrap();
-      let energy = locked_sheets[0].get(serial_bit);
+      let energy = unsafe{ self.elements_sheets[0].add(serial_bit).read() };
 
       // The dot color determines the element with non-zero amount among visible (non-filtered)
       let color_index = pr.vis_elem_indexes.iter().find(|i| {
          // sheet with [0] for energy
-         let amount = locked_sheets[**i + 1].get(serial_bit);
+         let amount = unsafe{ self.elements_sheets[**i + 1].add(serial_bit).read() };
          amount > 0
       });
       let mut color = if let Some(color_index) = color_index {
@@ -132,17 +130,14 @@ impl World {
       // Underlying bit serial number for dot
       let serial_bit = self.env.serial(dot.x, dot.y);
 
-      // Sheets with amounts
-      let locked_sheets = self.mutex_sheets.lock().unwrap();
-
       // For visible element names
       let pr = self.project.borrow();
 
       pr.vis_elem_indexes.iter()
       .take(max_lines - 1) // -1 for energy
       .enumerate()
-      .fold(format!("Energy: {}%", locked_sheets[0].get(serial_bit)), |acc, (i, element_i)| {
-         format!("{}{}{}: {}", acc, delimiter, pr.elements[*element_i].name, locked_sheets[i + 1].get(serial_bit))
+      .fold(format!("Energy: {}%", unsafe{ self.elements_sheets[0].add(serial_bit).read() }), |acc, (i, element_i)| {
+         format!("{}{}{}: {}", acc, delimiter, pr.elements[*element_i].name, unsafe{ self.elements_sheets[i + 1].add(serial_bit).read() })
       })
    }
 

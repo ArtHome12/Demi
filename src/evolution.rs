@@ -8,7 +8,7 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use std::{ops::{RangeInclusive}, sync::{Arc, Mutex, }, usize};
+use std::{ops::{RangeInclusive}, };
 use rand::{Rng, };
 use rayon::prelude::*;
 
@@ -20,20 +20,15 @@ use crate::organism::*;
 
 pub struct Evolution {
 
-   mirror: Arc<Mutex<Sheets>>, // for display
-
    // Elements
-   // pub sheets: MutSheets,
-   sheets: Sheets,
+   pub sheets: Sheets,
 
    organisms: Vec<Organism>,
 }
 
 impl Evolution {
 
-   pub fn new(mirror: Arc<Mutex<Sheets>>) -> Self {
-
-      let sheets = mirror.lock().unwrap().clone();
+   pub fn new(sheets: Sheets) -> Self {
 
       let luca = Organism {
          center: Coord::new(0, 0),
@@ -42,7 +37,6 @@ impl Evolution {
       };
 
       Self {
-         mirror,
          sheets,
          organisms: vec![luca],
       }
@@ -63,24 +57,11 @@ impl Evolution {
          }
       });
 
-
-
-      /* (0..=env.elements_count).into_par_iter().for_each(|i| {
-         // let mut sheet = self.sheets.data[i].lock().unwrap();
-         let mut sheet = &self.sheets.as_parallel_slice_mut()[i];
-         // Irradiate with solar energy or shuffle elements
-         if i == 0 {
-            Evolution::shine(env, &mut sheet, tick);
-         } else {
-            Evolution::diffusion(env, &mut sheet);
-         }
-      }); */
-
       // Process animal
       // self.organisms.into_par_iter()
 
       // Transfer data to mirror if there no delay
-      if let Ok(ref mut mirror_sheets) = self.mirror.try_lock() {
+      /* if let Ok(ref mut mirror_sheets) = self.mirror.try_lock() {
          // let mut s_iter = self.sheets.data.iter();
          let mut s_iter = self.sheets.iter();
          for m in mirror_sheets.iter_mut() {
@@ -88,7 +69,7 @@ impl Evolution {
             let mut s = s_iter.next().unwrap();
             m.memcpy_from(&mut s);
          }
-      }
+      } */
    }
 
    fn diffusion(env: &Environment, sheet: &mut Sheet) {
