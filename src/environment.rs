@@ -83,52 +83,19 @@ impl Environment {
       y * self.world_size.x + x
    }
 
-   // Convert serial number of bit to coordinate pair x, y
-   pub fn deserial(&self, serial: usize) -> (usize, usize) {
-      let w = self.world_size.x;
-      (serial % w, serial / w)
-   }
+   // Return serial number of bit at direction without checking bounds
+   pub fn distance(&self, direction: Direction) -> isize {
+      let width = self.world_size.x as isize;
 
-   // Return index of the point from the given in the specified direction
-   pub fn at_direction(&self, origin: usize, direction: Direction) -> usize {
-      let (x, y) = self.deserial(origin);
-      let Size {x : width, y: height} = self.world_size;
-
-      let (x, y) = match direction {
-         Direction::North => (
-            x,
-            if y > 0 {y - 1} else {height - 1}
-         ),
-         Direction::Northeast => (
-            if x + 1 < width {x + 1} else {0},
-            if y > 0 {y - 1} else {height - 1}
-         ),
-         Direction::East => (
-            if x + 1 < width {x + 1} else {0},
-            y
-         ),
-         Direction::Southeast => (
-            if x + 1 < width {x + 1} else {0},
-            if y + 1 < height {y + 1} else {0},
-         ),
-         Direction::South => (
-            x,
-            if y + 1 < height {y + 1} else {0},
-         ),
-         Direction::Southwest => (
-            if x > 0 {x - 1} else {width - 1},
-            if y + 1 < height {y + 1} else {0},
-         ),
-         Direction::West => (
-            if x > 0 {x - 1} else {width - 1},
-            y
-         ),
-         Direction::Northwest => (
-            if x > 0 {x - 1} else {width - 1},
-            if y > 0 {y - 1} else {height - 1}
-         ),
-      };
-
-      self.serial(x, y)
+      match direction {
+         Direction::North => -width,
+         Direction::Northeast => 1 - width,
+         Direction::East => 1,
+         Direction::Southeast => 1 + width,
+         Direction::South => width,
+         Direction::Southwest => -1 + width,
+         Direction::West => -1,
+         Direction::Northwest => -1 - width,
+      }
    }
 }

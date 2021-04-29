@@ -37,35 +37,14 @@ impl Sheet {
       // Amount of points
       let prod = size.x * size.y;
 
-      let _ = std::vec::from_elem(0, 10);
-
       Self {
          matrix: vec![initial_amount; prod],
          volatility,
       }
    }
 
-   pub fn get(&self, i: usize) -> usize {
-      self.matrix[i]
-   }
    pub fn set(&mut self, i: usize, amount: usize) {
       self.matrix[i] = amount;
-   }
-
-   // Returns how much is actually added
-   pub fn add(&mut self, i: usize, amount: usize) -> usize {
-      let new_val = self.matrix[i].saturating_add(amount);
-      let res = new_val - self.matrix[i];
-      self.matrix[i] = new_val;
-      res
-   }
-
-   // Returns how much is actually deducted
-   pub fn sub(&mut self, i: usize, amount: usize) -> usize {
-      let new_val = self.matrix[i].saturating_sub(amount);
-      let res = self.matrix[i] - new_val;
-      self.matrix[i] = new_val;
-      res
    }
 }
 

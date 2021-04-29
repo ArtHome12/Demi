@@ -8,36 +8,35 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use std::{ops::{RangeInclusive}, };
-use rand::{Rng, };
+use std::{ops::{RangeInclusive}, ptr, };
+use rand::distributions::{Distribution, Uniform};
 use rayon::prelude::*;
 
 use crate::dot::*;
 use crate::geom::*;
 use crate::environment::*;
-// use crate::organism::*;
+use crate::organism::*;
 
 pub struct Evolution {
 
    // Solar energy, geothermal energy and elements
    pub sheets: Sheets,
 
-   // organisms: Vec<Organism>,
+   organisms: Organisms,
 }
 
 impl Evolution {
 
    pub fn new(sheets: Sheets) -> Self {
 
-      /* let luca = Organism {
-         center: Coord::new(0, 0),
+      let luca = Organism {
          vitality: 300,
          birthday: 0,
-      }; */
+      };
 
       Self {
          sheets,
-         // organisms: vec![luca],
+         organisms: vec![luca],
       }
    }
 
@@ -46,6 +45,8 @@ impl Evolution {
       self.sheets
       .as_parallel_slice_mut()
       .into_par_iter()
+      // .as_mut_slice()
+      // .into_iter()
       .for_each(|mut sheet| {
          // Irradiate with solar energy or shuffle elements
          if sheet.volatility <= 0.0 {
@@ -72,11 +73,18 @@ impl Evolution {
 
    fn diffusion(env: &Environment, sheet: &mut Sheet) {
       let mut rng = rand::thread_rng();
+      let rnd_bit = Uniform::from(0..env.bits_count);
+      let rnd_dir = Uniform::from(0..8);
+
+      // Bounds for pointer
+      let first = ptr::addr_of_mut!(sheet.matrix[0]);
+      let last = unsafe{ first.add(env.bits_count) };
 
       (0..env.num_points_to_diffuse).for_each(|_| {
          // Get a random point
-         let origin_bit = rng.gen::<usize>() % env.bits_count;
-         let origin_amount = sheet.get(origin_bit);
+         let origin_bit = ptr::addr_of_mut!(sheet.matrix[rnd_bit.sample(&mut rng)]);
+
+         let origin_amount = unsafe{ origin_bit.read() };
 
          // Amount to tranfer based on its volatility
          let share_amount = (origin_amount as f32 * sheet.volatility) as usize;
@@ -84,14 +92,29 @@ impl Evolution {
          // If there is something to transfer
          if share_amount > 0 {
             // Point to transfer amount
-            let dir = rng.gen::<usize>() % 8;
-            let dest = env.at_direction(origin_bit, dir.into());
+            let dir = rnd_dir.sample(&mut rng);
+            let dest = env.distance(dir.into());
+            let mut dest = origin_bit.wrapping_offset(dest);
 
-            // Add to destination and save, how much it turned out
-            let actual_share = sheet.add(dest, share_amount);
+            unsafe {
+               // Check bounds
+               if dest < first {
+                  let delta = dest.offset_from(first);   // negative value
+                  dest = last.wrapping_offset(delta);
+               } else if dest >= last {
+                  let delta = dest.offset_from(last);    // positive value
+                  dest = first.wrapping_offset(delta);
+               }
 
-            // Deduct actual amount from origin
-            sheet.sub(origin_bit, actual_share);
+               // Add to destination and save, how much it turned out
+               let old_val = dest.read();
+               let new_val = old_val.saturating_add(share_amount);
+               std::ptr::write(dest, new_val);
+               let actual_share = new_val - old_val;
+
+               // Deduct actual amount from origin
+               std::ptr::write(origin_bit, (origin_amount - actual_share) as usize);
+            }
          }
       })
    }
