@@ -8,7 +8,8 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use std::{ops::{RangeInclusive}, ptr, };
+use std::{ops::RangeInclusive, ptr, };
+use std::sync::{Arc, Mutex, };
 use rand::distributions::{Distribution, Uniform};
 use rayon::prelude::*;
 
@@ -22,23 +23,22 @@ pub struct Evolution {
    // Solar energy, geothermal energy and elements
    pub sheets: Sheets,
 
-   // organisms: Organisms,
-   animal_sheet: AnimalSheet,
+   organisms: Organisms,
+   animal_sheet: AnimalSheet, // mirror for world
+   mirror: Arc<Mutex<AnimalSheet>>, // mirror for world
 }
 
 impl Evolution {
 
-   pub fn new(sheets: Sheets, animal_sheet: AnimalSheet) -> Self {
-
-      let luca = Organism {
-         vitality: 300,
-         birthday: 0,
-      };
+   pub fn new(sheets: Sheets, animal_sheet: Arc<Mutex<AnimalSheet>>) -> Self {
+      // Extract initial values from mirror
+      let animals = animal_sheet.lock().unwrap().clone();
 
       Self {
          sheets,
-         // organisms: vec![luca],
-         animal_sheet,
+         organisms: Vec::new(),
+         animal_sheet: animals,
+         mirror: animal_sheet,
       }
    }
 
@@ -58,21 +58,31 @@ impl Evolution {
 
       // Process animal
 
-      // LUCA should always to be at 0,0
-      
+      // At least LUCA should always to be first at 0,0
+      // Ignore the likelihood of endless addition due to constant death of LUCA
+      let luca_point = &mut self.animal_sheet.matrix[0];
+      if luca_point.is_empty() || !luca_point[0].alive() {
+         let luca = Organism {
+            vitality: 300,
+            birthday: 0,
+         };
+         let luca = Arc::new(luca);
+         self.organisms.push(Arc::downgrade(&luca));
+         luca_point.insert(0, luca);
+      }
 
       // self.organisms.into_par_iter()
 
       // Transfer data to mirror if there no delay
-      /* if let Ok(ref mut mirror_sheets) = self.mirror.try_lock() {
-         // let mut s_iter = self.sheets.data.iter();
-         let mut s_iter = self.sheets.iter();
-         for m in mirror_sheets.iter_mut() {
-            // let mut s = s_iter.next().unwrap().lock().unwrap();
-            let mut s = s_iter.next().unwrap();
-            m.memcpy_from(&mut s);
-         }
-      } */
+      // Need to benchmark with into_par_iter()
+      if let Ok(ref mut mirror) = self.mirror.try_lock() {
+         // mirror.clone_from(&self.animal_sheet);
+         // mirror.matrix = self.animal_sheet.matrix
+         // .par_iter()
+         // .map(|v| v.clone())
+         // .collect();
+         mirror.matrix.clone_from_slice(self.animal_sheet.matrix.as_parallel_slice());
+      }
    }
 
    fn diffusion(env: &Environment, sheet: &mut Sheet) {

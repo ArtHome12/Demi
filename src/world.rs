@@ -9,7 +9,7 @@ Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 use std::{rc::Rc, cell::RefCell, ptr, };
-use std::sync::{Arc, atomic::{Ordering, AtomicBool, AtomicUsize,}};
+use std::sync::{Arc, atomic::{Ordering, AtomicBool, AtomicUsize,}, Mutex, };
 use std::time::Duration;
 
 use crate::{dot::Sheet, evolution::Evolution, environment::*};
@@ -24,6 +24,7 @@ pub struct World {
    ticks_elapsed: Arc<AtomicUsize>, // model time - a number ticks elapsed from beginning
    env: Environment,
    elements_sheets: Vec<*const usize>,
+   animal_sheet: Arc<Mutex<AnimalSheet>>, // Mirror from Evaluation
 }
 
 impl World {
@@ -45,9 +46,10 @@ impl World {
 
       // Create animals
       let animal_sheet = AnimalSheet::new(pr.size);
+      let animal_sheet = Arc::new(Mutex::new(animal_sheet));
 
       // Evolution algorithm
-      let mut evolution = Evolution::new(sheets, animal_sheet);
+      let mut evolution = Evolution::new(sheets, Arc::clone(&animal_sheet));
 
       // Store raw pointers to elements
       let elements_sheets = evolution.sheets.iter()
@@ -87,6 +89,7 @@ impl World {
          ticks_elapsed,
          env,
          elements_sheets,
+         animal_sheet,
       }
    }
 
@@ -125,6 +128,12 @@ impl World {
 
       // Adjust color to energy
       color.a = energy as f32 / 100.0;
+
+      // Test output organism info
+      let animals = &self.animal_sheet.lock().unwrap().matrix[serial_bit];
+      if !animals.is_empty() {
+         color = iced::Color::from_rgb8(255, 0, 0);
+      };
 
       Dot{x, y, color,}
    }
