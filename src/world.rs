@@ -16,6 +16,7 @@ use crate::{dot::Sheet, evolution::Evolution, environment::*};
 pub use crate::dot::{Dot, };
 use crate::geom::*;
 use crate::project;
+use crate::organism::*;
 
 pub struct World {
    pub project: Rc<RefCell<project::Project>>,
@@ -42,8 +43,11 @@ impl World {
       let solar = Sheet::new(pr.size, 0, -1.0);
       sheets.insert(0, solar);
 
+      // Create animals
+      let animal_sheet = AnimalSheet::new(pr.size);
+
       // Evolution algorithm
-      let mut evolution = Evolution::new(sheets);
+      let mut evolution = Evolution::new(sheets, animal_sheet);
 
       // Store raw pointers to elements
       let elements_sheets = evolution.sheets.iter()

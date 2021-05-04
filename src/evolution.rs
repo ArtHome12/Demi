@@ -22,12 +22,13 @@ pub struct Evolution {
    // Solar energy, geothermal energy and elements
    pub sheets: Sheets,
 
-   organisms: Organisms,
+   // organisms: Organisms,
+   animal_sheet: AnimalSheet,
 }
 
 impl Evolution {
 
-   pub fn new(sheets: Sheets) -> Self {
+   pub fn new(sheets: Sheets, animal_sheet: AnimalSheet) -> Self {
 
       let luca = Organism {
          vitality: 300,
@@ -36,7 +37,8 @@ impl Evolution {
 
       Self {
          sheets,
-         organisms: vec![luca],
+         // organisms: vec![luca],
+         animal_sheet,
       }
    }
 
@@ -45,8 +47,6 @@ impl Evolution {
       self.sheets
       .as_parallel_slice_mut()
       .into_par_iter()
-      // .as_mut_slice()
-      // .into_iter()
       .for_each(|mut sheet| {
          // Irradiate with solar energy or shuffle elements
          if sheet.volatility <= 0.0 {
@@ -57,6 +57,10 @@ impl Evolution {
       });
 
       // Process animal
+
+      // LUCA should always to be at 0,0
+      
+
       // self.organisms.into_par_iter()
 
       // Transfer data to mirror if there no delay
