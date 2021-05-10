@@ -7,6 +7,7 @@
 # 28 April 34 FPS 124-126 TPS after refusal to buffer elements and energy
 # 28 April 34 FPS 127-130 TPS after remove geothermal energy
 # 29 April 34 FPS 145-156 TPS after use pointers to bits instead indexes
+# 10 May 34 FPS 98 TPS after mirroring animal
 width = 1000 # number of dots in width, max 30_000
 height_ratio = 0.4583 # proportion for height, for Merсator 24:11 or 0.4583
 resolution = 0.1 # number of dots calculated for each tick. Actually determines the speed of processes relative to the movement of the sun

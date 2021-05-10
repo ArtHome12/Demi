@@ -8,7 +8,7 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use std::{ops::RangeInclusive, ptr, };
+use std::{borrow::BorrowMut, ops::RangeInclusive, ptr};
 use std::sync::{Arc, Mutex, };
 use rand::distributions::{Distribution, Uniform};
 use rayon::prelude::*;
@@ -71,17 +71,11 @@ impl Evolution {
          luca_point.insert(0, luca);
       }
 
-      // self.organisms.into_par_iter()
+      Evolution::diffusion_animal(env, &mut self.animal_sheet);
 
       // Transfer data to mirror if there no delay
-      // Need to benchmark with into_par_iter()
       if let Ok(ref mut mirror) = self.mirror.try_lock() {
-         // mirror.clone_from(&self.animal_sheet);
-         // mirror.matrix = self.animal_sheet.matrix
-         // .par_iter()
-         // .map(|v| v.clone())
-         // .collect();
-         mirror.matrix.clone_from_slice(self.animal_sheet.matrix.as_parallel_slice());
+         mirror.matrix.clone_from(&self.animal_sheet.matrix);
       }
    }
 
@@ -129,6 +123,42 @@ impl Evolution {
                // Deduct actual amount from origin
                std::ptr::write(origin_bit, (origin_amount - actual_share) as usize);
             }
+         }
+      })
+   }
+
+   fn diffusion_animal(env: &Environment, sheet: &mut AnimalSheet) {
+      let mut rng = rand::thread_rng();
+      let rnd_bit = Uniform::from(0..env.bits_count);
+      let rnd_dir = Uniform::from(0..8);
+
+      // Bounds for pointer
+      let first = ptr::addr_of_mut!(sheet.matrix[0]);
+      let last = unsafe{ first.add(env.bits_count) };
+
+      (0..env.num_points_to_diffuse).for_each(|_| {
+         // Get a random point
+         let origin_bit = rnd_bit.sample(&mut rng);
+
+         let organism = sheet.matrix[origin_bit].pop();
+
+         // If there is something to transfer
+         if let Some(organism) = organism {
+            // Point to transfer the organism
+            let dir = rnd_dir.sample(&mut rng);
+            let dest_bit = env.distance(dir.into());
+            let mut dest_bit = origin_bit as isize + dest_bit;
+
+            // Check bounds
+            if dest_bit < 0 {
+               dest_bit = env.bits_count as isize + dest_bit; // negative value
+            } else if dest_bit >= env.bits_count as isize {
+               let delta = dest_bit - env.bits_count as isize; // positive value
+               dest_bit = delta;
+            }
+
+            // Store the organism at new place
+            sheet.matrix[dest_bit as usize].push(organism);
          }
       })
    }
