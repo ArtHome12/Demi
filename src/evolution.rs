@@ -8,7 +8,7 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use std::{borrow::BorrowMut, ops::RangeInclusive, ptr};
+use std::{ops::RangeInclusive, ptr};
 use std::sync::{Arc, Mutex, };
 use rand::distributions::{Distribution, Uniform};
 use rayon::prelude::*;
@@ -17,14 +17,15 @@ use crate::dot::*;
 use crate::geom::*;
 use crate::environment::*;
 use crate::organism::*;
+use crate::genes::*;
 
 pub struct Evolution {
 
    // Solar energy, geothermal energy and elements
    pub sheets: Sheets,
 
-   organisms: Organisms,
-   animal_sheet: AnimalSheet, // mirror for world
+   // organisms: Organisms, // separate list of organisms
+   animal_sheet: AnimalSheet, // organisms at points of the world
    mirror: Arc<Mutex<AnimalSheet>>, // mirror for world
 }
 
@@ -36,11 +37,12 @@ impl Evolution {
 
       Self {
          sheets,
-         organisms: Vec::new(),
+         // organisms: Vec::new(),
          animal_sheet: animals,
          mirror: animal_sheet,
       }
    }
+
 
    pub fn make_tick(&mut self, env: &Environment, tick: usize) {
       // Process inanimal
@@ -60,24 +62,31 @@ impl Evolution {
 
       // At least LUCA should always to be first at 0,0
       // Ignore the likelihood of endless addition due to constant death of LUCA
-      let luca_point = &mut self.animal_sheet.matrix[0];
+      let luca_point = &mut self.animal_sheet.get_mut(0);
       if luca_point.is_empty() || !luca_point[0].alive() {
+         let attr = &env.luca;
+         let reaction = env.reactions.get(&attr.digestion).unwrap();
+         let reaction = Arc::clone(reaction);
          let luca = Organism {
-            vitality: 300,
+            vitality: attr.vitality,
             birthday: 0,
+            gene_digestion: Digestion { reaction },
          };
-         let luca = Arc::new(luca);
-         self.organisms.push(Arc::downgrade(&luca));
+         // self.organisms.push(Arc::downgrade(&luca));
          luca_point.insert(0, luca);
       }
 
-      Evolution::diffusion_animal(env, &mut self.animal_sheet);
+      // Behavior
+      Evolution::transfer(env, &mut self.animal_sheet);
+      Evolution::escape(env, &mut self.animal_sheet);
+      Evolution::digestion(env, &mut self.animal_sheet);
 
       // Transfer data to mirror if there no delay
       if let Ok(ref mut mirror) = self.mirror.try_lock() {
-         mirror.matrix.clone_from(&self.animal_sheet.matrix);
+         mirror.clone_from(&self.animal_sheet);
       }
    }
+
 
    fn diffusion(env: &Environment, sheet: &mut Sheet) {
       let mut rng = rand::thread_rng();
@@ -127,20 +136,17 @@ impl Evolution {
       })
    }
 
-   fn diffusion_animal(env: &Environment, sheet: &mut AnimalSheet) {
+
+   fn transfer(env: &Environment, sheet: &mut AnimalSheet) {
       let mut rng = rand::thread_rng();
       let rnd_bit = Uniform::from(0..env.bits_count);
       let rnd_dir = Uniform::from(0..8);
-
-      // Bounds for pointer
-      let first = ptr::addr_of_mut!(sheet.matrix[0]);
-      let last = unsafe{ first.add(env.bits_count) };
 
       (0..env.num_points_to_diffuse).for_each(|_| {
          // Get a random point
          let origin_bit = rnd_bit.sample(&mut rng);
 
-         let organism = sheet.matrix[origin_bit].pop();
+         let organism = sheet.get_mut(origin_bit).pop();
 
          // If there is something to transfer
          if let Some(organism) = organism {
@@ -158,10 +164,32 @@ impl Evolution {
             }
 
             // Store the organism at new place
-            sheet.matrix[dest_bit as usize].push(organism);
+            sheet.get_mut(dest_bit as usize).push(organism);
          }
       })
    }
+
+
+   fn escape(_env: &Environment, _sheet: &mut AnimalSheet) {
+      // At this stage there are no predators
+   }
+
+
+   fn digestion(_env: &Environment, sheet: &mut AnimalSheet) {
+      // Each point on the ground
+      sheet.iter()
+      .for_each(|point| {
+         // Each organism at the point
+         point.iter()
+         .for_each(|animal| {
+            if animal.alive() {
+               // Check the availability of resources for digestion
+               
+            }
+         })
+      })
+   }
+
 
    fn shine(env: &Environment, sheet: &mut Sheet, tick: usize) {
 

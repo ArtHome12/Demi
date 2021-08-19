@@ -8,15 +8,17 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use std::sync::{Arc, Weak};
+// use std::sync::{Arc, Weak};
 use crate::geom::*;
+use crate::genes::*;
 
-pub type Organisms = Vec<Weak<Organism>>;
+// pub type Organisms = Vec<Weak<Organism>>;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Organism {
    pub vitality: usize,
    pub birthday: usize,
+   pub gene_digestion: Digestion,
 }
 
 impl Organism {
@@ -25,19 +27,20 @@ impl Organism {
    }
 }
 
-// Keeps live and death organisms in the grid
-type AnimalStack = Vec<Arc<Organism>>;
+// Organisms at one point
+type AnimalStack = Vec<Organism>;
 
 #[derive(Clone, Debug)]
+// Keeps live and death organisms in the grid
 pub struct AnimalSheet {
-   pub matrix: Vec<AnimalStack>,
+   matrix: Vec<AnimalStack>,
 }
 
-impl AnimalSheet {
+impl<'a> AnimalSheet {
    pub fn new(size: Size, ) -> Self {
 
       // Amount of points
-      let prod = size.x * size.y;
+      let prod = size.serial();
 
       let mut matrix = Vec::with_capacity(prod);
       (0..prod).for_each(|_| matrix.push(AnimalStack::new()));
@@ -45,5 +48,31 @@ impl AnimalSheet {
       Self {
          matrix,
       }
+   }
+
+   pub fn iter(&self) -> std::slice::Iter<'_, Vec<Organism>> {
+      self.matrix.iter()
+   }
+
+   // Return stack of organisms at point
+   pub fn get(&self, index: usize) -> &AnimalStack {
+      &self.matrix[index]
+   }
+
+   pub fn get_mut(&mut self, index: usize) -> &mut AnimalStack {
+      &mut self.matrix[index]
+   }
+}
+
+// Point of organisms sheet with coordinates
+#[derive(Debug, Clone, Copy)]
+pub struct AnimalPoint<'a> {
+   pub sheet: &'a AnimalSheet,
+   pub coord: Coord,
+}
+
+impl<'a> AnimalPoint<'a> {
+   pub fn get(&self) -> &'a AnimalStack {
+      self.sheet.get(self.coord.serial())
    }
 }

@@ -81,6 +81,13 @@ resolution = 0.1 # number of dots calculated for each tick. Actually determines 
             { element = "Hydrogen", amount = 4} ]
 
 
+# First organism
+#
+[luca]
+vitality=300
+digestion="CO2+4H2=CH4+2H2O"
+
+
 # Available colors for elements
 #
 [colors]

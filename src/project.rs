@@ -10,6 +10,7 @@ Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 
 use std::{collections::HashMap, };
 use std::fs;
+use std::sync::Arc;
 use serde_derive::Deserialize;
 
 use crate::geom::*;
@@ -26,10 +27,15 @@ struct Toml {
    elements: Vec<ElementAttributes>,
    chemical: Vec<ReactionAttributes>,
    colors: HashMap<String, Colors>,
+   luca: LucaAttributes,
 }
 
-type Colors = (u8, u8, u8);
-
+impl Toml {
+   pub fn new(filename: &str) -> Self {
+      let data = fs::read_to_string(filename).expect("Unable to read project file");
+      toml::from_str(&data).unwrap()
+   }
+}
 
 #[derive(Deserialize)]
 struct ElementAttributes {
@@ -38,6 +44,8 @@ struct ElementAttributes {
    volatility: f32,
    amount: usize,
 }
+
+pub type Reactions = HashMap<String, Arc::<Reaction>>;
 
 #[derive(Debug, Deserialize)]
 struct ReactionReagent {
@@ -54,19 +62,21 @@ struct ReactionAttributes {
    right: Vec<ReactionReagent>,
 }
 
-impl Toml {
-   pub fn new(filename: &str) -> Self {
-      let data = fs::read_to_string(filename).expect("Unable to read project file");
-      toml::from_str(&data).unwrap()
-   }
+type Colors = (u8, u8, u8);
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct LucaAttributes {
+   pub vitality: usize,
+   pub digestion: String,
 }
 
 pub struct Project {
    pub size: Size,
    pub resolution: f32,
    pub elements: Vec<Element>,
-   pub reactions: Vec<Reaction>,
+   pub reactions: Reactions,
    pub vis_elem_indexes: Vec<usize>, // indexes of visible (non-filtered) elements
+   pub luca: LucaAttributes, // first organism
 }
 
 pub struct Element {
@@ -80,17 +90,16 @@ impl Project {
    pub fn new(filename: &str) -> Self {
 
       // Reads reactions reagents
-      fn reagents(elements: &Vec<Element>, part: &Vec<ReactionReagent>) -> Vec<Reagent> {
+      fn do_reagents(elements: &Vec<Element>, part: &Vec<ReactionReagent>) -> Vec<Reagent> {
          part.iter().map(|reagent| {
 
             // Element index from its name
-            let index = elements.iter().position(|v| v.name == reagent.element);
-            if index.is_none() {
-               panic!("Unknown chemical reagent {}", reagent.element);
-            };
+            let index = elements.iter()
+            .position(|v| v.name == reagent.element)
+            .expect(&format!("Unknown chemical reagent {}", reagent.element));
 
             Reagent {
-               index: index.unwrap(),
+               index: index,
                amount: reagent.amount,
             }
          }).collect()
@@ -123,17 +132,25 @@ impl Project {
 
       // Read reactions
       let reactions = toml.chemical.iter().map(|val| {
-         Reaction {
-            energy: val.energy,
-            vitality: val.vitality,
-            left: reagents(&elements, &val.left),
-            right: reagents(&elements, &val.right),
-         }
-      }).collect();
+         (
+            val.name.to_owned(),
+            Arc::new(Reaction {
+               energy: val.energy,
+               vitality: val.vitality,
+               left: do_reagents(&elements, &val.left),
+               right: do_reagents(&elements, &val.right),
+            })
+         )
+      }).collect::<Reactions>();
 
       // At start all elements should be visible, collect its indexes
       let len = toml.elements.len();
       let vis_elem_indexes = (0..len).collect();
+
+      // Check data for first organism
+      let reaction_name = &toml.luca.digestion;
+      let _ = reactions.get(reaction_name)
+      .expect(&format!("Unknown reaction for digestion LUCA {}", reaction_name));
 
       Self {
          size,
@@ -141,6 +158,7 @@ impl Project {
          elements,
          reactions,
          vis_elem_indexes,
+         luca: toml.luca.to_owned(),
       }
    }
 }

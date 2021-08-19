@@ -22,6 +22,11 @@ impl Size {
    pub fn new(x: usize, y: usize) -> Self {
       Self {x, y}
    }
+
+   // Serial number of a dot with this coordinates
+   pub fn serial(&self) -> usize {
+      self.x * self.y
+   }
 }
 
 pub enum Direction {
@@ -33,6 +38,7 @@ pub enum Direction {
    Southwest,
    West,
    Northwest,
+   None,
 }
 
 impl From<usize> for Direction {
@@ -46,7 +52,7 @@ impl From<usize> for Direction {
          5 => Direction::Southwest,
          6 => Direction::West,
          7 => Direction::Northwest,
-         _ => panic!("From {} for Direction", num),
+         _ => Direction::None,
       }
    }
 }

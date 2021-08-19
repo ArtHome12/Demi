@@ -9,7 +9,7 @@ Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 use crate::geom::*;
-use crate::project::Project;
+use crate::project::{Project, LucaAttributes, Reactions};
 
 #[derive(Debug, Clone)]
 pub struct Environment {
@@ -30,6 +30,12 @@ pub struct Environment {
 
    // Range for serial number of all bits
    pub bits_count: usize,
+
+   // List of chemical reactions for digestion
+   pub reactions: Reactions,
+
+   // First organism
+   pub luca: LucaAttributes,
 }
 
 impl Environment {
@@ -54,6 +60,8 @@ impl Environment {
          elements_count: element_count,
          num_points_to_diffuse,
          bits_count,
+         reactions: project.reactions.to_owned(),
+         luca: project.luca.to_owned(),
       }
    }
 
@@ -96,6 +104,7 @@ impl Environment {
          Direction::Southwest => -1 + width,
          Direction::West => -1,
          Direction::Northwest => -1 - width,
+         Direction::None => 0,
       }
    }
 }

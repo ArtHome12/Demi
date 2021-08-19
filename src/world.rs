@@ -130,7 +130,8 @@ impl World {
       color.a = energy as f32 / 100.0;
 
       // Test output organism info
-      let animals = &self.animal_sheet.lock().unwrap().matrix[serial_bit];
+      let unlocked_sheet =self.animal_sheet.lock().unwrap();
+      let animals = unlocked_sheet.get(serial_bit);
       if !animals.is_empty() {
          color = iced::Color::from_rgb8(255, 0, 0);
       };

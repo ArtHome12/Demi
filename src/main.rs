@@ -26,7 +26,7 @@ mod organism;
 
 use grid::Grid;
 use iced::{Application, Column, Command, Container, Element, Length, Settings,
-   Subscription, time, executor, PaneGrid, pane_grid,
+   Subscription, time, executor, PaneGrid, pane_grid, Clipboard,
    pane_grid::{Pane, Axis, },
 };
 use std::time::{Duration, Instant};
@@ -91,11 +91,11 @@ impl Application for Demi {
       )
    }
 
-   fn title(&self) -> String {
+    fn title(&self) -> String {
       String::from("Demi")
    }
 
-   fn update(&mut self, message: Message) -> Command<Message> {
+   fn update(&mut self, message: Message, _clipboard: &mut Clipboard) -> Command<Message> {
       match message {
          Message::ProjectMessage(message) => {
 
