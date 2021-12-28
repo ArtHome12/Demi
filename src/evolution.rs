@@ -62,16 +62,15 @@ impl Evolution {
 
       // At least LUCA should always to be first at 0,0
       // Ignore the likelihood of endless addition due to constant death of LUCA
-      let luca_point = &mut self.animal_sheet.get_mut(0);
+      let luca_point = self.animal_sheet.get_mut(0);
       if luca_point.is_empty() || !luca_point[0].alive() {
          let attr = &env.luca;
          let reaction = env.reactions.get(&attr.digestion).unwrap();
          let reaction = Arc::clone(reaction);
-         let luca = Organism {
-            vitality: attr.vitality,
-            birthday: 0,
-            gene_digestion: Digestion { reaction },
-         };
+         let luca = Organism::new(attr.vitality, tick,
+            Digestion { reaction }
+         );
+
          // self.organisms.push(Arc::downgrade(&luca));
          luca_point.insert(0, luca);
       }
@@ -179,12 +178,13 @@ impl Evolution {
       // Each point on the ground
       sheet.iter()
       .for_each(|point| {
+         // Available resources at the point
+
          // Each organism at the point
          point.iter()
          .for_each(|animal| {
             if animal.alive() {
-               // Check the availability of resources for digestion
-               
+               animal.digestion()
             }
          })
       })

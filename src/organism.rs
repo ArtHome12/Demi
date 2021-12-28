@@ -16,14 +16,27 @@ use crate::genes::*;
 
 #[derive(Debug, Clone)]
 pub struct Organism {
-   pub vitality: usize,
-   pub birthday: usize,
-   pub gene_digestion: Digestion,
+   vitality: usize,
+   birthday: usize,
+   gene_digestion: Digestion,
 }
 
 impl Organism {
+   pub fn new(vitality: usize, birthday: usize, gene_digestion: Digestion,) -> Self {
+      Self {
+         vitality,
+         birthday,
+         gene_digestion,
+      }
+   }
+
    pub fn alive(&self, ) -> bool {
       self.vitality > 0
+   }
+
+   pub fn digestion(&self, ) {
+      // Check the availability of resources for digestion
+
    }
 }
 
