@@ -27,7 +27,7 @@ pub struct Dot {
 pub struct Sheet {
    pub matrix: Vec<usize>,
 
-   // How much the fraction moves during diffusion, from 0 to 1
+   // How much the fraction moves during diffusion, from 0 to 1 for elements and <0 for energy
    pub volatility: f32,
 }
 

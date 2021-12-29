@@ -79,6 +79,11 @@ impl Evolution {
       Evolution::transfer(env, &mut self.animal_sheet);
       Evolution::escape(env, &mut self.animal_sheet);
       Evolution::digestion(env, &mut self.sheets, &mut self.animal_sheet);
+      Evolution::attack(env, &mut self.animal_sheet);
+      Evolution::catch(env, &mut self.animal_sheet);
+      Evolution::cheese(env, &mut self.animal_sheet);
+      Evolution::walk(env, &mut self.animal_sheet);
+      Evolution::reproduction(env, &mut self.animal_sheet);
 
       // Transfer data to mirror if there no delay
       if let Ok(ref mut mirror) = self.mirror.try_lock() {
@@ -175,21 +180,32 @@ impl Evolution {
 
 
    fn digestion(_env: &Environment, elements: &mut Sheets, animals_sheet: &mut AnimalSheet) {
-      // Each point on the ground
-      animals_sheet.iter_mut()
-      .enumerate()
-      .for_each(|(serial, animals)| {
-         // Available resources at the point
-         // Как в организм передать элементы?
-         
-         // Each organism at the point
-         animals.iter_mut()
-         .for_each(|animal| {
-            if animal.alive() {
-               animal.digestion(elements, serial)
-            }
-         })
-      })
+      animals_sheet.digestion(elements)
+   }
+
+
+   fn attack(_env: &Environment, _sheet: &mut AnimalSheet) {
+      // At this stage there are no predators
+   }
+
+
+   fn catch(_env: &Environment, _sheet: &mut AnimalSheet) {
+      // At this stage there are no predators
+   }
+
+
+   fn cheese(_env: &Environment, _sheet: &mut AnimalSheet) {
+      // At this stage there are no muscle
+   }
+
+
+   fn walk(_env: &Environment, _sheet: &mut AnimalSheet) {
+      // At this stage there are no walk
+   }
+
+
+   fn reproduction(_env: &Environment, _sheet: &mut AnimalSheet) {
+      // Todo
    }
 
 
