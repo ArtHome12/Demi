@@ -36,13 +36,9 @@ impl World {
       let env = Environment::new(&pr);
 
       // Create sheets with initial amounts
-      let mut sheets = pr.elements.iter().map(|v| {
+      let sheets = pr.elements.iter().map(|v| {
          Sheet::new(pr.size, v.init_amount, v.volatility)
       }).collect::<Sheets>();
-
-      // // Energy first with special volatility for identification
-      // let solar = Sheet::new(pr.size, 0, -1.0);
-      // sheets.get_mut().insert(0, solar);
 
       // Create animals
       let animal_sheet = AnimalSheet::new(pr.size);
@@ -150,8 +146,8 @@ impl World {
       pr.vis_elem_indexes.iter()
       .take(max_lines - 1) // -1 for energy
       .enumerate()
-      .fold(format!("Energy: {}%", unsafe{ self.elements_sheets[0].add(serial_bit).read() }), |acc, (i, element_i)| {
-         format!("{}{}{}: {}", acc, delimiter, pr.elements[*element_i].name, unsafe{ self.elements_sheets[i + 1].add(serial_bit).read() })
+      .fold(String::default(), |acc, (i, element_i)| {
+         format!("{}{}{}: {}", acc, delimiter, pr.elements[*element_i].name, unsafe{ self.elements_sheets[i].add(serial_bit).read() })
       })
    }
 

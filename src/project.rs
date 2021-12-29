@@ -56,7 +56,6 @@ struct ReactionReagent {
 #[derive(Deserialize)]
 struct ReactionAttributes {
    name: String,
-   energy: usize,
    vitality: usize,
    left: Vec<ReactionReagent>,
    right: Vec<ReactionReagent>,
@@ -135,7 +134,6 @@ impl Project {
          (
             val.name.to_owned(),
             Arc::new(Reaction {
-               energy: val.energy,
                vitality: val.vitality,
                left: do_reagents(&elements, &val.left),
                right: do_reagents(&elements, &val.right),

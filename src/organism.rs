@@ -39,10 +39,6 @@ impl Organism {
       // Check the availability of resources for digestion
       let r = &self.gene_digestion.reaction;
 
-      let avail = r.energy <= element_sheets.amount(0, serial);
-      if !avail {
-         return
-      }
       let avail = r.left.iter().all(|reagent| {
             reagent.amount <= element_sheets.amount(reagent.index, serial)
          });
@@ -57,9 +53,6 @@ impl Organism {
       }
 
       // Process the reaction
-
-      // Expend energy
-      element_sheets.dec_amount(0, serial, r.energy);
 
       // Subtract source elements
       r.left.iter()

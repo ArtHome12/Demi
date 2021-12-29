@@ -17,7 +17,6 @@ pub struct Reagent {
 
 #[derive(Debug, Clone)]
 pub struct Reaction {
-   pub energy: usize, // the amount of energy needed
    pub vitality: usize, // the amount of vitality produced
    pub left: Vec<Reagent>, // initial elements for the reaction
    pub right: Vec<Reagent>, // reaction products

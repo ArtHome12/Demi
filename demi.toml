@@ -14,8 +14,15 @@ resolution = 0.1 # number of dots calculated for each tick. Actually determines 
 
 # Elements of inanimate nature
    [[elements]]
+   # Solar energy with special volatility as mark
+   name="Energy"
+   color="cornflowerblue"
+   volatility=-1
+   amount=0
+
    # Water is the basis of everything, and as a basis its volatility is less than that of solids
    # Title starts with 0 for correct sorting
+   [[elements]]
    name="Water"
    color="cornflowerblue"
    volatility=0.01
@@ -64,16 +71,15 @@ resolution = 0.1 # number of dots calculated for each tick. Actually determines 
 #
    [[chemical]]
    name="CO2+4H2=CH4+2H2O"
-   energy=1
    vitality=5
-   left = [ { element = "CarbonDioxide", amount = 1 },
+   left = [ { element = "Energy", amount = 1 },
+            { element = "CarbonDioxide", amount = 1 },
             { element = "Hydrogen", amount = 4} ]
    right = [ { element = "Methane", amount = 1 },
             { element = "Water", amount = 2} ]
 
    [[chemical]]
    name="CH4+2H2O=CO2+4H2" # reverse reaction
-   energy=0
    vitality=3
    left = [ { element = "Methane", amount = 1 },
             { element = "Water", amount = 2} ]
