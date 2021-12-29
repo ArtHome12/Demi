@@ -11,6 +11,7 @@ Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 // use std::sync::{Arc, Weak};
 use crate::geom::*;
 use crate::genes::*;
+use crate::dot::*;
 
 // pub type Organisms = Vec<Weak<Organism>>;
 
@@ -34,9 +35,46 @@ impl Organism {
       self.vitality > 0
    }
 
-   pub fn digestion(&self, ) {
+   pub fn digestion(&mut self, element_sheets: &mut Sheets, serial: usize) {
       // Check the availability of resources for digestion
+      let r = &self.gene_digestion.reaction;
 
+      let avail = r.energy <= element_sheets.amount(0, serial);
+      if !avail {
+         return
+      }
+      let avail = r.left.iter().all(|reagent| {
+            reagent.amount <= element_sheets.amount(reagent.index, serial)
+         });
+
+
+      // let avail = r.energy <= element_sheets.amount(0, serial)
+      //    && r.left.iter().all(|reagent| {
+      //       reagent.amount <= element_sheets.amount(reagent.index, serial)
+      //    });
+      if !avail {
+         return
+      }
+
+      // Process the reaction
+
+      // Expend energy
+      element_sheets.dec_amount(0, serial, r.energy);
+
+      // Subtract source elements
+      r.left.iter()
+      .for_each(|reagent| {
+         element_sheets.dec_amount(reagent.index, serial, reagent.amount);
+      });
+
+      // Add the resulting elements
+      r.right.iter()
+      .for_each(|reagent| {
+         element_sheets.inc_amount(reagent.index, serial, reagent.amount);
+      });
+
+      // Increase vitality
+      self.vitality += r.vitality;
    }
 }
 
@@ -65,6 +103,10 @@ impl<'a> AnimalSheet {
 
    pub fn iter(&self) -> std::slice::Iter<'_, Vec<Organism>> {
       self.matrix.iter()
+   }
+
+   pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, Vec<Organism>> {
+      self.matrix.iter_mut()
    }
 
    // Return stack of organisms at point

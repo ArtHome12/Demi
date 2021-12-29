@@ -48,5 +48,38 @@ impl Sheet {
    }
 }
 
-pub type Sheets = Vec<Sheet>;
+pub struct Sheets(Vec<Sheet>);
 
+impl Sheets {
+   pub fn amount(&self, sheet_index: usize, point_serial: usize) -> usize {
+      self.0[sheet_index].matrix[point_serial]
+   }
+
+   pub fn dec_amount(&mut self, sheet_index: usize, point_serial: usize, delta: usize) -> usize {
+      let data = &mut self.0[sheet_index].matrix[point_serial];
+      *data = *data - delta;
+      *data
+   }
+
+   pub fn inc_amount(&mut self, sheet_index: usize, point_serial: usize, delta: usize) -> usize {
+      let data = &mut self.0[sheet_index].matrix[point_serial];
+      *data = *data + delta;
+      *data
+   }
+
+   pub fn get(&self) -> &Vec<Sheet> {
+      &self.0
+   }
+
+   pub fn get_mut(&mut self) -> &mut Vec<Sheet> {
+      &mut self.0
+   }
+}
+
+impl std::iter::FromIterator<Sheet> for Sheets {
+   fn from_iter<I: IntoIterator<Item = Sheet>>(iter: I) -> Self {
+      Self {
+         0: iter.into_iter().collect(),
+      }
+   }
+}

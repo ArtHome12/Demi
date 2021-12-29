@@ -13,7 +13,7 @@ use std::sync::{Arc, atomic::{Ordering, AtomicBool, AtomicUsize,}, Mutex, };
 use std::time::Duration;
 
 use crate::{dot::Sheet, evolution::Evolution, environment::*};
-pub use crate::dot::{Dot, };
+pub use crate::dot::{Dot, Sheets, };
 use crate::geom::*;
 use crate::project;
 use crate::organism::*;
@@ -38,11 +38,11 @@ impl World {
       // Create sheets with initial amounts
       let mut sheets = pr.elements.iter().map(|v| {
          Sheet::new(pr.size, v.init_amount, v.volatility)
-      }).collect::<Vec<Sheet>>();
+      }).collect::<Sheets>();
 
-      // Energy first with special volatility for identification
-      let solar = Sheet::new(pr.size, 0, -1.0);
-      sheets.insert(0, solar);
+      // // Energy first with special volatility for identification
+      // let solar = Sheet::new(pr.size, 0, -1.0);
+      // sheets.get_mut().insert(0, solar);
 
       // Create animals
       let animal_sheet = AnimalSheet::new(pr.size);
@@ -52,7 +52,7 @@ impl World {
       let mut evolution = Evolution::new(sheets, Arc::clone(&animal_sheet));
 
       // Store raw pointers to elements
-      let elements_sheets = evolution.sheets.iter()
+      let elements_sheets = evolution.sheets.get().iter()
       .map(|sheet| ptr::addr_of!(sheet.matrix[0]))
       .collect();
 

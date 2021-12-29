@@ -21,7 +21,7 @@ use crate::genes::*;
 
 pub struct Evolution {
 
-   // Solar energy, geothermal energy and elements
+   // Solar energy and elements
    pub sheets: Sheets,
 
    // organisms: Organisms, // separate list of organisms
@@ -46,7 +46,7 @@ impl Evolution {
 
    pub fn make_tick(&mut self, env: &Environment, tick: usize) {
       // Process inanimal
-      self.sheets
+      self.sheets.get_mut()
       .as_parallel_slice_mut()
       .into_par_iter()
       .for_each(|mut sheet| {
@@ -78,7 +78,7 @@ impl Evolution {
       // Behavior
       Evolution::transfer(env, &mut self.animal_sheet);
       Evolution::escape(env, &mut self.animal_sheet);
-      Evolution::digestion(env, &mut self.animal_sheet);
+      Evolution::digestion(env, &mut self.sheets, &mut self.animal_sheet);
 
       // Transfer data to mirror if there no delay
       if let Ok(ref mut mirror) = self.mirror.try_lock() {
@@ -174,17 +174,19 @@ impl Evolution {
    }
 
 
-   fn digestion(_env: &Environment, sheet: &mut AnimalSheet) {
+   fn digestion(_env: &Environment, elements: &mut Sheets, animals_sheet: &mut AnimalSheet) {
       // Each point on the ground
-      sheet.iter()
-      .for_each(|point| {
+      animals_sheet.iter_mut()
+      .enumerate()
+      .for_each(|(serial, animals)| {
          // Available resources at the point
-
+         // Как в организм передать элементы?
+         
          // Each organism at the point
-         point.iter()
+         animals.iter_mut()
          .for_each(|animal| {
             if animal.alive() {
-               animal.digestion()
+               animal.digestion(elements, serial)
             }
          })
       })
