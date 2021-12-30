@@ -140,14 +140,33 @@ impl World {
       // Underlying bit serial number for dot
       let serial_bit = self.env.serial(dot.x, dot.y);
 
+      // Current time
+      let now = self.ticks_elapsed();
+
+      let mut remaining_lines = max_lines;
+
+      // Animal world
+      let animal_desc = if let Ok(animals) = self.animal_sheet.lock() {
+         let stack = animals.get(serial_bit); // Animals at the point
+
+         // Decrease max lines
+         remaining_lines -= stack.len();
+
+         stack.iter()
+         .take(max_lines)
+         .fold(String::default(), |acc, o| format!("{}[Возраст: {}, ЖС: {}]{}", acc, now.wrapping_sub(o.birthday), o.vitality, delimiter))
+      } else {
+         String::default()
+      };
+
       // For visible element names
       let pr = self.project.borrow();
 
       pr.vis_elem_indexes.iter()
-      .take(max_lines - 1) // -1 for energy
+      .take(remaining_lines)
       .enumerate()
-      .fold(String::default(), |acc, (i, element_i)| {
-         format!("{}{}{}: {}", acc, delimiter, pr.elements[*element_i].name, unsafe{ self.elements_sheets[i].add(serial_bit).read() })
+      .fold(animal_desc, |acc, (i, element_i)| {
+         format!("{}{}: {}{}", acc, pr.elements[*element_i].name, unsafe{ self.elements_sheets[i].add(serial_bit).read() }, delimiter)
       })
    }
 

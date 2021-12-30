@@ -9,6 +9,7 @@ Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 // use std::sync::{Arc, Weak};
+
 use crate::geom::*;
 use crate::genes::*;
 use crate::dot::*;
@@ -17,9 +18,9 @@ use crate::dot::*;
 
 #[derive(Debug, Clone)]
 pub struct Organism {
-   vitality: usize,
-   birthday: usize,
-   gene_digestion: Digestion,
+   pub vitality: usize,
+   pub birthday: usize,
+   pub gene_digestion: Digestion,
 }
 
 impl Organism {
@@ -96,14 +97,13 @@ impl<'a> AnimalSheet {
 
    pub fn digestion(&mut self, elements: &mut Sheets) {
       // Each point on the ground
-      self.0.iter_mut()
+      self.0
+      .iter_mut()
       .enumerate()
       .for_each(|(serial, animals)| {
-         // Available resources at the point
-         // Как в организм передать элементы?
-         
          // Each organism at the point
-         animals.iter_mut()
+         animals
+         .iter_mut()
          .for_each(|animal| {
             if animal.alive() {
                animal.digestion(elements, serial)
