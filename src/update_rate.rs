@@ -5,7 +5,7 @@ Speed calculation (FPS, model time).
 ----------------------------------------------------------------------------
 Licensed under the terms of the GPL version 3.
 http://www.gnu.org/licenses/gpl-3.0.html
-Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
+Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 // Struct for counting FPS, screen refresh rate
