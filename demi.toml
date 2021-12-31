@@ -73,6 +73,7 @@ resolution = 0.1 # number of dots calculated for each tick. Actually determines 
    [[chemical]]
    name="CO2+4H2=CH4+2H2O"
    vitality=12
+   color="violet"
    left = [ { element = "Energy", amount = 1 },
             { element = "CarbonDioxide", amount = 1 },
             { element = "Hydrogen", amount = 4} ]
@@ -82,6 +83,7 @@ resolution = 0.1 # number of dots calculated for each tick. Actually determines 
    [[chemical]]
    name="CH4+2H2O=CO2+4H2" # reverse reaction
    vitality=3
+   color="green"
    left = [ { element = "Methane", amount = 1 },
             { element = "Water", amount = 2} ]
    right = [ { element = "CarbonDioxide", amount = 1 },

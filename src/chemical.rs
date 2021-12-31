@@ -8,6 +8,9 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
+use iced::Color;
+
+
 // Element-reagent of reaction
 #[derive(Debug, Clone, Copy)]
 pub struct Reagent {
@@ -18,6 +21,7 @@ pub struct Reagent {
 #[derive(Debug, Clone)]
 pub struct Reaction {
    pub vitality: usize, // the amount of vitality produced
+   pub color: Color, // // color for display
    pub left: Vec<Reagent>, // initial elements for the reaction
    pub right: Vec<Reagent>, // reaction products
 }

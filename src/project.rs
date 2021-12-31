@@ -57,6 +57,7 @@ struct ReactionReagent {
 struct ReactionAttributes {
    name: String,
    vitality: usize,
+   color: String,
    left: Vec<ReactionReagent>,
    right: Vec<ReactionReagent>,
 }
@@ -110,15 +111,9 @@ impl Project {
 
       // Map elements from Hash to Vec with colors in internal representation
       let elements: Vec<Element> = toml.elements.iter().map(|val| {
-         // Color item from hash by name
-         let color = toml.colors.get(&val.color);
 
-         // Color from r, g, b array
-         let color = if let Some(color) = color {
-            iced::Color::from_rgb8(color.0, color.1, color.2)
-         } else {
-            iced::Color::BLACK
-         };
+         // Color item from hash by name
+         let color = Project::color_by_name(&toml, &val.color);
 
          Element {
             name: val.name.clone(),
@@ -134,6 +129,7 @@ impl Project {
             val.name.to_owned(),
             Arc::new(Reaction {
                vitality: val.vitality,
+               color: Project::color_by_name(&toml, &val.color),
                left: do_reagents(&elements, &val.left),
                right: do_reagents(&elements, &val.right),
             })
@@ -156,6 +152,16 @@ impl Project {
          reactions,
          vis_elem_indexes,
          luca: toml.luca.to_owned(),
+      }
+   }
+
+   fn color_by_name(toml: &Toml, color: &String) -> iced::Color {
+      // Color from r, g, b array or default
+      let color = toml.colors.get(color);
+      if let Some(color) = color {
+         iced::Color::from_rgb8(color.0, color.1, color.2)
+      } else {
+         iced::Color::BLACK
       }
    }
 }

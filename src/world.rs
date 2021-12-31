@@ -112,27 +112,30 @@ impl World {
       let serial_bit = self.env.serial(x, y);
       let energy = unsafe{ self.elements_sheets[0].add(serial_bit).read() };
 
-      // The dot color determines the element with non-zero amount among visible (non-filtered)
-      let color_index = pr.vis_elem_indexes.iter().find(|i| {
-         // sheet with [0] for energy
-         let amount = unsafe{ self.elements_sheets[**i + 1].add(serial_bit).read() };
-         amount > 0
-      });
-      let mut color = if let Some(color_index) = color_index {
-         pr.elements[*color_index].color
-      } else {iced::Color::BLACK};
+      // Find the dot color among animals
+      let unlocked_sheet =self.animal_sheet.lock().unwrap();
+      let animals = unlocked_sheet.get(serial_bit);
+      let first_alive = animals.iter().find(|o| o.alive());
+
+      let mut color = if let Some(organism) = first_alive {
+         organism.color()
+      } else {
+         // Among elements color determines the element with non-zero amount among visible (non-filtered)
+         let color_index = pr.vis_elem_indexes.iter().find(|i| {
+            // sheet with [0] for energy
+            let amount = unsafe{ self.elements_sheets[**i + 1].add(serial_bit).read() };
+            amount > 0
+         });
+         
+         if let Some(color_index) = color_index {
+            pr.elements[*color_index].color
+         } else {
+            iced::Color::BLACK
+         }
+      };
 
       // Adjust color to energy
       color.a = energy as f32 / 100.0;
-
-      // Test output organism info
-      let unlocked_sheet =self.animal_sheet.lock().unwrap();
-      let animals = unlocked_sheet.get(serial_bit);
-      let somebody_alive = animals.iter().any(|o| o.alive());
-
-      if somebody_alive {
-         color = iced::Color::from_rgb8(255, 0, 0);
-      };
 
       Dot{x, y, color,}
    }
@@ -160,7 +163,7 @@ impl World {
             // After death, the date of birth contains the age at death
             let age = if o.alive() { now.saturating_sub(o.birthday) } else { o.birthday };
             
-            format!("{}[Возраст: {}, {}]{}", acc, age, o, delimiter)
+            format!("{}[{}۩ {}]{}", acc, age, o, delimiter)
          })
       } else {
          String::default()

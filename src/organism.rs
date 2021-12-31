@@ -94,6 +94,11 @@ impl Organism {
          None
       }
    }
+
+
+   pub fn color(&self) -> iced::Color {
+      self.gene_digestion.reaction.color
+   }
 }
 
 
@@ -104,7 +109,7 @@ impl fmt::Display for Organism {
        // stream: `f`. Returns `fmt::Result` which indicates whether the
        // operation succeeded or failed. Note that `write!` uses syntax which
        // is very similar to `println!`.
-       write!(f, "ЖС: {}, ПР: {}", self.vitality, self.gene_reproduction.level)
+       write!(f, "{}❤ {}ߐ", self.vitality, self.gene_reproduction.level)
    }
 }
 
