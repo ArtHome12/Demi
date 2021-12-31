@@ -67,8 +67,11 @@ impl Evolution {
          let attr = &env.luca;
          let reaction = env.reactions.get(&attr.digestion).unwrap();
          let reaction = Arc::clone(reaction);
-         let luca = Organism::new(attr.vitality, tick,
-            Digestion { reaction }
+         let vitality = 3 * env.world_size.x;   // hold out for 3 days
+         let level = 3 * vitality;  // grow 3 times to start breeding
+         let luca = Organism::new(vitality, tick,
+            Digestion { reaction },
+            Reproduction { level },
          );
 
          // self.organisms.push(Arc::downgrade(&luca));
@@ -83,7 +86,8 @@ impl Evolution {
       Evolution::catch(env, &mut self.animal_sheet);
       Evolution::cheese(env, &mut self.animal_sheet);
       Evolution::walk(env, &mut self.animal_sheet);
-      Evolution::reproduction(env, &mut self.animal_sheet);
+      Evolution::reproduction(env, &mut self.animal_sheet, tick);
+      Evolution::end_of_turn(env, &mut self.animal_sheet, tick);
 
       // Transfer data to mirror if there no delay
       if let Ok(ref mut mirror) = self.mirror.try_lock() {
@@ -204,8 +208,13 @@ impl Evolution {
    }
 
 
-   fn reproduction(_env: &Environment, _sheet: &mut AnimalSheet) {
-      // Todo
+   fn reproduction(_env: &Environment, animals_sheet: &mut AnimalSheet, now: usize) {
+      animals_sheet.reproduction(now)
+   }
+
+
+   fn end_of_turn(_env: &Environment, sheet: &mut AnimalSheet, now: usize) {
+      sheet.end_of_turn(now)
    }
 
 

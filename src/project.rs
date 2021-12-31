@@ -65,7 +65,6 @@ type Colors = (u8, u8, u8);
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct LucaAttributes {
-   pub vitality: usize,
    pub digestion: String,
 }
 

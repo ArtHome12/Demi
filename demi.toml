@@ -72,7 +72,7 @@ resolution = 0.1 # number of dots calculated for each tick. Actually determines 
 #
    [[chemical]]
    name="CO2+4H2=CH4+2H2O"
-   vitality=5
+   vitality=12
    left = [ { element = "Energy", amount = 1 },
             { element = "CarbonDioxide", amount = 1 },
             { element = "Hydrogen", amount = 4} ]
@@ -91,7 +91,6 @@ resolution = 0.1 # number of dots calculated for each tick. Actually determines 
 # First organism
 #
 [luca]
-vitality=300
 digestion="CO2+4H2=CH4+2H2O"
 
 

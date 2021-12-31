@@ -128,7 +128,9 @@ impl World {
       // Test output organism info
       let unlocked_sheet =self.animal_sheet.lock().unwrap();
       let animals = unlocked_sheet.get(serial_bit);
-      if !animals.is_empty() {
+      let somebody_alive = animals.iter().any(|o| o.alive());
+
+      if somebody_alive {
          color = iced::Color::from_rgb8(255, 0, 0);
       };
 
@@ -154,7 +156,12 @@ impl World {
 
          stack.iter()
          .take(max_lines)
-         .fold(String::default(), |acc, o| format!("{}[Возраст: {}, ЖС: {}]{}", acc, now.wrapping_sub(o.birthday), o.vitality, delimiter))
+         .fold(String::default(), |acc, o| {
+            // After death, the date of birth contains the age at death
+            let age = if o.alive() { now.saturating_sub(o.birthday) } else { o.birthday };
+            
+            format!("{}[Возраст: {}, {}]{}", acc, age, o, delimiter)
+         })
       } else {
          String::default()
       };

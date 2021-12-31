@@ -8,7 +8,9 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2021 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-// use std::sync::{Arc, Weak};
+use std::cmp::max;
+use std::fmt;
+use rayon::prelude::*;
 
 use crate::geom::*;
 use crate::genes::*;
@@ -21,20 +23,26 @@ pub struct Organism {
    pub vitality: usize,
    pub birthday: usize,
    pub gene_digestion: Digestion,
+   metabolism: usize,
+   gene_reproduction: Reproduction,
 }
 
 impl Organism {
-   pub fn new(vitality: usize, birthday: usize, gene_digestion: Digestion,) -> Self {
+   pub fn new(vitality: usize, birthday: usize, gene_digestion: Digestion, gene_reproduction: Reproduction,) -> Self {
       Self {
          vitality,
          birthday,
+         metabolism: 0,
          gene_digestion,
+         gene_reproduction,
       }
    }
+
 
    pub fn alive(&self, ) -> bool {
       self.vitality > 0
    }
+
 
    pub fn digestion(&mut self, element_sheets: &mut Sheets, serial: usize) {
       // Check the availability of resources for digestion
@@ -61,9 +69,45 @@ impl Organism {
       });
 
       // Increase vitality
-      self.vitality += r.vitality;
+      self.vitality = self.vitality.saturating_add(r.vitality);
+   }
+
+
+   pub fn reproduction(&mut self, randoms: &mut Randoms) -> Option<Organism> {
+      // Check avaliability
+      let level = self.gene_reproduction.level;
+      if self.vitality > level {
+         // Reducing own reserves of vitality
+         self.vitality -= level;
+
+         // Bring into the world a new organism
+         let res = Self {
+            vitality: level / 2,
+            birthday: 0,
+            metabolism: 0,
+            gene_digestion: self.gene_digestion.mutate(randoms),
+            gene_reproduction: self.gene_reproduction.mutate(randoms),
+         };
+         Some(res)
+
+      } else {
+         None
+      }
    }
 }
+
+
+impl fmt::Display for Organism {
+   // This trait requires `fmt` with this exact signature.
+   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+       // Write strictly the first element into the supplied output
+       // stream: `f`. Returns `fmt::Result` which indicates whether the
+       // operation succeeded or failed. Note that `write!` uses syntax which
+       // is very similar to `println!`.
+       write!(f, "ЖС: {}, ПР: {}", self.vitality, self.gene_reproduction.level)
+   }
+}
+
 
 // Organisms at one point
 type AnimalStack = Vec<Organism>;
@@ -86,14 +130,17 @@ impl<'a> AnimalSheet {
       }
    }
 
+
    // Return stack of organisms at point
    pub fn get(&self, index: usize) -> &AnimalStack {
       &self.0[index]
    }
 
+
    pub fn get_mut(&mut self, index: usize) -> &mut AnimalStack {
       &mut self.0[index]
    }
+
 
    pub fn digestion(&mut self, elements: &mut Sheets) {
       // Each point on the ground
@@ -104,14 +151,67 @@ impl<'a> AnimalSheet {
          // Each organism at the point
          animals
          .iter_mut()
+         .filter(|animal| animal.alive())
+         .for_each(|animal| {
+            animal.digestion(elements, serial)
+         })
+      })
+   }
+
+
+   pub fn reproduction(&mut self, now: usize) {
+      // Temporary storage for newborns
+      let mut newborns = AnimalStack::new();
+
+      // For optimization
+      let mut randoms = Randoms::new();
+
+      // Each point on the ground
+      self.0
+      .iter_mut()
+      .for_each(|animals| {
+         // Each organism at the point
+         animals
+         .iter_mut()
+         .filter(|animal| animal.alive())
+         .for_each(|animal| {
+            // Ask about birth
+            if let Some(mut new_born) = animal.reproduction(&mut randoms) {
+               // Place new organism
+               new_born.birthday = now;
+               newborns.push(new_born)
+            }
+         });
+
+         animals.append(&mut newborns);
+      })
+   }
+
+
+   pub fn end_of_turn(&mut self, now: usize) {
+      // Each point on the ground
+      self.0
+      .par_iter_mut()
+      .for_each(|animals| {
+         // Each organism at the point
+         animals
+         .iter_mut()
          .for_each(|animal| {
             if animal.alive() {
-               animal.digestion(elements, serial)
+               // Decrease vitality on methabolism
+               animal.vitality = animal.vitality.saturating_sub(max(1, animal.metabolism));
+
+               // In case of death keep the age
+               if animal.vitality == 0 {
+                  animal.birthday = now - animal.birthday + 1;
+               }
             }
          })
       })
    }
 }
+
+
 
 // Point of organisms sheet with coordinates
 // #[derive(Debug, Clone, Copy)]
