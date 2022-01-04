@@ -8,8 +8,13 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
+use std::sync::Arc;
+
 use crate::geom::*;
-use crate::project::{Project, LucaAttributes, Reactions};
+use crate::project::{Project, };
+use crate::chemical::Reactions;
+use crate::organism::Organism;
+use crate::genes::*;
 
 #[derive(Debug, Clone)]
 pub struct Environment {
@@ -35,7 +40,7 @@ pub struct Environment {
    pub reactions: Reactions,
 
    // First organism
-   pub luca: LucaAttributes,
+   pub luca: Organism,
 }
 
 impl Environment {
@@ -53,6 +58,18 @@ impl Environment {
       let bits_count = world_size.x * world_height;
       let num_points_to_diffuse = (bits_count as f32 * project.resolution) as usize;
 
+      // Create first organism
+      let reactions = project.reactions.to_owned();
+      let reaction = &project.luca.digestion;
+      let reaction = reactions.find(reaction).unwrap();
+      let reaction = Arc::clone(reaction);
+      let vitality = 3 * world_size.x;   // hold out for 3 days
+      let level = 3 * vitality;  // grow 3 times to start breeding
+      let luca = Organism::new(vitality, 0,
+         Digestion { reaction },
+         Reproduction { level },
+      );
+
       Self {
          world_size,
          light_radius: (0.8 * world_height as f32 / 2.0) as usize,
@@ -60,8 +77,8 @@ impl Environment {
          elements_count: element_count,
          num_points_to_diffuse,
          bits_count,
-         reactions: project.reactions.to_owned(),
-         luca: project.luca.to_owned(),
+         reactions,
+         luca,
       }
    }
 

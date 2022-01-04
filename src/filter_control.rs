@@ -18,7 +18,9 @@ use crate::project;
 
 #[derive(Debug, Clone)]
 pub enum Message {
-   ItemToggled(usize, bool), // index, checked
+   ItemToggledElement(usize, bool), // index, checked
+   ItemToggledAnimal(usize, bool), // index, checked
+   ItemToggledDead(bool), // index, checked
 }
 
 
@@ -36,9 +38,11 @@ impl Controls {
    }
 
    pub fn update(&mut self, message: Message) {
+      // Storage for visible items
+      let mut pr = self.project.borrow_mut();
+
       match message {
-         Message::ItemToggled(index, checked) => {
-            let mut pr = self.project.borrow_mut();
+         Message::ItemToggledElement(index, checked) => {
 
             // Insert or remove index to the corresponding list
             if checked {
@@ -50,6 +54,9 @@ impl Controls {
                pr.vis_elem_indexes.retain(|value| *value != index);
             }
          }
+
+         Message::ItemToggledAnimal(index, checked) => pr.set_visible_reaction(index, checked),
+         Message::ItemToggledDead(checked) => pr.vis_dead = checked,
       }
   }
 
@@ -57,18 +64,39 @@ impl Controls {
 
       let pr = self.project.borrow();
       
-      let check_boxes = pr.elements
-         .iter()
-         .enumerate()
-         .fold(Column::new().spacing(10), |column, (index, item)| {
-            column.push(Checkbox::new(
-               pr.vis_elem_indexes.contains(&index),
-               &item.name,
-               move |b| Message::ItemToggled(index, b),
-               ).text_size(16)
-               .size(16)
-            )
-         });
+      let elements_check_boxes = pr.elements
+      .iter()
+      .enumerate()
+      .fold(Column::new().spacing(10), |column, (index, item)| {
+         column.push(Checkbox::new(
+            pr.vis_elem_indexes.contains(&index),
+            &item.name,
+            move |b| Message::ItemToggledElement(index, b),
+            ).text_size(16)
+            .size(16)
+         )
+      });
+
+      let dead_check_box = Checkbox::new(
+         pr.vis_dead,
+         "Show dead",
+         move |b| Message::ItemToggledDead(b),
+         )
+      .text_size(16)
+      .size(16);
+
+      let animal_check_boxes = pr.reactions
+      .iter()
+      .enumerate()
+      .fold(Column::new().spacing(10), |column, (index, item)| {
+         column.push(Checkbox::new(
+            pr.visible_reaction(index),
+            item.name.to_owned(),
+            move |b| Message::ItemToggledAnimal(index, b),
+            ).text_size(16)
+            .size(16)
+         )
+      });
 
       let content = Scrollable::new(&mut self.scroll)
          .width(Length::Fill)
@@ -76,7 +104,10 @@ impl Controls {
          .spacing(10)
          // .push(Space::with_height(Length::Units(600)))
          .push(Text::new("Elements to show:").size(16))
-         .push(check_boxes);      
+         .push(elements_check_boxes)
+         .push(Text::new("Animals ro show:").size(16))
+         .push(dead_check_box)
+         .push(animal_check_boxes);
 
       Container::new(content)
          .width(Length::Fill)

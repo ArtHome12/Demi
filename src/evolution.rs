@@ -17,7 +17,6 @@ use crate::dot::*;
 use crate::geom::*;
 use crate::environment::*;
 use crate::organism::*;
-use crate::genes::*;
 
 pub struct Evolution {
 
@@ -61,18 +60,12 @@ impl Evolution {
       // Process animal
 
       // At least LUCA should always to be first at 0,0
-      // Ignore the likelihood of endless addition due to constant death of LUCA
       let luca_point = self.animal_sheet.get_mut(0);
-      if luca_point.is_empty() || !luca_point[0].alive() {
-         let attr = &env.luca;
-         let reaction = env.reactions.get(&attr.digestion).unwrap();
-         let reaction = Arc::clone(reaction);
-         let vitality = 3 * env.world_size.x;   // hold out for 3 days
-         let level = 3 * vitality;  // grow 3 times to start breeding
-         let luca = Organism::new(vitality, tick,
-            Digestion { reaction },
-            Reproduction { level },
-         );
+      let first_alive = luca_point.iter()
+      .find(|o| o.alive());
+      if first_alive.is_none() {
+         let mut luca = env.luca.to_owned();
+         luca.birthday = tick;
 
          // self.organisms.push(Arc::downgrade(&luca));
          luca_point.insert(0, luca);

@@ -115,9 +115,16 @@ impl World {
       // Find the dot color among animals
       let unlocked_sheet =self.animal_sheet.lock().unwrap();
       let animals = unlocked_sheet.get(serial_bit);
-      let first_alive = animals.iter().find(|o| o.alive());
 
-      let mut color = if let Some(organism) = first_alive {
+      // Among animals determines with visible reaction and alive or not
+      let first_suitable = animals.iter()
+      .find(|o| {
+         // Need to be visible and alive or not
+         let visible = o.gene_digestion.reaction.visible;
+         visible && pr.vis_dead != o.alive()
+      });
+
+      let mut color = if let Some(organism) = first_suitable {
          organism.color()
       } else {
          // Among elements color determines the element with non-zero amount among visible (non-filtered)

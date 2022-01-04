@@ -45,7 +45,6 @@ struct ElementAttributes {
    amount: usize,
 }
 
-pub type Reactions = HashMap<String, Arc::<Reaction>>;
 
 #[derive(Debug, Deserialize)]
 struct ReactionReagent {
@@ -74,8 +73,11 @@ pub struct Project {
    pub resolution: f32,
    pub elements: Vec<Element>,
    pub reactions: Reactions,
-   pub vis_elem_indexes: Vec<usize>, // indexes of visible (non-filtered) elements
    pub luca: LucaAttributes, // first organism
+
+   // Section for filter control
+   pub vis_elem_indexes: Vec<usize>, // indexes of visible (non-filtered) elements
+   pub vis_dead: bool,
 }
 
 pub struct Element {
@@ -125,15 +127,13 @@ impl Project {
 
       // Read reactions
       let reactions = toml.chemical.iter().map(|val| {
-         (
-            val.name.to_owned(),
-            Arc::new(Reaction {
-               vitality: val.vitality,
-               color: Project::color_by_name(&toml, &val.color),
-               left: do_reagents(&elements, &val.left),
-               right: do_reagents(&elements, &val.right),
-            })
-         )
+         Arc::new(Reaction {
+            vitality: val.vitality,
+            left: do_reagents(&elements, &val.left),
+            right: do_reagents(&elements, &val.right),
+            name: val.name.to_owned(),
+            color: Project::color_by_name(&toml, &val.color),
+         })
       }).collect::<Reactions>();
 
       // At start all elements should be visible, collect its indexes
@@ -142,7 +142,7 @@ impl Project {
 
       // Check data for first organism
       let reaction_name = &toml.luca.digestion;
-      let _ = reactions.get(reaction_name)
+      let _ = reactions.find(reaction_name)
       .expect(&format!("Unknown reaction for digestion LUCA {}", reaction_name));
 
       Self {
@@ -150,8 +150,9 @@ impl Project {
          resolution: toml.resolution,
          elements,
          reactions,
-         vis_elem_indexes,
          luca: toml.luca.to_owned(),
+         vis_elem_indexes,
+         vis_dead: true,
       }
    }
 
@@ -163,5 +164,16 @@ impl Project {
       } else {
          iced::Color::BLACK
       }
+   }
+
+
+   pub fn set_visible_reaction(&mut self, index: usize, visible: bool) {
+      // self.reactions.get_mut(index).visible = visible;
+   }
+
+
+   pub fn visible_reaction(&self, index: usize) -> bool {
+      // self.reactions.get(index).visible
+      true
    }
 }
