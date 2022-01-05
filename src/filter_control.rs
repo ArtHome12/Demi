@@ -19,7 +19,7 @@ use crate::project;
 #[derive(Debug, Clone)]
 pub enum Message {
    ItemToggledElement(usize, bool), // index, checked
-   ItemToggledAnimal(usize, bool), // index, checked
+   ItemToggledAnimal(String, bool), // index, checked
    ItemToggledDead(bool), // index, checked
 }
 
@@ -55,7 +55,10 @@ impl Controls {
             }
          }
 
-         Message::ItemToggledAnimal(index, checked) => pr.set_visible_reaction(index, checked),
+         Message::ItemToggledAnimal(name, checked) => {
+            let r = pr.vis_reac_hash.get_mut(&name).unwrap();
+            *r = checked;
+         }
          Message::ItemToggledDead(checked) => pr.vis_dead = checked,
       }
   }
@@ -79,7 +82,7 @@ impl Controls {
 
       let dead_check_box = Checkbox::new(
          pr.vis_dead,
-         "Show dead",
+         "Include dead",
          move |b| Message::ItemToggledDead(b),
          )
       .text_size(16)
@@ -87,12 +90,14 @@ impl Controls {
 
       let animal_check_boxes = pr.reactions
       .iter()
-      .enumerate()
-      .fold(Column::new().spacing(10), |column, (index, item)| {
+      .fold(Column::new().spacing(10), |column, reaction| {
+         // Reaction name
+         let name = reaction.name.to_owned();
+         let is_checked = *pr.vis_reac_hash.get(&name).unwrap();
          column.push(Checkbox::new(
-            pr.visible_reaction(index),
-            item.name.to_owned(),
-            move |b| Message::ItemToggledAnimal(index, b),
+            is_checked,
+            name.to_owned(),
+            move |b| Message::ItemToggledAnimal(name.to_owned(), b),
             ).text_size(16)
             .size(16)
          )

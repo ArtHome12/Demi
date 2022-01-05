@@ -114,14 +114,15 @@ impl World {
 
       // Find the dot color among animals
       let unlocked_sheet =self.animal_sheet.lock().unwrap();
-      let animals = unlocked_sheet.get(serial_bit);
+      let stack = unlocked_sheet.get(serial_bit);
 
       // Among animals determines with visible reaction and alive or not
-      let first_suitable = animals.iter()
+      let first_suitable = stack.iter()
       .find(|o| {
          // Need to be visible and alive or not
-         let visible = o.gene_digestion.reaction.visible;
-         visible && pr.vis_dead != o.alive()
+         let reaction = &o.gene_digestion.reaction.name;
+         let visible = pr.vis_reac_hash.get(reaction).unwrap();
+         *visible && (pr.vis_dead || o.alive())
       });
 
       let mut color = if let Some(organism) = first_suitable {
@@ -130,7 +131,7 @@ impl World {
          // Among elements color determines the element with non-zero amount among visible (non-filtered)
          let color_index = pr.vis_elem_indexes.iter().find(|i| {
             // sheet with [0] for energy
-            let amount = unsafe{ self.elements_sheets[**i + 1].add(serial_bit).read() };
+            let amount = unsafe{ self.elements_sheets[**i].add(serial_bit).read() };
             amount > 0
          });
          
@@ -149,6 +150,8 @@ impl World {
 
    // Text to describe a point with a size constraint
    pub fn description(&self, dot: &Dot, max_lines: usize, delimiter: char) -> String {
+      let pr = self.project.borrow();
+
       // Underlying bit serial number for dot
       let serial_bit = self.env.serial(dot.x, dot.y);
 
@@ -159,31 +162,37 @@ impl World {
 
       // Animal world
       let animal_desc = if let Ok(animals) = self.animal_sheet.lock() {
-         let stack = animals.get(serial_bit); // Animals at the point
+         // Filter suitable organisms at the point
+         let stack = animals.get(serial_bit)
+         .iter()
+         .filter(|o| {
+            // Need to be visible and alive or not
+            let reaction = &o.gene_digestion.reaction.name;
+            let visible = pr.vis_reac_hash.get(reaction).unwrap();
+            *visible && (pr.vis_dead || o.alive())
+         });
 
-         // Decrease max lines
-         remaining_lines -= stack.len();
-
-         stack.iter()
+         // Make descroption
+         stack
          .take(max_lines)
          .fold(String::default(), |acc, o| {
             // After death, the date of birth contains the age at death
             let age = if o.alive() { now.saturating_sub(o.birthday) } else { o.birthday };
             
+            // Decrease max lines (side effect)
+            remaining_lines -= 1;
+
             format!("{}[{}۩ {}]{}", acc, age, o, delimiter)
          })
       } else {
          String::default()
       };
 
-      // For visible element names
-      let pr = self.project.borrow();
-
+      // Inanimal world
       pr.vis_elem_indexes.iter()
       .take(remaining_lines)
-      .enumerate()
-      .fold(animal_desc, |acc, (i, element_i)| {
-         format!("{}{}: {}{}", acc, pr.elements[*element_i].name, unsafe{ self.elements_sheets[i].add(serial_bit).read() }, delimiter)
+      .fold(animal_desc, |acc, vis_index| {
+         format!("{}{}: {}{}", acc, pr.elements[*vis_index].name, unsafe{ self.elements_sheets[*vis_index].add(serial_bit).read() }, delimiter)
       })
    }
 

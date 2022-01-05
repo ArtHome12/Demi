@@ -12,7 +12,7 @@ use std::sync::Arc;
 use rand::prelude::*;
 use rand::distributions::Uniform;
 
-use crate::chemical::*;
+use crate::reactions::*;
 
 // Environment around the organism
 /* pub struct State {

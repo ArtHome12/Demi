@@ -20,7 +20,7 @@ mod geom;
 mod environment;
 mod resources;
 mod filter_control;
-mod chemical;
+mod reactions;
 mod genes;
 mod organism;
 

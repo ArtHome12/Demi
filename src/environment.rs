@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use crate::geom::*;
 use crate::project::{Project, };
-use crate::chemical::Reactions;
+use crate::reactions::Reactions;
 use crate::organism::Organism;
 use crate::genes::*;
 

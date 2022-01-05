@@ -14,7 +14,7 @@ use std::sync::Arc;
 use serde_derive::Deserialize;
 
 use crate::geom::*;
-use crate::chemical::*;
+use crate::reactions::*;
 
 
 // Content of a toml project file
@@ -75,8 +75,10 @@ pub struct Project {
    pub reactions: Reactions,
    pub luca: LucaAttributes, // first organism
 
+
    // Section for filter control
    pub vis_elem_indexes: Vec<usize>, // indexes of visible (non-filtered) elements
+   pub vis_reac_hash: HashMap<String, bool>,
    pub vis_dead: bool,
 }
 
@@ -139,6 +141,9 @@ impl Project {
       // At start all elements should be visible, collect its indexes
       let len = toml.elements.len();
       let vis_elem_indexes = (0..len).collect();
+      let vis_reac_hash = reactions.iter()
+      .map(|r| {(r.name.to_owned(), true)})
+      .collect();
 
       // Check data for first organism
       let reaction_name = &toml.luca.digestion;
@@ -152,6 +157,7 @@ impl Project {
          reactions,
          luca: toml.luca.to_owned(),
          vis_elem_indexes,
+         vis_reac_hash,
          vis_dead: true,
       }
    }
@@ -164,16 +170,5 @@ impl Project {
       } else {
          iced::Color::BLACK
       }
-   }
-
-
-   pub fn set_visible_reaction(&mut self, index: usize, visible: bool) {
-      // self.reactions.get_mut(index).visible = visible;
-   }
-
-
-   pub fn visible_reaction(&self, index: usize) -> bool {
-      // self.reactions.get(index).visible
-      true
    }
 }
