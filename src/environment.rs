@@ -103,6 +103,13 @@ impl Environment {
       Coord::new(x as usize, y as usize)
    }
 
+   pub fn date(tick: usize) -> (usize, usize) {
+      let days = tick as f32 / Self::TICKS_PER_DAY;
+      let years = (days / Self::DAYS_PER_YEAR) as usize;
+      let days = (days % Self::DAYS_PER_YEAR) as usize;
+      (years, days)
+   }
+
    // Convert coordinates to serial number of bit
    pub fn serial(&self, x: usize, y: usize) -> usize {
       y * self.world_size.x + x

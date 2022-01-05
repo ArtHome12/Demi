@@ -287,9 +287,10 @@ impl<'a> canvas::Program<Message> for Grid {
          };
 
          // Print FPS and model time
+         let (years, days) = self.world.date();
          frame.fill_text(Text{
             position: Point::new(3.0, frame_height - 3.0),
-            content: format!("{} FPS {} TPS", self.fps.borrow().rate, self.tps.rate),
+            content: format!("{}Y:{}D {} FPS {} TPS", years, days, self.fps.borrow().rate, self.tps.rate),
             ..text
          });
 

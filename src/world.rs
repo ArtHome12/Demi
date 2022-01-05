@@ -211,6 +211,11 @@ impl World {
    pub fn size(&self) -> Size {
       self.project.borrow().size
    }
+
+   pub fn date(&self) -> (usize, usize) {
+      let now = self.ticks_elapsed();
+      Environment::date(now)
+   }
 }
 
 
