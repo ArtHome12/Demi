@@ -10,6 +10,8 @@
 # 10 May 34 FPS 98 TPS after mirroring animal
 # 30 Dec 2021 34 FPS 60 TPS after add digestion
 # 31 Dec 2021 34 FPS 47 TPS after add reproduction, at 87 day CPU 30%, FPS 16, TPS 2, memory 1.877GB
+# 06 Jan 2021 34 FPS 47 TPS after parallel reproduction, at 87 day CPU 36%, FPS 16, TPS 2-3, memory 1.927GB
+# 06 Jan 2021 34 FPS 47 TPS after parallel reproduction and digestion, at 87 day CPU _%, FPS _, TPS _, memory _
 width = 1000 # number of dots in width, max 30_000
 height_ratio = 0.4583 # proportion for height, for Merсator 24:11 or 0.4583
 resolution = 0.1 # number of dots calculated for each tick. Actually determines the speed of processes relative to the movement of the sun

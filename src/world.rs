@@ -8,12 +8,12 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use std::{rc::Rc, cell::RefCell, ptr, };
+use std::{rc::Rc, cell::RefCell, };
 use std::sync::{Arc, atomic::{Ordering, AtomicBool, AtomicUsize,}, Mutex, };
 use std::time::Duration;
 
 use crate::{dot::Sheet, evolution::Evolution, environment::*};
-pub use crate::dot::{Dot, Sheets, };
+pub use crate::dot::{Dot, Sheets, PtrSheets};
 use crate::geom::*;
 use crate::project;
 use crate::organism::*;
@@ -23,7 +23,7 @@ pub struct World {
    run_flag: Arc<AtomicBool>, // running when true else paused
    ticks_elapsed: Arc<AtomicUsize>, // model time - a number ticks elapsed from beginning
    env: Environment,
-   elements_sheets: Vec<*const usize>,
+   elements_sheets: PtrSheets,
    animal_sheet: Arc<Mutex<AnimalSheet>>, // Mirror from Evaluation
 }
 
@@ -48,9 +48,7 @@ impl World {
       let mut evolution = Evolution::new(sheets, Arc::clone(&animal_sheet));
 
       // Store raw pointers to elements
-      let elements_sheets = evolution.sheets.get().iter()
-      .map(|sheet| ptr::addr_of!(sheet.matrix[0]))
-      .collect();
+      let elements_sheets = PtrSheets::create(&evolution.sheets);
 
       // Flags for thread control
       let run_flag = Arc::new(AtomicBool::new(false));
@@ -110,7 +108,7 @@ impl World {
 
       // Corresponding bit of the world
       let serial_bit = self.env.serial(x, y);
-      let energy = unsafe{ self.elements_sheets[0].add(serial_bit).read() };
+      let energy = self.elements_sheets.get(0, serial_bit);
 
       // Find the dot color among animals
       let unlocked_sheet =self.animal_sheet.lock().unwrap();
@@ -131,7 +129,7 @@ impl World {
          // Among elements color determines the element with non-zero amount among visible (non-filtered)
          let color_index = pr.vis_elem_indexes.iter().find(|i| {
             // sheet with [0] for energy
-            let amount = unsafe{ self.elements_sheets[**i].add(serial_bit).read() };
+            let amount = self.elements_sheets.get(**i, serial_bit);
             amount > 0
          });
          
@@ -192,7 +190,7 @@ impl World {
       pr.vis_elem_indexes.iter()
       .take(remaining_lines)
       .fold(animal_desc, |acc, vis_index| {
-         format!("{}{}: {}{}", acc, pr.elements[*vis_index].name, unsafe{ self.elements_sheets[*vis_index].add(serial_bit).read() }, delimiter)
+         format!("{}{}: {}{}", acc, pr.elements[*vis_index].name, self.elements_sheets.get(*vis_index, serial_bit), delimiter)
       })
    }
 

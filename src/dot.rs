@@ -8,6 +8,7 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
+use std::ptr;
 use iced::Color;
 
 use crate::geom::*;
@@ -23,6 +24,7 @@ pub struct Dot {
    pub color: Color,
 }
 
+// Storage amount by points of one element
 #[derive(Clone, Debug)]
 pub struct Sheet {
    pub matrix: Vec<usize>,
@@ -80,6 +82,42 @@ impl std::iter::FromIterator<Sheet> for Sheets {
    fn from_iter<I: IntoIterator<Item = Sheet>>(iter: I) -> Self {
       Self {
          0: iter.into_iter().collect(),
+      }
+   }
+}
+
+// Fast unsafe access to elements
+pub struct PtrSheets {
+   ptr: Vec<*const usize>,
+}
+
+impl PtrSheets {
+   pub fn create(sheets: &Sheets) -> Self {
+      // Store raw pointers to elements
+      let ptr = sheets.get().iter()
+      .map(|sheet| ptr::addr_of!(sheet.matrix[0]))
+      .collect();
+
+      Self { ptr }
+   }
+
+   pub fn get(&self, element_index: usize, serial: usize) -> usize {
+      unsafe{ self.ptr[element_index].add(serial).read() }
+   }
+
+   pub fn inc_amount(&self, element_index: usize, serial: usize, delta: usize) {
+      unsafe{ 
+         let mut dest = self.ptr[element_index].add(serial);
+         let new_val = dest.read().saturating_add(delta);
+         std::ptr::write(&mut dest, std::ptr::addr_of!(delta));
+      }
+   }
+
+   pub fn dec_amount(&self, element_index: usize, serial: usize, delta: usize) {
+      unsafe{ 
+         let mut dest = self.ptr[element_index].add(serial);
+         let new_val = dest.read().saturating_sub(delta);
+         std::ptr::write(&mut dest, std::ptr::addr_of!(delta));
       }
    }
 }

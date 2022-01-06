@@ -44,11 +44,11 @@ impl Organism {
    }
 
 
-   pub fn digestion(&mut self, element_sheets: &mut Sheets, serial: usize) {
+   pub fn digestion(&mut self, ptr: &PtrSheets, serial: usize) {
       // Check the availability of resources for digestion
       let r = &self.gene_digestion.reaction;
       let avail = r.left.iter().all(|reagent| {
-            reagent.amount <= element_sheets.amount(reagent.index, serial)
+            reagent.amount <= ptr.get(reagent.index, serial)
          });
       if !avail {
          return
@@ -59,13 +59,13 @@ impl Organism {
       // Subtract source elements
       r.left.iter()
       .for_each(|reagent| {
-         element_sheets.dec_amount(reagent.index, serial, reagent.amount);
+         ptr.dec_amount(reagent.index, serial, reagent.amount);
       });
 
       // Add the resulting elements
       r.right.iter()
       .for_each(|reagent| {
-         element_sheets.inc_amount(reagent.index, serial, reagent.amount);
+         ptr.inc_amount(reagent.index, serial, reagent.amount);
       });
 
       // Increase vitality
@@ -148,6 +148,8 @@ impl<'a> AnimalSheet {
 
 
    pub fn digestion(&mut self, elements: &mut Sheets) {
+      let ptr_elements = PtrSheets::create(elements);
+
       // Each point on the ground
       self.0
       .iter_mut()
@@ -158,7 +160,7 @@ impl<'a> AnimalSheet {
          .iter_mut()
          .filter(|animal| animal.alive())
          .for_each(|animal| {
-            animal.digestion(elements, serial)
+            animal.digestion(&ptr_elements, serial)
          })
       })
    }
