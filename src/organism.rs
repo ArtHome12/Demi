@@ -165,16 +165,14 @@ impl<'a> AnimalSheet {
 
 
    pub fn reproduction(&mut self, now: usize) {
-      // Temporary storage for newborns
-      let mut newborns = AnimalStack::new();
-
-      // For optimization
-      let mut randoms = Randoms::new();
-
       // Each point on the ground
       self.0
-      .iter_mut()
+      .par_iter_mut()
       .for_each(|animals| {
+         // For optimization
+         let mut randoms = Randoms::new();
+         let mut newborns = AnimalStack::new();
+
          // Each organism at the point
          animals
          .iter_mut()

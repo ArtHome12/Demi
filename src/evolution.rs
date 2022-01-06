@@ -50,7 +50,7 @@ impl Evolution {
       .into_par_iter()
       .for_each(|mut sheet| {
          // Irradiate with solar energy or shuffle elements
-         if sheet.volatility <= 0.0 {
+         if sheet.volatility < 0.0 {
             Evolution::shine(env, &mut sheet, tick);
          } else {
             Evolution::diffusion(env, &mut sheet);
@@ -68,7 +68,7 @@ impl Evolution {
          luca.birthday = tick;
 
          // self.organisms.push(Arc::downgrade(&luca));
-         luca_point.insert(0, luca);
+         luca_point.push(luca);
       }
 
       // Behavior

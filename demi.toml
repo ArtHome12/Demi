@@ -9,7 +9,7 @@
 # 29 April 34 FPS 145-156 TPS after use pointers to bits instead indexes
 # 10 May 34 FPS 98 TPS after mirroring animal
 # 30 Dec 2021 34 FPS 60 TPS after add digestion
-# 31 Dec 2021 34 FPS 47 TPS after add reproduction
+# 31 Dec 2021 34 FPS 47 TPS after add reproduction, at 87 day CPU 30%, FPS 16, TPS 2, memory 1.877GB
 width = 1000 # number of dots in width, max 30_000
 height_ratio = 0.4583 # proportion for height, for Merсator 24:11 or 0.4583
 resolution = 0.1 # number of dots calculated for each tick. Actually determines the speed of processes relative to the movement of the sun
@@ -19,7 +19,7 @@ resolution = 0.1 # number of dots calculated for each tick. Actually determines 
    # Solar energy with special volatility as mark
    name="Energy"
    color="cornflowerblue"
-   volatility=-1
+   volatility=-1 # indicate for algorithm for energy, not for elements
    amount=0
 
    # Water is the basis of everything, and as a basis its volatility is less than that of solids
