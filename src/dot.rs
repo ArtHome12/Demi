@@ -53,22 +53,6 @@ impl Sheet {
 pub struct Sheets(Vec<Sheet>);
 
 impl Sheets {
-   pub fn amount(&self, sheet_index: usize, point_serial: usize) -> usize {
-      self.0[sheet_index].matrix[point_serial]
-   }
-
-   pub fn dec_amount(&mut self, sheet_index: usize, point_serial: usize, delta: usize) -> usize {
-      let data = &mut self.0[sheet_index].matrix[point_serial];
-      *data = *data - delta;
-      *data
-   }
-
-   pub fn inc_amount(&mut self, sheet_index: usize, point_serial: usize, delta: usize) -> usize {
-      let data = &mut self.0[sheet_index].matrix[point_serial];
-      *data = *data + delta;
-      *data
-   }
-
    pub fn get(&self) -> &Vec<Sheet> {
       &self.0
    }
@@ -88,36 +72,36 @@ impl std::iter::FromIterator<Sheet> for Sheets {
 
 // Fast unsafe access to elements
 pub struct PtrSheets {
-   ptr: Vec<*const usize>,
+   ptr: Vec<usize>,
 }
 
 impl PtrSheets {
    pub fn create(sheets: &Sheets) -> Self {
       // Store raw pointers to elements
       let ptr = sheets.get().iter()
-      .map(|sheet| ptr::addr_of!(sheet.matrix[0]))
+      .map(|sheet| ptr::addr_of!(sheet.matrix[0]) as usize)
       .collect();
 
       Self { ptr }
    }
 
    pub fn get(&self, element_index: usize, serial: usize) -> usize {
-      unsafe{ self.ptr[element_index].add(serial).read() }
+      unsafe{ (self.ptr[element_index] as *const usize).add(serial).read() }
    }
 
    pub fn inc_amount(&self, element_index: usize, serial: usize, delta: usize) {
       unsafe{ 
-         let mut dest = self.ptr[element_index].add(serial);
+         let dest = (self.ptr[element_index] as *mut usize).add(serial);
          let new_val = dest.read().saturating_add(delta);
-         std::ptr::write(&mut dest, std::ptr::addr_of!(delta));
+         std::ptr::write(dest, new_val);
       }
    }
 
    pub fn dec_amount(&self, element_index: usize, serial: usize, delta: usize) {
-      unsafe{ 
-         let mut dest = self.ptr[element_index].add(serial);
+      unsafe{
+         let dest = (self.ptr[element_index] as *mut usize).add(serial);
          let new_val = dest.read().saturating_sub(delta);
-         std::ptr::write(&mut dest, std::ptr::addr_of!(delta));
+         std::ptr::write(dest, new_val);
       }
    }
 }

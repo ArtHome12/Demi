@@ -152,7 +152,7 @@ impl<'a> AnimalSheet {
 
       // Each point on the ground
       self.0
-      .iter_mut()
+      .par_iter_mut()
       .enumerate()
       .for_each(|(serial, animals)| {
          // Each organism at the point
