@@ -10,8 +10,8 @@ Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 
 use iced::button::{self, Button};
 use iced::{Checkbox, Align, Command, Element, Row, Text,};
-use crate::style;
 
+use crate::style;
 use crate::resources::*;
 
 pub struct Controls {

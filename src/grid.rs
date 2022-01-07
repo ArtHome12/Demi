@@ -14,11 +14,9 @@ use iced::{
    mouse, Color, Element, Length, Point, Rectangle,
    Size, Vector, VerticalAlignment,
 };
-use rustc_hash::FxHashSet;
 use std::{ops::RangeInclusive, rc::Rc, cell::RefCell};
 
 use crate::world::{World, };
-use crate::project;
 use crate::update_rate::*;
 
 pub struct Grid {
@@ -27,7 +25,7 @@ pub struct Grid {
    grid_cache: Cache,
    translation: Vector,
    scaling: f32,
-   pub world: World,
+   world: Rc<RefCell<World>>,
    fps: RefCell<FPS>,  // screen refresh rate
    tps: TPS, // model time rate, ticks per second
    illumination: bool,
@@ -52,14 +50,14 @@ impl Grid {
 
    const STATUS_BAR_HEIGHT: f32 = 30.0;
 
-   pub fn new(project: Rc<RefCell<project::Project>>) -> Self {
+   pub fn new(world: Rc<RefCell<World>>) -> Self {
       Self {
          interaction: Interaction::None,
          life_cache: Cache::default(),
          grid_cache: Cache::default(),
          translation: Vector::default(),
          scaling: 1.0,
-         world: World::new(project),
+         world,
          fps: RefCell::new(FPS::default()),
          tps: TPS::default(),
          illumination: false,
@@ -104,7 +102,7 @@ impl Grid {
       self.translation = new_translation;
 
       // World size in pixels
-      let crate::geom::Size {x: w, y: h} = self.world.size();
+      let crate::geom::Size {x: w, y: h} = self.world.borrow().size();
       let w = w as f32 * Self::CELL_SIZE;
       let h = h as f32 * Self::CELL_SIZE;
       // To prevent overflow translation in coninious world
@@ -118,7 +116,7 @@ impl Grid {
    // Update rate counters
    pub fn clock_chime(&mut self) {
       self.fps.borrow_mut().clock_chime();
-      self.tps.clock_chime(self.world.ticks_elapsed())
+      self.tps.clock_chime(self.world.borrow().ticks_elapsed())
    }
 
    pub fn set_illumination(&mut self, checked: bool) {
@@ -231,7 +229,7 @@ impl<'a> canvas::Program<Message> for Grid {
             for point in itertools::iproduct!(region.columns(), region.rows()) {
                // Get dot for point (allow display dot outside its real x and y)
                let (x, y) = point;
-               let dot = self.world.dot(x, y);
+               let dot = self.world.borrow().dot(x, y);
                let mut color = dot.color;
                if self.illumination {
                   color.a = 1.0;
@@ -249,7 +247,7 @@ impl<'a> canvas::Program<Message> for Grid {
                   frame.with_save(|frame| {
                      frame.translate(Vector::new(0.03, 0.03));
                      frame.fill_text(Text {
-                        content: self.world.description(&dot, lines_number, '\n'),
+                        content: self.world.borrow().description(&dot, lines_number, '\n'),
                         position: Point::new(x as f32, y as f32),
                         ..Text::default()
                      });
@@ -287,7 +285,7 @@ impl<'a> canvas::Program<Message> for Grid {
          };
 
          // Print FPS and model time
-         let (years, days) = self.world.date();
+         let (years, days) = self.world.borrow().date();
          frame.fill_text(Text{
             position: Point::new(3.0, frame_height - 3.0),
             content: format!("{}Y:{}D {} FPS {} TPS", years, days, self.fps.borrow().rate, self.tps.rate),
@@ -318,8 +316,8 @@ impl<'a> canvas::Program<Message> for Grid {
             });
 
             // Output info at bottom left edge
-            let dot = self.world.dot(x as isize, y as isize);
-            let description = self.world.description(&dot, 30, ' ');
+            let dot = self.world.borrow().dot(x as isize, y as isize);
+            let description = self.world.borrow().description(&dot, 30, ' ');
             frame.fill_text(Text{
                position: Point::new(210.0, frame_height - 3.0),
                content: format!("{}:{} {}", dot.x, dot.y, description),
@@ -340,7 +338,7 @@ impl<'a> canvas::Program<Message> for Grid {
          let columns = region.columns();
          let (total_rows, total_columns) = (rows.clone().count(), columns.clone().count());
          let (rows_start, columns_start) = (*rows.start() as f32, *columns.start() as f32);
-         let crate::geom::Size {x: world_width, y: world_height} = self.world.size();
+         let crate::geom::Size {x: world_width, y: world_height} = self.world.borrow().size();
 
          // Amount of lines for border around the world
          let outer_rows = total_rows / world_height;
@@ -437,27 +435,6 @@ impl<'a> canvas::Program<Message> for Grid {
    }
 }
 
-
-#[derive(Clone, Default)]
-pub struct Life {
-   cells: FxHashSet<Cell>,
-}
-
-impl std::iter::FromIterator<Cell> for Life {
-   fn from_iter<I: IntoIterator<Item = Cell>>(iter: I) -> Self {
-      Life {
-         cells: iter.into_iter().collect(),
-      }
-   }
-}
-
-impl std::fmt::Debug for Life {
-   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-      f.debug_struct("Life")
-         .field("cells", &self.cells.len())
-         .finish()
-   }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Cell {

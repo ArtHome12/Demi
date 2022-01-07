@@ -9,7 +9,7 @@ Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 use std::{collections::HashMap, };
-use std::fs;
+use std::{fs, };
 use std::sync::Arc;
 use serde_derive::Deserialize;
 
@@ -74,7 +74,6 @@ pub struct Project {
    pub elements: Vec<Element>,
    pub reactions: Reactions,
    pub luca: LucaAttributes, // first organism
-
 
    // Section for filter control
    pub vis_elem_indexes: Vec<usize>, // indexes of visible (non-filtered) elements
@@ -171,4 +170,5 @@ impl Project {
          iced::Color::BLACK
       }
    }
+
 }

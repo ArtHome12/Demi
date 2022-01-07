@@ -31,6 +31,7 @@ use iced::{Application, Column, Command, Container, Element, Length, Settings,
 };
 use std::time::{Duration, Instant};
 use std::{rc::Rc, cell::RefCell, };
+use rfd::*;
 
 
 #[tokio::main]
@@ -56,10 +57,12 @@ enum Message {
    ShowFilter(bool),
    Illuminate(bool),
    ToggleRun,
+   DialogSaveAs,
 }
 
 
 struct Demi {
+   world: Rc<RefCell<world::World>>,
    controls: project_controls::Controls,
    panes: pane_grid::State<Content>,
    grid_pane: Pane,
@@ -73,14 +76,21 @@ impl Application for Demi {
    type Flags = ();
 
    fn new(_flags: ()) -> (Self, Command<Message>) {
+      // Project contains info for create model
       let project = project::Project::new("./demi.toml");
-      let project = Rc::new(RefCell::new(project));
+
+      // World contains model and manage its evaluation
+      let world = world::World::new(project);
+      let world = Rc::new(RefCell::new(world));
+      let grid_world = Rc::clone(&world);
+
       let controls = project_controls::Controls::new(resources::Resources::new("./res"));
 
       // Put the grid into pane and get back ref to it
-      let (panes, grid_pane) = pane_grid::State::new(Content::new(PaneContent::Grid(Grid::new(project))));
+      let (panes, grid_pane) = pane_grid::State::new(Content::new(PaneContent::Grid(Grid::new(grid_world))));
       (
          Self {
+            world,
             controls,
             panes,
             grid_pane,
@@ -107,6 +117,7 @@ impl Application for Demi {
                project_controls::Message::ToggleRun => Some(Message::ToggleRun),
                project_controls::Message::ToggleIllumination(is_on) => Some(Message::Illuminate(is_on)),
                project_controls::Message::ToggleFilter(show) => Some(Message::ShowFilter(show)),
+               project_controls::Message::SaveAs => Some(Message::DialogSaveAs),
                _ => None,
             };
 
@@ -135,11 +146,9 @@ impl Application for Demi {
 
          Message::ShowFilter(show) => {
             if show {
-               // Get ref to the project from the grid
-               let project = self.grid_mut().world.project.clone();
-
                // Construct filter pane
-               let content = filter_control::Controls::new(project);
+               let w = self.world.clone();
+               let content = filter_control::Controls::new(w);
                let content = PaneContent::Filter(content);
                let content = Content::new(content);
                let pair = self.panes.split(Axis::Vertical, &self.grid_pane, content);
@@ -157,7 +166,9 @@ impl Application for Demi {
 
          Message::Illuminate(is_on) => self.grid_mut().set_illumination(is_on),
 
-         Message::ToggleRun => self.grid_mut().world.toggle_run(),
+         Message::ToggleRun => self.world.borrow().toggle_run(),
+
+         Message::DialogSaveAs => self.save_as(),
       }
       Command::none()
    }
@@ -213,6 +224,18 @@ impl Demi {
       match self.panes.get_mut(&pane).unwrap().content {
          PaneContent::Filter(ref mut elements) => elements,
          _ => panic!("filter_mut() Pane is not a filter_control::Controls"),
+      }
+   }
+
+   fn save_as(&self) {
+      let filename = FileDialog::new()
+      .add_filter("text", &["txt", "rs"])
+      .add_filter("rust", &["rs", "toml"])
+      .save_file();
+
+      if let Some(filename) = filename {
+         let mut world = self.world.borrow_mut();
+         world.save_as(filename);
       }
    }
 }

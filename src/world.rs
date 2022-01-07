@@ -8,30 +8,31 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use std::{rc::Rc, cell::RefCell, };
 use std::sync::{Arc, atomic::{Ordering, AtomicBool, AtomicUsize,}, Mutex, };
 use std::time::Duration;
+use std::path::PathBuf;
 
 use crate::{dot::Sheet, evolution::Evolution, environment::*};
 pub use crate::dot::{Dot, Sheets, PtrSheets};
 use crate::geom::*;
-use crate::project;
+use crate::project::Project;
 use crate::organism::*;
 
 pub struct World {
-   pub project: Rc<RefCell<project::Project>>,
+   pub project: Project,
    run_flag: Arc<AtomicBool>, // running when true else paused
    ticks_elapsed: Arc<AtomicUsize>, // model time - a number ticks elapsed from beginning
    env: Environment,
    elements_sheets: PtrSheets,
    animal_sheet: Arc<Mutex<AnimalSheet>>, // Mirror from Evaluation
+
+   pub bin_filename: Option<PathBuf>,
 }
 
 impl World {
-   pub fn new(project: Rc<RefCell<project::Project>>) -> Self {
+   pub fn new(project: Project) -> Self {
 
-      let project_cloned = project.clone();
-      let pr = project_cloned.borrow();
+      let pr = &project;
 
       let env = Environment::new(&pr);
 
@@ -84,13 +85,14 @@ impl World {
          env,
          elements_sheets,
          animal_sheet,
+         bin_filename: None,
       }
    }
 
    // Return dot at display position
    // The world must be continuous, the first point goes to the right (or bottom) of the last point again
    pub fn dot(&self, display_x: isize, display_y: isize) -> Dot {
-      let pr = self.project.borrow();
+      let pr = &self.project;
       let Size {x: width, y: height} = pr.size;
       let width = width as isize;
       let height = height as isize;
@@ -148,7 +150,7 @@ impl World {
 
    // Text to describe a point with a size constraint
    pub fn description(&self, dot: &Dot, max_lines: usize, delimiter: char) -> String {
-      let pr = self.project.borrow();
+      let pr = &self.project;
 
       // Underlying bit serial number for dot
       let serial_bit = self.env.serial(dot.x, dot.y);
@@ -207,13 +209,15 @@ impl World {
    }
 
    pub fn size(&self) -> Size {
-      self.project.borrow().size
+      self.project.size
    }
 
    pub fn date(&self) -> (usize, usize) {
       let now = self.ticks_elapsed();
       Environment::date(now)
    }
+
+   pub fn save_as(&mut self, filename: PathBuf) {
+      self.bin_filename = Some(filename);
+   }
 }
-
-

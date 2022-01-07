@@ -13,7 +13,7 @@ use iced::{Container, Element, Length, Column, Checkbox, scrollable, Scrollable,
    Align, Text,
 };
 
-use crate::project;
+use crate::world::World;
 
 
 #[derive(Debug, Clone)]
@@ -26,20 +26,20 @@ pub enum Message {
 
 pub struct Controls {
    scroll: scrollable::State,
-   project: Rc<RefCell<project::Project>>,
+   world: Rc<RefCell<World>>,
 }
 
 impl Controls {
-   pub fn new(project: Rc<RefCell<project::Project>>) -> Self {
+   pub fn new(world: Rc<RefCell<World>>) -> Self {
       Self{
          scroll: scrollable::State::new(),
-         project,
+         world,
       }
    }
 
    pub fn update(&mut self, message: Message) {
       // Storage for visible items
-      let mut pr = self.project.borrow_mut();
+      let mut pr = &mut self.world.borrow_mut().project;
 
       match message {
          Message::ItemToggledElement(index, checked) => {
@@ -65,7 +65,7 @@ impl Controls {
 
    pub fn view(&mut self) -> Element<Message> {
 
-      let pr = self.project.borrow();
+      let pr = &self.world.borrow().project;
       
       let elements_check_boxes = pr.elements
       .iter()
