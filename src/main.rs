@@ -31,7 +31,6 @@ use iced::{Application, Column, Command, Container, Element, Length, Settings,
 };
 use std::time::{Duration, Instant};
 use std::{rc::Rc, cell::RefCell, };
-use rfd::*;
 
 
 #[tokio::main]
@@ -57,7 +56,7 @@ enum Message {
    ShowFilter(bool),
    Illuminate(bool),
    ToggleRun,
-   DialogSaveAs,
+   WorldSave,
 }
 
 
@@ -117,7 +116,7 @@ impl Application for Demi {
                project_controls::Message::ToggleRun => Some(Message::ToggleRun),
                project_controls::Message::ToggleIllumination(is_on) => Some(Message::Illuminate(is_on)),
                project_controls::Message::ToggleFilter(show) => Some(Message::ShowFilter(show)),
-               project_controls::Message::SaveAs => Some(Message::DialogSaveAs),
+               project_controls::Message::Save => Some(Message::WorldSave),
                _ => None,
             };
 
@@ -168,7 +167,7 @@ impl Application for Demi {
 
          Message::ToggleRun => self.world.borrow().toggle_run(),
 
-         Message::DialogSaveAs => self.save_as(),
+         Message::WorldSave => self.world.borrow().save(),
       }
       Command::none()
    }
@@ -227,17 +226,6 @@ impl Demi {
       }
    }
 
-   fn save_as(&self) {
-      let filename = FileDialog::new()
-      .add_filter("text", &["txt", "rs"])
-      .add_filter("rust", &["rs", "toml"])
-      .save_file();
-
-      if let Some(filename) = filename {
-         let mut world = self.world.borrow_mut();
-         world.save_as(filename);
-      }
-   }
 }
 
 enum PaneContent {

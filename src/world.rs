@@ -10,7 +10,6 @@ Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 
 use std::sync::{Arc, atomic::{Ordering, AtomicBool, AtomicUsize,}, Mutex, };
 use std::time::Duration;
-use std::path::PathBuf;
 
 use crate::{dot::Sheet, evolution::Evolution, environment::*};
 pub use crate::dot::{Dot, Sheets, PtrSheets};
@@ -25,8 +24,6 @@ pub struct World {
    env: Environment,
    elements_sheets: PtrSheets,
    animal_sheet: Arc<Mutex<AnimalSheet>>, // Mirror from Evaluation
-
-   pub bin_filename: Option<PathBuf>,
 }
 
 impl World {
@@ -85,7 +82,6 @@ impl World {
          env,
          elements_sheets,
          animal_sheet,
-         bin_filename: None,
       }
    }
 
@@ -217,7 +213,7 @@ impl World {
       Environment::date(now)
    }
 
-   pub fn save_as(&mut self, filename: PathBuf) {
-      self.bin_filename = Some(filename);
+   pub fn save(&self) {
+      // self.bin_filename = Some(filename);
    }
 }

@@ -25,10 +25,8 @@ pub struct Controls {
    filter_button: button::State,
 
    new_button: button::State,
-   open_button: button::State,
+   load_button: button::State,
    save_button: button::State,
-   save_as_button: button::State,
-   restart_button: button::State,
    pause_button: button::State,
 
    res: Resources,
@@ -46,10 +44,8 @@ impl Controls {
          illuminate_button: button::State::default(),
          filter_button: button::State::default(),
          new_button: button::State::default(),
-         open_button: button::State::default(),
+         load_button: button::State::default(),
          save_button: button::State::default(),
-         save_as_button: button::State::default(),
-         restart_button: button::State::default(),
          pause_button: button::State::default(),
          res,
       }
@@ -114,10 +110,10 @@ impl Controls {
 
       .push(
          Button::new(
-               &mut self.open_button,
-               Text::new("Open"),
+               &mut self.load_button,
+               Text::new("Load"),
          )
-         .on_press(Message::Open)
+         .on_press(Message::Load)
          .style(style::Button),
       )
 
@@ -127,24 +123,6 @@ impl Controls {
                Text::new("Save"),
          )
          .on_press(Message::Save)
-         .style(style::Button),
-      )
-
-      .push(
-         Button::new(
-               &mut self.save_as_button,
-               Text::new("Save as"),
-         )
-         .on_press(Message::SaveAs)
-         .style(style::Button),
-      )
-
-      .push(
-         Button::new(
-               &mut self.restart_button,
-               Text::new("Restart"),
-         )
-         .on_press(Message::Restart)
          .style(style::Button),
       )
 
@@ -171,10 +149,8 @@ pub enum Message {
    ToggleIllumination(bool),
    ToggleFilter(bool),
    New,
-   Open,
+   Load,
    Save,
-   SaveAs,
-   Restart,
    ToggleRun,
    ToggleAutosave(bool),
    ToggleAutorun(bool),
