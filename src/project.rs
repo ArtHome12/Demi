@@ -76,8 +76,8 @@ pub struct Project {
    pub luca: LucaAttributes, // first organism
 
    // Section for filter control
-   pub vis_elem_indexes: Vec<usize>, // indexes of visible (non-filtered) elements
-   pub vis_reac_hash: HashMap<String, bool>,
+   pub vis_elem_indexes: Vec<bool>, // indexes of visible (non-filtered) elements
+   pub vis_reac_indexes: Vec<bool>, // indexes of visible (non-filtered) reactions
    pub vis_dead: bool,
 }
 
@@ -139,10 +139,8 @@ impl Project {
 
       // At start all elements should be visible, collect its indexes
       let len = toml.elements.len();
-      let vis_elem_indexes = (0..len).collect();
-      let vis_reac_hash = reactions.iter()
-      .map(|r| {(r.name.to_owned(), true)})
-      .collect();
+      let vis_elem_indexes = vec![true; len];
+      let vis_reac_indexes = vec![true; len];
 
       // Check data for first organism
       let reaction_name = &toml.luca.digestion;
@@ -156,7 +154,7 @@ impl Project {
          reactions,
          luca: toml.luca.to_owned(),
          vis_elem_indexes,
-         vis_reac_hash,
+         vis_reac_indexes,
          vis_dead: true,
       }
    }

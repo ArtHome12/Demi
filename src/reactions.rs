@@ -42,8 +42,18 @@ impl Reactions {
       })
    }
 
+   pub fn index(&self, name: &String) -> Option<usize> {
+      self.0.iter()
+      .position(|r| &r.name == name)
+   }
+
    pub fn iter(&self) -> Iter<'_, Arc::<Reaction>> {
       self.0.iter()
+   }
+
+   pub fn get(&self, index: usize) -> Arc::<Reaction> {
+      let r = &self.0[index];
+      r.clone()
    }
 }
 

@@ -43,8 +43,10 @@ impl World {
       let animal_sheet = AnimalSheet::new(pr.size);
       let animal_sheet = Arc::new(Mutex::new(animal_sheet));
 
+      let reactions = pr.reactions.clone();
+
       // Evolution algorithm
-      let mut evolution = Evolution::new(sheets, Arc::clone(&animal_sheet));
+      let mut evolution = Evolution::new(sheets, Arc::clone(&animal_sheet), reactions);
 
       // Store raw pointers to elements
       let elements_sheets = PtrSheets::create(&evolution.sheets);
@@ -123,26 +125,35 @@ impl World {
       let stack = unlocked_sheet.get(serial_bit);
 
       // Among animals determines with visible reaction and alive or not
-      let first_suitable = stack.iter()
-      .find(|o| {
+      let animal_color = stack.iter()
+      .find_map(|o| {
          // Need to be visible and alive or not
-         let reaction = &o.gene_digestion.reaction.name;
-         let visible = pr.vis_reac_hash.get(reaction).unwrap();
-         *visible && (pr.vis_dead || o.alive())
+         let reaction = o.reaction_index();
+         let visible = pr.vis_reac_indexes[reaction];
+         if visible && (pr.vis_dead || o.alive()) {
+            let reaction = pr.reactions.get(reaction);
+            Some(reaction.color)
+         } else {
+            None
+         }
       });
 
-      let mut color = if let Some(organism) = first_suitable {
-         organism.color()
+      let mut color = if let Some(color) = animal_color {
+         color
       } else {
          // Among elements color determines the element with non-zero amount among visible (non-filtered)
-         let color_index = pr.vis_elem_indexes.iter().find(|i| {
-            // sheet with [0] for energy
-            let amount = self.elements_sheets.get(**i, serial_bit);
-            amount > 0
+         let color = pr.vis_elem_indexes.iter()
+         .enumerate()
+         .find_map(|(item_index, visible)| {
+            if *visible && self.elements_sheets.get(item_index, serial_bit) > 0 {
+               Some(pr.elements[item_index].color)
+            } else {
+               None
+            }
          });
          
-         if let Some(color_index) = color_index {
-            pr.elements[*color_index].color
+         if let Some(color) = color {
+            color
          } else {
             iced::Color::BLACK
          }
@@ -166,39 +177,39 @@ impl World {
 
       let mut remaining_lines = max_lines;
 
+      // Collect info among animals
+      let unlocked_sheet = self.animal_sheet.lock().unwrap();
+      let stack = unlocked_sheet.get(serial_bit);
+
+      // Among animals determines with visible reaction and alive or not
+      let filtered_animals = stack.iter()
+      .filter(|o| {
+         // Need to be visible and alive or not
+         let reaction = o.reaction_index();
+         let visible = pr.vis_reac_indexes[reaction];
+         visible && (pr.vis_dead || o.alive())
+      });
+
       // Animal world
-      let animal_desc = if let Ok(animals) = self.animal_sheet.lock() {
-         // Filter suitable organisms at the point
-         let stack = animals.get(serial_bit)
-         .iter()
-         .filter(|o| {
-            // Need to be visible and alive or not
-            let reaction = &o.gene_digestion.reaction.name;
-            let visible = pr.vis_reac_hash.get(reaction).unwrap();
-            *visible && (pr.vis_dead || o.alive())
-         });
+      let animal_desc = filtered_animals
+      .take(max_lines)
+      .fold(String::default(), |acc, o| {
+         // After death, the date of birth contains the age at death
+         let age = if o.alive() { now.saturating_sub(o.birthday) } else { o.birthday };
+         
+         // Decrease max lines (side effect)
+         remaining_lines -= 1;
 
-         // Make descroption
-         stack
-         .take(max_lines)
-         .fold(String::default(), |acc, o| {
-            // After death, the date of birth contains the age at death
-            let age = if o.alive() { now.saturating_sub(o.birthday) } else { o.birthday };
-            
-            // Decrease max lines (side effect)
-            remaining_lines -= 1;
-
-            format!("{}[{}۩ {}]{}", acc, age, o, delimiter)
-         })
-      } else {
-         String::default()
-      };
+         format!("{}[{}۩ {}]{}", acc, age, o, delimiter)
+      });
 
       // Inanimal world
       pr.vis_elem_indexes.iter()
+      .enumerate()
+      .filter(|(_index, vis)| **vis)
       .take(remaining_lines)
-      .fold(animal_desc, |acc, vis_index| {
-         format!("{}{}: {}{}", acc, pr.elements[*vis_index].name, self.elements_sheets.get(*vis_index, serial_bit), delimiter)
+      .fold(animal_desc, |acc, (vis_index, _)| {
+         format!("{}{}: {}{}", acc, pr.elements[vis_index].name, self.elements_sheets.get(vis_index, serial_bit), delimiter)
       })
    }
 

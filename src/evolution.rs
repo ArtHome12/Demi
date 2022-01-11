@@ -17,12 +17,14 @@ use crate::dot::*;
 use crate::geom::*;
 use crate::environment::*;
 use crate::organism::*;
+use crate::reactions::Reactions;
 
 pub struct Evolution {
 
    // Solar energy and elements
    pub sheets: Sheets,
 
+   reactions: Reactions,
    // organisms: Organisms, // separate list of organisms
    animal_sheet: AnimalSheet, // organisms at points of the world
    mirror: Arc<Mutex<AnimalSheet>>, // mirror for world
@@ -30,12 +32,13 @@ pub struct Evolution {
 
 impl Evolution {
 
-   pub fn new(sheets: Sheets, animal_sheet: Arc<Mutex<AnimalSheet>>) -> Self {
+   pub fn new(sheets: Sheets, animal_sheet: Arc<Mutex<AnimalSheet>>, reactions: Reactions) -> Self {
       // Extract initial values from mirror
       let animals = animal_sheet.lock().unwrap().clone();
 
       Self {
          sheets,
+         reactions,
          // organisms: Vec::new(),
          animal_sheet: animals,
          mirror: animal_sheet,
@@ -74,7 +77,7 @@ impl Evolution {
       // Behavior
       Evolution::transfer(env, &mut self.animal_sheet);
       Evolution::escape(env, &mut self.animal_sheet);
-      Evolution::digestion(env, &mut self.sheets, &mut self.animal_sheet);
+      Evolution::digestion(env, &mut self.sheets, &mut self.animal_sheet, &self.reactions);
       Evolution::attack(env, &mut self.animal_sheet);
       Evolution::catch(env, &mut self.animal_sheet);
       Evolution::cheese(env, &mut self.animal_sheet);
@@ -176,8 +179,8 @@ impl Evolution {
    }
 
 
-   fn digestion(_env: &Environment, elements: &mut Sheets, animals_sheet: &mut AnimalSheet) {
-      animals_sheet.digestion(elements)
+   fn digestion(_env: &Environment, elements: &mut Sheets, animals_sheet: &mut AnimalSheet, reactions: &Reactions) {
+      animals_sheet.digestion(elements, reactions)
    }
 
 

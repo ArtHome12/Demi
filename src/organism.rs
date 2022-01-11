@@ -14,6 +14,7 @@ use rayon::prelude::*;
 
 use crate::geom::*;
 use crate::genes::*;
+use crate::reactions::Reactions;
 use crate::dot::*;
 
 // pub type Organisms = Vec<Weak<Organism>>;
@@ -22,7 +23,7 @@ use crate::dot::*;
 pub struct Organism {
    pub vitality: usize,
    pub birthday: usize,
-   pub gene_digestion: Digestion,
+   gene_digestion: Digestion,
    metabolism: usize,
    gene_reproduction: Reproduction,
 }
@@ -44,9 +45,10 @@ impl Organism {
    }
 
 
-   pub fn digestion(&mut self, ptr: &PtrSheets, serial: usize) {
+   pub fn digestion(&mut self, ptr: &PtrSheets, serial: usize, reactions: &Reactions) {
       // Check the availability of resources for digestion
-      let r = &self.gene_digestion.reaction;
+      let r = self.gene_digestion.reaction;
+      let r = reactions.get(r);
       let avail = r.left.iter().all(|reagent| {
             reagent.amount <= ptr.get(reagent.index, serial)
          });
@@ -95,9 +97,8 @@ impl Organism {
       }
    }
 
-
-   pub fn color(&self) -> iced::Color {
-      self.gene_digestion.reaction.color
+   pub fn reaction_index(&self) -> usize {
+      self.gene_digestion.reaction
    }
 }
 
@@ -147,7 +148,7 @@ impl<'a> AnimalSheet {
    }
 
 
-   pub fn digestion(&mut self, elements: &mut Sheets) {
+   pub fn digestion(&mut self, elements: &mut Sheets, reactions: &Reactions) {
       let ptr_elements = PtrSheets::create(elements);
 
       // Each point on the ground
@@ -160,7 +161,7 @@ impl<'a> AnimalSheet {
          .iter_mut()
          .filter(|animal| animal.alive())
          .for_each(|animal| {
-            animal.digestion(&ptr_elements, serial)
+            animal.digestion(&ptr_elements, serial, reactions)
          })
       })
    }

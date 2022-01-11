@@ -19,7 +19,7 @@ use crate::world::World;
 #[derive(Debug, Clone)]
 pub enum Message {
    ItemToggledElement(usize, bool), // index, checked
-   ItemToggledAnimal(String, bool), // index, checked
+   ItemToggledAnimal(usize, bool), // index, checked
    ItemToggledDead(bool), // index, checked
 }
 
@@ -42,23 +42,8 @@ impl Controls {
       let mut pr = &mut self.world.borrow_mut().project;
 
       match message {
-         Message::ItemToggledElement(index, checked) => {
-
-            // Insert or remove index to the corresponding list
-            if checked {
-               pr.vis_elem_indexes.push(index);
-
-               // Keep order from first to last to correctly select the color of the first non-empty element
-               pr.vis_elem_indexes.sort();
-            } else {
-               pr.vis_elem_indexes.retain(|value| *value != index);
-            }
-         }
-
-         Message::ItemToggledAnimal(name, checked) => {
-            let r = pr.vis_reac_hash.get_mut(&name).unwrap();
-            *r = checked;
-         }
+         Message::ItemToggledElement(index, checked) => pr.vis_elem_indexes[index] = checked,
+         Message::ItemToggledAnimal(index, checked) => pr.vis_reac_indexes[index] = checked,
          Message::ItemToggledDead(checked) => pr.vis_dead = checked,
       }
   }
@@ -72,7 +57,7 @@ impl Controls {
       .enumerate()
       .fold(Column::new().spacing(10), |column, (index, item)| {
          column.push(Checkbox::new(
-            pr.vis_elem_indexes.contains(&index),
+            pr.vis_elem_indexes[index],
             &item.name,
             move |b| Message::ItemToggledElement(index, b),
             ).text_size(16)
@@ -90,14 +75,13 @@ impl Controls {
 
       let animal_check_boxes = pr.reactions
       .iter()
-      .fold(Column::new().spacing(10), |column, reaction| {
+      .enumerate()
+      .fold(Column::new().spacing(10), |column, (index, item)| {
          // Reaction name
-         let name = reaction.name.to_owned();
-         let is_checked = *pr.vis_reac_hash.get(&name).unwrap();
          column.push(Checkbox::new(
-            is_checked,
-            name.to_owned(),
-            move |b| Message::ItemToggledAnimal(name.to_owned(), b),
+            pr.vis_reac_indexes[index],
+            &item.name,
+            move |b| Message::ItemToggledAnimal(index, b),
             ).text_size(16)
             .size(16)
          )

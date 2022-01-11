@@ -8,8 +8,6 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use std::sync::Arc;
-
 use crate::geom::*;
 use crate::project::{Project, };
 use crate::reactions::Reactions;
@@ -61,8 +59,7 @@ impl Environment {
       // Create first organism
       let reactions = project.reactions.to_owned();
       let reaction = &project.luca.digestion;
-      let reaction = reactions.find(reaction).unwrap();
-      let reaction = Arc::clone(reaction);
+      let reaction = reactions.index(reaction).unwrap();
       let vitality = 3 * world_size.x;   // hold out for 3 days
       let level = 3 * vitality;  // grow 3 times to start breeding
       let luca = Organism::new(vitality, 0,
