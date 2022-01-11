@@ -73,7 +73,7 @@ impl Controls {
       .text_size(16)
       .size(16);
 
-      let animal_check_boxes = pr.reactions
+      let animal_check_boxes = pr.ui_reactions
       .iter()
       .enumerate()
       .fold(Column::new().spacing(10), |column, (index, item)| {

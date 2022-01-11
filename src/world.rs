@@ -131,7 +131,7 @@ impl World {
          let reaction = o.reaction_index();
          let visible = pr.vis_reac_indexes[reaction];
          if visible && (pr.vis_dead || o.alive()) {
-            let reaction = pr.reactions.get(reaction);
+            let reaction = pr.ui_reactions.get(reaction);
             Some(reaction.color)
          } else {
             None

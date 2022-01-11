@@ -10,7 +10,6 @@ Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 
 use std::{collections::HashMap, };
 use std::{fs, };
-use std::sync::Arc;
 use serde_derive::Deserialize;
 
 use crate::geom::*;
@@ -73,6 +72,7 @@ pub struct Project {
    pub resolution: f32,
    pub elements: Vec<Element>,
    pub reactions: Reactions,
+   pub ui_reactions: UIReactions,
    pub luca: LucaAttributes, // first organism
 
    // Section for filter control
@@ -126,16 +126,21 @@ impl Project {
          }
       }).collect();
 
-      // Read reactions
+      // Read reactions twice, for model and for UI
       let reactions = toml.chemical.iter().map(|val| {
-         Arc::new(Reaction {
+         Reaction {
             vitality: val.vitality,
             left: do_reagents(&elements, &val.left),
             right: do_reagents(&elements, &val.right),
+         }
+      }).collect::<Reactions>();
+
+      let ui_reactions = toml.chemical.iter().map(|val| {
+         UIReaction {
             name: val.name.to_owned(),
             color: Project::color_by_name(&toml, &val.color),
-         })
-      }).collect::<Reactions>();
+         }
+      }).collect::<UIReactions>();
 
       // At start all elements should be visible, collect its indexes
       let len = toml.elements.len();
@@ -144,7 +149,7 @@ impl Project {
 
       // Check data for first organism
       let reaction_name = &toml.luca.digestion;
-      let _ = reactions.find(reaction_name)
+      let _ = ui_reactions.index(reaction_name)
       .expect(&format!("Unknown reaction for digestion LUCA {}", reaction_name));
 
       Self {
@@ -152,6 +157,7 @@ impl Project {
          resolution: toml.resolution,
          elements,
          reactions,
+         ui_reactions,
          luca: toml.luca.to_owned(),
          vis_elem_indexes,
          vis_reac_indexes,

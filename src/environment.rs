@@ -10,7 +10,7 @@ Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 
 use crate::geom::*;
 use crate::project::{Project, };
-use crate::reactions::Reactions;
+use crate::reactions::UIReactions;
 use crate::organism::Organism;
 use crate::genes::*;
 
@@ -35,7 +35,7 @@ pub struct Environment {
    pub bits_count: usize,
 
    // List of chemical reactions for digestion
-   pub reactions: Reactions,
+   pub reactions: UIReactions,
 
    // First organism
    pub luca: Organism,
@@ -57,7 +57,7 @@ impl Environment {
       let num_points_to_diffuse = (bits_count as f32 * project.resolution) as usize;
 
       // Create first organism
-      let reactions = project.reactions.to_owned();
+      let reactions = project.ui_reactions.to_owned();
       let reaction = &project.luca.digestion;
       let reaction = reactions.index(reaction).unwrap();
       let vitality = 3 * world_size.x;   // hold out for 3 days
