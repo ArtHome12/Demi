@@ -9,7 +9,7 @@ Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 use std::sync::{Arc, atomic::{Ordering, AtomicBool, AtomicUsize,}, Mutex, };
-use std::time::Duration;
+use std::time::{Duration, Instant, };
 
 use crate::{dot::Sheet, evolution::Evolution, environment::*};
 pub use crate::dot::{Dot, Sheets, PtrSheets};
@@ -19,7 +19,8 @@ use crate::organism::*;
 
 pub struct World {
    pub project: Project,
-   run_flag: Arc<AtomicBool>, // running when true else paused
+   run_flag: Arc<AtomicBool>, // requirement for thread run if true else pause
+   state_flag: Arc<AtomicBool>, // actual state of thread
    ticks_elapsed: Arc<AtomicUsize>, // model time - a number ticks elapsed from beginning
    env: Environment,
    elements_sheets: PtrSheets,
@@ -51,6 +52,8 @@ impl World {
       // Flags for thread control
       let run_flag = Arc::new(AtomicBool::new(false));
       let run_flag_threaded = Arc::clone(&run_flag);
+      let state_flag = Arc::new(AtomicBool::new(false));
+      let state_flag_threaded = Arc::clone(&state_flag);
 
       // The model time
       let ticks_elapsed = Arc::new(AtomicUsize::new(0));
@@ -59,18 +62,24 @@ impl World {
       // Thread for calculate evolution
       let cloned_env = env.clone();
       tokio::task::spawn_blocking(move || {
+         let sleep_time = Duration::from_millis(100);
+         
          // Running until program not closed
          loop {
 
             // Sleep if it paused
             if run_flag_threaded.load(Ordering::Acquire) {
+               // Transfer signal to parent
+               state_flag_threaded.store(true, Ordering::Release);
+
                // Increase model time
                let tick = ticks_elapsed_threaded.fetch_add(1, Ordering::Relaxed);
 
                // Calculate the tick of evolution
                evolution.make_tick(&cloned_env, tick);
             } else {
-               std::thread::sleep(Duration::from_millis(100));
+               state_flag_threaded.store(false, Ordering::Release);
+               std::thread::sleep(sleep_time);
             }
          }
       });
@@ -78,6 +87,7 @@ impl World {
       Self {
          project,
          run_flag,
+         state_flag,
          ticks_elapsed,
          env,
          elements_sheets,
@@ -213,7 +223,35 @@ impl World {
       Environment::date(now)
    }
 
+   fn await_for_stop_thread_or_panic(&self) {
+      let timeout = Duration::from_secs(5);
+      let sleep_time = Duration::from_millis(100);
+      let now = Instant::now();
+
+      while now.elapsed() < timeout {
+         let run = self.state_flag.load(Ordering::Acquire);
+         if !run {
+            return;
+         }
+         std::thread::sleep(sleep_time);
+      }
+      panic!("await_for_stop_thread too long")
+   }
+
+
    pub fn save(&self) {
-      // self.bin_filename = Some(filename);
+      // Stop evaluate if running
+      let prev_state = self.run_flag.load(Ordering::Acquire);
+      if prev_state {
+         self.toggle_run();
+      }
+
+      // Await for stop
+      self.await_for_stop_thread_or_panic();
+
+      // Resume evaluation if nesessary
+      if prev_state {
+         self.toggle_run();
+      }
    }
 }
