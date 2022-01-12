@@ -39,25 +39,25 @@ impl Controls {
 
    pub fn update(&mut self, message: Message) {
       // Storage for visible items
-      let mut pr = &mut self.world.borrow_mut().project;
+      let world = &mut self.world.borrow_mut();
 
       match message {
-         Message::ItemToggledElement(index, checked) => pr.vis_elem_indexes[index] = checked,
-         Message::ItemToggledAnimal(index, checked) => pr.vis_reac_indexes[index] = checked,
-         Message::ItemToggledDead(checked) => pr.vis_dead = checked,
+         Message::ItemToggledElement(index, checked) => world.vis_elem_indexes[index] = checked,
+         Message::ItemToggledAnimal(index, checked) => world.vis_reac_indexes[index] = checked,
+         Message::ItemToggledDead(checked) => world.vis_dead = checked,
       }
   }
 
    pub fn view(&mut self) -> Element<Message> {
 
-      let pr = &self.world.borrow().project;
+      let world = &self.world.borrow();
       
-      let elements_check_boxes = pr.elements
+      let elements_check_boxes = world.elements
       .iter()
       .enumerate()
       .fold(Column::new().spacing(10), |column, (index, item)| {
          column.push(Checkbox::new(
-            pr.vis_elem_indexes[index],
+            world.vis_elem_indexes[index],
             &item.name,
             move |b| Message::ItemToggledElement(index, b),
             ).text_size(16)
@@ -66,20 +66,20 @@ impl Controls {
       });
 
       let dead_check_box = Checkbox::new(
-         pr.vis_dead,
+         world.vis_dead,
          "Include dead",
          move |b| Message::ItemToggledDead(b),
          )
       .text_size(16)
       .size(16);
 
-      let animal_check_boxes = pr.ui_reactions
+      let animal_check_boxes = world.ui_reactions
       .iter()
       .enumerate()
       .fold(Column::new().spacing(10), |column, (index, item)| {
          // Reaction name
          column.push(Checkbox::new(
-            pr.vis_reac_indexes[index],
+            world.vis_reac_indexes[index],
             &item.name,
             move |b| Message::ItemToggledAnimal(index, b),
             ).text_size(16)

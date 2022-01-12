@@ -76,14 +76,14 @@ impl Evolution {
 
       // Behavior
       Evolution::transfer(env, &mut self.animal_sheet);
-      Evolution::escape(env, &mut self.animal_sheet);
-      Evolution::digestion(env, &mut self.sheets, &mut self.animal_sheet, &self.reactions);
-      Evolution::attack(env, &mut self.animal_sheet);
-      Evolution::catch(env, &mut self.animal_sheet);
-      Evolution::cheese(env, &mut self.animal_sheet);
-      Evolution::walk(env, &mut self.animal_sheet);
-      Evolution::reproduction(env, &mut self.animal_sheet, tick);
-      Evolution::end_of_turn(env, &mut self.animal_sheet, tick);
+      Evolution::escape(&mut self.animal_sheet);
+      Evolution::digestion(&mut self.sheets, &mut self.animal_sheet, &self.reactions);
+      Evolution::attack(&mut self.animal_sheet);
+      Evolution::catch(&mut self.animal_sheet);
+      Evolution::cheese(&mut self.animal_sheet);
+      Evolution::walk(&mut self.animal_sheet);
+      Evolution::reproduction(&mut self.animal_sheet, tick);
+      Evolution::end_of_turn(&mut self.animal_sheet, tick);
 
       // Transfer data to mirror if there no delay
       if let Ok(ref mut mirror) = self.mirror.try_lock() {
@@ -174,42 +174,42 @@ impl Evolution {
    }
 
 
-   fn escape(_env: &Environment, _sheet: &mut AnimalSheet) {
+   fn escape(_sheet: &mut AnimalSheet) {
       // At this stage there are no predators
    }
 
 
-   fn digestion(_env: &Environment, elements: &mut Sheets, animals_sheet: &mut AnimalSheet, reactions: &Reactions) {
+   fn digestion(elements: &mut Sheets, animals_sheet: &mut AnimalSheet, reactions: &Reactions) {
       animals_sheet.digestion(elements, reactions)
    }
 
 
-   fn attack(_env: &Environment, _sheet: &mut AnimalSheet) {
+   fn attack(_sheet: &mut AnimalSheet) {
       // At this stage there are no predators
    }
 
 
-   fn catch(_env: &Environment, _sheet: &mut AnimalSheet) {
+   fn catch(_sheet: &mut AnimalSheet) {
       // At this stage there are no predators
    }
 
 
-   fn cheese(_env: &Environment, _sheet: &mut AnimalSheet) {
+   fn cheese(_sheet: &mut AnimalSheet) {
       // At this stage there are no muscle
    }
 
 
-   fn walk(_env: &Environment, _sheet: &mut AnimalSheet) {
+   fn walk(_sheet: &mut AnimalSheet) {
       // At this stage there are no walk
    }
 
 
-   fn reproduction(_env: &Environment, animals_sheet: &mut AnimalSheet, now: usize) {
+   fn reproduction(animals_sheet: &mut AnimalSheet, now: usize) {
       animals_sheet.reproduction(now)
    }
 
 
-   fn end_of_turn(_env: &Environment, sheet: &mut AnimalSheet, now: usize) {
+   fn end_of_turn(sheet: &mut AnimalSheet, now: usize) {
       sheet.end_of_turn(now)
    }
 

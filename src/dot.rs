@@ -25,7 +25,7 @@ pub struct Dot {
 }
 
 // Storage amount by points of one element
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Sheet {
    pub matrix: Vec<usize>,
 

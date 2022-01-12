@@ -11,16 +11,6 @@ Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 use rand::prelude::*;
 use rand::distributions::Uniform;
 
-// Environment around the organism
-/* pub struct State {
-   transfer: bool,
-   escape: bool,
-   digestion: bool,
-   attack: bool,
-   rush: bool,
-   cheese: bool,
-} */
-
 
 pub struct Randoms {
    rng: ThreadRng,
@@ -71,4 +61,3 @@ impl Gene for Reproduction {
       Self { level }
    }
 }
-

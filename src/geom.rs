@@ -11,20 +11,24 @@ Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 use serde_derive::Deserialize;
 
 #[derive(Debug, Clone, Copy, Deserialize, )]
-pub struct Size {
+pub struct Coord {
    pub x: usize,
    pub y: usize,
 }
 
-pub type Coord = Size;
+pub type Size = Coord;
 
-impl Size {
+impl Coord {
    pub fn new(x: usize, y: usize) -> Self {
       Self {x, y}
    }
 
    // Serial number of a dot with this coordinates
-   pub fn serial(&self) -> usize {
+   pub fn serial(&self, x: usize, y: usize) -> usize {
+      y * self.x + x
+   }
+
+   pub fn max_serial(&self) -> usize {
       self.x * self.y
    }
 }

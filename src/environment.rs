@@ -9,12 +9,10 @@ Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 use crate::geom::*;
-use crate::project::{Project, };
-use crate::reactions::UIReactions;
 use crate::organism::Organism;
 use crate::genes::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Environment {
    // World size
    pub world_size: Size,
@@ -25,17 +23,11 @@ pub struct Environment {
    // The course of the Sun vertically, due to the inclination of the earth axis, approximately sin (23.5) = 0.4 or 10% on each side of the equator
 	pub tropic_height: f32,
 
-   // Number of elements
-   pub elements_count: usize,
-
    // How many bits to move (diffusion) elements in one tick
    pub num_points_to_diffuse: usize,
 
    // Range for serial number of all bits
    pub bits_count: usize,
-
-   // List of chemical reactions for digestion
-   pub reactions: UIReactions,
 
    // First organism
    pub luca: Organism,
@@ -47,23 +39,18 @@ impl Environment {
    const DAYS_PER_YEAR: f32 = Self::TICKS_PER_DAY * 365.0;
    const HALF_YEAR: f32 = Self::DAYS_PER_YEAR / 2.0 + 0.5;
 
-   pub fn new(project: &Project) -> Self {
-      let element_count = project.elements.len();
-      let world_size = project.size;
+   pub fn new(world_size: Size, resolution: f32, luca_reaction: usize) -> Self {
       let world_height = world_size.y;
 
       // How many bits to move (diffusion) elements in one tick
       let bits_count = world_size.x * world_height;
-      let num_points_to_diffuse = (bits_count as f32 * project.resolution) as usize;
+      let num_points_to_diffuse = (bits_count as f32 * resolution) as usize;
 
       // Create first organism
-      let reactions = project.ui_reactions.to_owned();
-      let reaction = &project.luca.digestion;
-      let reaction = reactions.index(reaction).unwrap();
       let vitality = 3 * world_size.x;   // hold out for 3 days
       let level = 3 * vitality;  // grow 3 times to start breeding
       let luca = Organism::new(vitality, 0,
-         Digestion { reaction },
+         Digestion { reaction: luca_reaction },
          Reproduction { level },
       );
 
@@ -71,10 +58,8 @@ impl Environment {
          world_size,
          light_radius: (0.8 * world_height as f32 / 2.0) as usize,
          tropic_height: world_height as f32 / 5.0,
-         elements_count: element_count,
          num_points_to_diffuse,
          bits_count,
-         reactions,
          luca,
       }
    }
@@ -105,11 +90,6 @@ impl Environment {
       let years = (days / Self::DAYS_PER_YEAR) as usize;
       let days = (days % Self::DAYS_PER_YEAR) as usize;
       (years, days)
-   }
-
-   // Convert coordinates to serial number of bit
-   pub fn serial(&self, x: usize, y: usize) -> usize {
-      y * self.world_size.x + x
    }
 
    // Return serial number of bit at direction without checking bounds

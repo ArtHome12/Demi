@@ -22,7 +22,6 @@ struct Toml {
    pub width: usize,
    pub height_ratio: f32,
    resolution: f32,
-
    elements: Vec<ElementAttributes>,
    chemical: Vec<ReactionAttributes>,
    colors: HashMap<String, Colors>,
@@ -73,7 +72,7 @@ pub struct Project {
    pub elements: Vec<Element>,
    pub reactions: Reactions,
    pub ui_reactions: UIReactions,
-   pub luca: LucaAttributes, // first organism
+   pub luca_reaction: usize, // first organism
 
    // Section for filter control
    pub vis_elem_indexes: Vec<bool>, // indexes of visible (non-filtered) elements
@@ -81,6 +80,7 @@ pub struct Project {
    pub vis_dead: bool,
 }
 
+#[derive(Debug)]
 pub struct Element {
    pub name: String,
    pub color: iced::Color,
@@ -149,7 +149,7 @@ impl Project {
 
       // Check data for first organism
       let reaction_name = &toml.luca.digestion;
-      let _ = ui_reactions.index(reaction_name)
+      let luca_reaction = ui_reactions.index(reaction_name)
       .expect(&format!("Unknown reaction for digestion LUCA {}", reaction_name));
 
       Self {
@@ -158,7 +158,7 @@ impl Project {
          elements,
          reactions,
          ui_reactions,
-         luca: toml.luca.to_owned(),
+         luca_reaction,
          vis_elem_indexes,
          vis_reac_indexes,
          vis_dead: true,
@@ -174,5 +174,4 @@ impl Project {
          iced::Color::BLACK
       }
    }
-
 }

@@ -126,7 +126,7 @@ impl<'a> AnimalSheet {
    pub fn new(size: Size, ) -> Self {
 
       // Amount of points
-      let prod = size.serial();
+      let prod = size.max_serial();
 
       let mut matrix = Vec::with_capacity(prod);
       (0..prod).for_each(|_| matrix.push(AnimalStack::new()));
