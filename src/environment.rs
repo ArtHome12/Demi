@@ -12,7 +12,7 @@ use crate::geom::*;
 use crate::organism::Organism;
 use crate::genes::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Environment {
    // World size
    pub world_size: Size,

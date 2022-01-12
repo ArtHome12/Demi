@@ -91,6 +91,11 @@ impl Evolution {
       }
    }
 
+   // Mirror copy guarantee
+   pub fn mirror_data(&mut self) {
+      let mut mirror = self.mirror.lock().unwrap();
+      mirror.clone_from(&self.animal_sheet);
+   }
 
    fn diffusion(env: &Environment, sheet: &mut Sheet) {
       let mut rng = rand::thread_rng();

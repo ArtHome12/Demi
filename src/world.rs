@@ -8,7 +8,7 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use std::sync::{Arc, atomic::{Ordering, AtomicBool, AtomicUsize,}, Mutex, };
+use std::sync::{Arc, atomic::{Ordering, AtomicUsize, AtomicU8}, Mutex, };
 use std::time::{Duration, Instant, };
 
 use crate::{dot::Sheet, evolution::Evolution, environment::*};
@@ -16,23 +16,43 @@ pub use crate::dot::{Dot, Sheets, PtrSheets};
 use crate::geom::*;
 use crate::project::{Project, Element, };
 use crate::organism::*;
-use crate::reactions::UIReactions;
+use crate::reactions::{Reactions, UIReactions, };
 
 pub struct World {
-   run_flag: Arc<AtomicBool>, // requirement for thread run if true else pause
-   state_flag: Arc<AtomicBool>, // actual state of thread
+   env: Environment,
+   mode: Arc<AtomicU8>,
    ticks_elapsed: Arc<AtomicUsize>, // model time - a number ticks elapsed from beginning
    elements_sheets: PtrSheets,
    animal_sheet: Arc<Mutex<AnimalSheet>>, // Mirror from Evaluation
-   size: Size,
 
    // Section for UI
    pub vis_elem_indexes: Vec<bool>, // indexes of visible (non-filtered) elements
    pub vis_reac_indexes: Vec<bool>, // indexes of visible (non-filtered) reactions
    pub vis_dead: bool,
+   pub reactions: Reactions,
    pub ui_reactions: UIReactions,
-   // pub elements_count: usize,
    pub elements: Vec<Element>,
+}
+
+// Modes of operation of the calculated thread
+#[derive(Copy, Clone, )]
+enum ThreadMode {
+   Run = 1, // evaluate tick by tick
+   Pause = 2, // command from main to pause
+   Paused = 3, // signal from thread about pause
+   Exit = 4, // command from main to break loop
+}
+
+impl From<u8> for ThreadMode {
+   fn from(n: u8) -> Self {
+      match n {
+         1 => ThreadMode::Run,
+         2 => ThreadMode::Pause,
+         3 => ThreadMode::Paused,
+         4 => ThreadMode::Exit,
+         _ => panic!("world::ThreadMode()"),
+      }
+   }
 }
 
 impl World {
@@ -54,45 +74,21 @@ impl World {
       let animal_sheet = AnimalSheet::new(size);
       let animal_sheet = Arc::new(Mutex::new(animal_sheet));
 
-      // Evolution algorithm
-      let mut evolution = Evolution::new(sheets, Arc::clone(&animal_sheet), reactions);
-
-      // Store raw pointers to elements
-      let elements_sheets = PtrSheets::create(&evolution.sheets);
-
       // Flags for thread control
-      let run_flag = Arc::new(AtomicBool::new(false));
-      let run_flag_threaded = Arc::clone(&run_flag);
-      let state_flag = Arc::new(AtomicBool::new(false));
-      let state_flag_threaded = Arc::clone(&state_flag);
+      let mode = Arc::new(AtomicU8::new(ThreadMode::Paused as u8));
 
       // The model time
       let ticks_elapsed = Arc::new(AtomicUsize::new(0));
-      let ticks_elapsed_threaded = Arc::clone(&ticks_elapsed);
 
       // Thread for calculate evolution
-      tokio::task::spawn_blocking(move || {
-         let sleep_time = Duration::from_millis(100);
-         
-         // Running until program not closed
-         loop {
-
-            // Sleep if it paused
-            if run_flag_threaded.load(Ordering::Acquire) {
-               // Transfer signal to parent
-               state_flag_threaded.store(true, Ordering::Release);
-
-               // Increase model time
-               let tick = ticks_elapsed_threaded.fetch_add(1, Ordering::Relaxed);
-
-               // Calculate the tick of evolution
-               evolution.make_tick(&env, tick);
-            } else {
-               state_flag_threaded.store(false, Ordering::Release);
-               std::thread::sleep(sleep_time);
-            }
-         }
-      });
+      let elements_sheets = Self::spawn(
+         env.clone(),
+         sheets,
+         animal_sheet.clone(),
+         reactions.clone(),
+         mode.clone(),
+         ticks_elapsed.clone()
+      );
 
       // At start all elements should be visible, collect its indexes
       let len = elements.len();
@@ -100,19 +96,58 @@ impl World {
       let vis_reac_indexes = vec![true; len];
 
       Self {
-         run_flag,
-         state_flag,
+         env,
+         mode,
          ticks_elapsed,
          elements_sheets,
          animal_sheet,
-         size,
 
          vis_elem_indexes,
          vis_reac_indexes,
          vis_dead: true,
+         reactions,
          ui_reactions,
          elements,
       }
+   }
+
+   fn spawn(env: Environment, elements: Sheets, animal_sheet: Arc<Mutex<AnimalSheet>>, reactions: Reactions, mode: Arc<AtomicU8>, ticks: Arc<AtomicUsize>) -> PtrSheets {
+      // Evolution algorithm
+      let mut evolution = Evolution::new(elements, animal_sheet, reactions);
+
+      // Store raw pointers to elements
+      let elements_sheets = PtrSheets::create(&evolution.sheets);
+
+      // Thread for calculate evolution
+      tokio::task::spawn_blocking(move || {
+         let sleep_time = Duration::from_millis(100);
+         
+         // Running until program not closed
+         loop {
+            // Get task
+            let task = mode.load(Ordering::Acquire).into();
+            match task {
+               ThreadMode::Run => {
+                  // Increase model time
+                  let tick = ticks.fetch_add(1, Ordering::Relaxed);
+
+                  // Calculate the tick of evolution and try to mirror data
+                  evolution.make_tick(&env, tick);
+               }
+               ThreadMode::Pause => {
+                  evolution.mirror_data(); // mirror copy guarantee, at tick it may be skipped
+                  mode.store(ThreadMode::Paused as u8, Ordering::Release);
+               }
+               ThreadMode::Paused => std::thread::sleep(sleep_time),
+               ThreadMode::Exit => {
+                  mode.store(ThreadMode::Paused as u8, Ordering::Release);
+                  break;
+               }
+            }
+         }
+      });
+
+      elements_sheets
    }
 
    // Return dot at display position
@@ -134,7 +169,7 @@ impl World {
       let y = y as usize;
 
       // Corresponding bit of the world
-      let serial_bit = self.size.serial(x, y);
+      let serial_bit = self.size().serial(x, y);
       let energy = self.elements_sheets.get(0, serial_bit);
 
       // Find the dot color among animals
@@ -186,7 +221,7 @@ impl World {
    pub fn description(&self, dot: &Dot, max_lines: usize, delimiter: char) -> String {
 
       // Underlying bit serial number for dot
-      let serial_bit = self.size.serial(dot.x, dot.y);
+      let serial_bit = self.size().serial(dot.x, dot.y);
 
       // Current time
       let now = self.ticks_elapsed();
@@ -231,9 +266,15 @@ impl World {
 
    // Pause/resume evolutuon thread
    pub fn toggle_run(&self) {
-      // Transfer signal to thread
-      let flag = !self.run_flag.load(Ordering::Acquire);
-      self.run_flag.store(flag, Ordering::Release);
+      // Receive signal from thread
+      let state: ThreadMode = self.mode.load(Ordering::Acquire).into();
+      let state = match state {
+         ThreadMode::Run => ThreadMode::Pause,
+         _ => ThreadMode::Run,
+      };
+
+      // Transfer new signal to thread
+      self.mode.store(state as u8, Ordering::Release);
    }
 
    // Returns model time - a number ticks elapsed from beginning
@@ -242,7 +283,7 @@ impl World {
    }
 
    pub fn size(&self) -> Size {
-      self.size
+      self.env.world_size
    }
 
    pub fn date(&self) -> (usize, usize) {
@@ -256,11 +297,11 @@ impl World {
       let now = Instant::now();
 
       while now.elapsed() < timeout {
-         let run = self.state_flag.load(Ordering::Acquire);
-         if !run {
-            return;
+         let state: ThreadMode = self.mode.load(Ordering::Acquire).into();
+         match state {
+            ThreadMode::Paused => return,
+            _ => std::thread::sleep(sleep_time),
          }
-         std::thread::sleep(sleep_time);
       }
       panic!("await_for_stop_thread too long")
    }
@@ -268,17 +309,17 @@ impl World {
 
    pub fn save(&self) {
       // Stop evaluate if running
-      let prev_state = self.run_flag.load(Ordering::Acquire);
-      if prev_state {
-         self.toggle_run();
+      let prev_state: ThreadMode = self.mode.load(Ordering::Acquire).into();
+      if matches!(prev_state, ThreadMode::Run) {
+         self.mode.store(ThreadMode::Pause as u8, Ordering::Release);
+         self.await_for_stop_thread_or_panic();
       }
 
-      // Await for stop
-      self.await_for_stop_thread_or_panic();
+      // Save
 
-      // Resume evaluation if nesessary
-      if prev_state {
-         self.toggle_run();
+      // Resume
+      if matches!(prev_state, ThreadMode::Run) {
+         self.mode.store(ThreadMode::Run as u8, Ordering::Release);
       }
    }
 }
