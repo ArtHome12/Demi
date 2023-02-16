@@ -38,12 +38,6 @@ pub enum Message {
    Scaled(f32, Option<Vector>),
 }
 
-// impl Default for Grid {
-//    fn default() -> Self {
-//        Self::from_preset(Preset::default())
-//    }
-// }
-
 
 impl Grid {
    // Default size of one cell
@@ -132,7 +126,7 @@ impl Grid {
       (x, y)
    }
 
-   fn set_translation(&mut self, new_translation: Vector) {
+   /* fn set_translation(&mut self, new_translation: Vector) {
       self.translation = new_translation;
 
       // World size in pixels
@@ -145,7 +139,7 @@ impl Grid {
 
       if self.translation.y <= 0.0 {self.translation.y += h}
       else if self.translation.y >= h {self.translation.y -= h}
-   }
+   } */
 
    // Update rate counters
    pub fn clock_chime(&mut self) {

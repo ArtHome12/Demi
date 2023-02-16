@@ -293,7 +293,7 @@ impl World {
       self.mode.store(state as u8, Ordering::Release);
       let handle = self.thread_handle.take();
       if let Some(handle) = handle {
-         handle.join();
+         handle.join().expect("world::shutdown error on join");
       }
    }
 

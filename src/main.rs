@@ -25,12 +25,11 @@ mod organism;
 
 use grid::Grid;
 use iced::{Application, Command, Element, Length, Settings,
-   Subscription, time, executor, Alignment, window,
+   Subscription, executor, window,
 };
 use iced::widget::{
-   Container, column, Column, text, container, scrollable,
-   PaneGrid, pane_grid,
-   pane_grid::{Pane, Axis, },
+   Container, column, PaneGrid, pane_grid,
+   pane_grid::{Axis, },
 };
 use iced::theme::Theme;
 use iced_lazy::responsive;
@@ -71,8 +70,8 @@ enum Message {
 struct Demi {
    world: Rc<RefCell<world::World>>,
    controls: project_controls::Controls,
-   panes: pane_grid::State<Content>,
-   grid_pane: Pane,
+   panes: pane_grid::State<PaneState>,
+   grid_pane: pane_grid::Pane,
    grid_pane_ratio: f32, // Width of grid when filter visible too
    last_one_second_time: Instant,   // for FPS/TPS evaluations
 }
@@ -95,7 +94,7 @@ impl Application for Demi {
       let controls = project_controls::Controls::new(resources::Resources::new("./res"));
 
       // Put the grid into pane and get back ref to it
-      let (panes, grid_pane) = pane_grid::State::new(Content::new(PaneContent::Grid(Grid::new(grid_world))));
+      let (panes, grid_pane) = pane_grid::State::new(PaneState::new(PaneContent::Grid(Grid::new(grid_world))));
       (
          Self {
             world,
@@ -135,7 +134,7 @@ impl Application for Demi {
             };
          }
 
-         Message::GridMessage(_message) => (),
+         Message::GridMessage(message) => self.grid_mut().update(message),
 
          Message::FilterMessage(message) => self.filter_mut().update(message),
 
@@ -158,7 +157,7 @@ impl Application for Demi {
                let w = self.world.clone();
                let content = filter_control::Controls::new(w);
                let content = PaneContent::Filter(content);
-               let content = Content::new(content);
+               let content = PaneState::new(content);
                let pair = self.panes.split(Axis::Vertical, &self.grid_pane, content);
 
                // Restore ratio
@@ -189,9 +188,10 @@ impl Application for Demi {
    }
 
    fn subscription(&self) -> Subscription<Message> {
-      // time::every(Duration::from_millis(30))
-      // .map(Message::Cadence)
-      iced_native::subscription::events().map(Message::EventOccurred)
+      let subs = vec![window::frames().map(Message::Cadence),
+         iced_native::subscription::events().map(Message::EventOccurred),
+      ];
+      Subscription::batch(subs)
    }
 
    fn view(&self) -> Element<Message> {
@@ -200,18 +200,19 @@ impl Application for Demi {
       let controls = self.controls.view().map(Message::ProjectMessage);
 
       // Client area contains grid with the world's dots and sometimes filter for showing elements
-      let pane_grid = PaneGrid::new(&self.panes, |id, _pane, _is_maximized| {
-         pane_grid::Content::new(responsive(move |size| {
-            view_content(id, size)
+      let pane_grid = PaneGrid::new(&self.panes, |_id, pane, _is_maximized| {
+         pane_grid::Content::new(responsive(move |_size| {
+            pane.view()
          }))
       })
       .width(Length::Fill)
       .height(Length::Fill)
       .on_resize(10, Message::Resized);
 
-      let content = Column::new()
-      .push(controls)
-      .push(pane_grid);
+      let content = column![
+         controls,
+         pane_grid,
+      ];
 
       Container::new(content)
       .width(Length::Fill)
@@ -221,26 +222,6 @@ impl Application for Demi {
    }
 }
 
-fn view_content<'a>(
-   _pane: pane_grid::Pane,
-   size: iced::Size,
-) -> Element<'a, Message> {
-
-   let label = format!("{}x{}", size.width, size.height);
-   let content = column![
-      text(label).size(24),
-      ]
-   .width(Length::Fill)
-   .spacing(10)
-   .align_items(Alignment::Center);
-
-   container(scrollable(content))
-       .width(Length::Fill)
-       .height(Length::Fill)
-       .padding(5)
-       .center_y()
-       .into()
-}
 
 impl Demi {
    fn grid_mut(&mut self) -> &mut Grid {
@@ -250,7 +231,7 @@ impl Demi {
       }
    }
 
-   fn filter_pane(&self) -> Pane {
+   fn filter_pane(&self) -> pane_grid::Pane {
       // Find filter pane from panes - it have to be not a grid pane
       self.panes.iter()
       .find(|p| p.0 != &self.grid_pane)
@@ -273,13 +254,13 @@ enum PaneContent {
    Filter(filter_control::Controls),
 }
 
-struct Content {
+struct PaneState {
    pub content: PaneContent,
 }
 
-impl Content {
+impl PaneState {
    fn new(content: PaneContent) -> Self {
-       Content {
+       PaneState {
             content,
        }
    }
