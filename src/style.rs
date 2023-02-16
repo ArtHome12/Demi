@@ -7,7 +7,7 @@ Licensed under the terms of the GPL version 3.
 http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
-use iced::{button, container, pick_list, slider, Background, Color};
+use iced::widget::{button, container, pick_list, slider, Background, Color};
 
 const ACTIVE: Color = Color::from_rgb(
     0x72 as f32 / 255.0,

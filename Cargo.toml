@@ -2,17 +2,18 @@
 name = "demi"
 version = "0.1.0"
 authors = ["Artem Khomenko <_mag12@yahoo.com>"]
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-iced = { version = "0.3.0",  features = ["canvas", "tokio", "image", "debug"] }
-tokio = { version = "1.10.0", features = ["macros", "rt-multi-thread", "time"] }
-itertools = "0.10.1"
-rustc-hash = "1.1"
-serde = "1.0.127"
-serde_derive = "1.0.127"
-rand = "0.8.4"
-rayon = "1.5.1"
-toml = "0.5.8"
+iced = { version = "0.7.0",  features = ["canvas", "tokio", "image", "debug"] }
+iced_native = "0.8.0"
+iced_lazy = "0.4.0"
+itertools = "0.10.5"
+rustc-hash = "1.1.0"
+serde = "1.0.147"
+serde_derive = "1.0.147"
+rand = "0.8.5"
+rayon = "1.5.3"
+toml = "0.7.2"

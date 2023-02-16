@@ -9,9 +9,12 @@ Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 use std::{rc::Rc, cell::RefCell, };
-use iced::{Container, Element, Length, Column, Checkbox, scrollable, Scrollable,
-   Align, Text,
+
+use iced::{Element, Length, Alignment,};
+use iced::widget::{
+   Container, Column, Checkbox, Text, column,
 };
+
 
 use crate::world::World;
 
@@ -25,14 +28,14 @@ pub enum Message {
 
 
 pub struct Controls {
-   scroll: scrollable::State,
+   // scroll: scrollable::State,
    world: Rc<RefCell<World>>,
 }
 
 impl Controls {
    pub fn new(world: Rc<RefCell<World>>) -> Self {
       Self{
-         scroll: scrollable::State::new(),
+         // scroll: scrollable::State::new(),
          world,
       }
    }
@@ -48,7 +51,7 @@ impl Controls {
       }
   }
 
-   pub fn view(&mut self) -> Element<Message> {
+   pub fn view(&self) -> Element<Message> {
 
       let world = &self.world.borrow();
       
@@ -57,8 +60,8 @@ impl Controls {
       .enumerate()
       .fold(Column::new().spacing(10), |column, (index, item)| {
          column.push(Checkbox::new(
-            world.vis_elem_indexes[index],
             &item.name,
+            world.vis_elem_indexes[index],
             move |b| Message::ItemToggledElement(index, b),
             ).text_size(16)
             .size(16)
@@ -66,8 +69,8 @@ impl Controls {
       });
 
       let dead_check_box = Checkbox::new(
-         world.vis_dead,
          "Include dead",
+         world.vis_dead,
          move |b| Message::ItemToggledDead(b),
          )
       .text_size(16)
@@ -79,24 +82,32 @@ impl Controls {
       .fold(Column::new().spacing(10), |column, (index, item)| {
          // Reaction name
          column.push(Checkbox::new(
-            world.vis_reac_indexes[index],
             &item.name,
+            world.vis_reac_indexes[index],
             move |b| Message::ItemToggledAnimal(index, b),
             ).text_size(16)
             .size(16)
          )
       });
 
-      let content = Scrollable::new(&mut self.scroll)
-         .width(Length::Fill)
-         .align_items(Align::Start)
-         .spacing(10)
+      let content = column![
+         Text::new("Elements to show:").size(16),
+         elements_check_boxes,
+         Text::new("Animals to show:").size(16),
+         dead_check_box,
+         animal_check_boxes
+      ]
+      .width(Length::Fill)
+      .align_items(Alignment::Start)
+      .spacing(10);
+
+      // let content = Scrollable::new(content)
          // .push(Space::with_height(Length::Units(600)))
-         .push(Text::new("Elements to show:").size(16))
-         .push(elements_check_boxes)
-         .push(Text::new("Animals ro show:").size(16))
-         .push(dead_check_box)
-         .push(animal_check_boxes);
+         // .push(Text::new("Elements to show:").size(16))
+         // .push(elements_check_boxes)
+         // .push(Text::new("Animals ro show:").size(16))
+         // .push(dead_check_box)
+         // .push(animal_check_boxes);
 
       Container::new(content)
          .width(Length::Fill)

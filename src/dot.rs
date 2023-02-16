@@ -64,34 +64,30 @@ impl Sheets {
 
 impl std::iter::FromIterator<Sheet> for Sheets {
    fn from_iter<I: IntoIterator<Item = Sheet>>(iter: I) -> Self {
-      Self {
-         0: iter.into_iter().collect(),
-      }
+      Self(iter.into_iter().collect())
    }
 }
 
-// Fast unsafe access to elements
-pub struct PtrSheets {
-   ptr: Vec<usize>,
-}
+// Fast unsafe access to elements for mirroring and rayon
+pub struct PtrSheets(Vec<usize>);
 
 impl PtrSheets {
-   pub fn create(sheets: &Sheets) -> Self {
+   pub fn new(sheets: &Sheets) -> Self {
       // Store raw pointers to elements
       let ptr = sheets.get().iter()
       .map(|sheet| ptr::addr_of!(sheet.matrix[0]) as usize)
       .collect();
 
-      Self { ptr }
+      Self(ptr)
    }
 
    pub fn get(&self, element_index: usize, serial: usize) -> usize {
-      unsafe{ (self.ptr[element_index] as *const usize).add(serial).read() }
+      unsafe{ (self.0[element_index] as *const usize).add(serial).read() }
    }
 
    pub fn inc_amount(&self, element_index: usize, serial: usize, delta: usize) {
       unsafe{ 
-         let dest = (self.ptr[element_index] as *mut usize).add(serial);
+         let dest = (self.0[element_index] as *mut usize).add(serial);
          let new_val = dest.read().saturating_add(delta);
          std::ptr::write(dest, new_val);
       }
@@ -99,7 +95,7 @@ impl PtrSheets {
 
    pub fn dec_amount(&self, element_index: usize, serial: usize, delta: usize) {
       unsafe{
-         let dest = (self.ptr[element_index] as *mut usize).add(serial);
+         let dest = (self.0[element_index] as *mut usize).add(serial);
          let new_val = dest.read().saturating_sub(delta);
          std::ptr::write(dest, new_val);
       }

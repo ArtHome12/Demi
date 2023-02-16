@@ -8,53 +8,37 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use iced::button::{self, Button};
-use iced::{Checkbox, Align, Command, Element, Row, Text,};
+use iced::{Alignment, Command, Element, theme, };
+use iced::widget::{checkbox, row, button};
 
-use crate::style;
 use crate::resources::*;
 
 pub struct Controls {
-   run: bool,
-   autosave: bool,
-   autorun: bool,
-   illuminate: bool,
+   run: bool, // run or pause calculation
+   autosave: bool, // autosave project on exit
+   autorun: bool, // autostart evaluations on load
+   pub illuminate: bool, // toggle illuminations only from the sun or total
    pub show_filter: bool, // panel at the left side with elements filter
-
-   illuminate_button: button::State,
-   filter_button: button::State,
-
-   new_button: button::State,
-   load_button: button::State,
-   save_button: button::State,
-   pause_button: button::State,
-
    res: Resources,
 }
 
 impl Controls {
 
    pub fn new(res: Resources) -> Self {
-      Self {
+         Self {
          run: false,
          autosave: false,
          autorun: false,
          illuminate: false,
          show_filter: false,
-         illuminate_button: button::State::default(),
-         filter_button: button::State::default(),
-         new_button: button::State::default(),
-         load_button: button::State::default(),
-         save_button: button::State::default(),
-         pause_button: button::State::default(),
          res,
       }
    }
 
    pub fn update(&mut self, message: Message) -> Command<Message> {
       match message {
-         Message::ToggleIllumination(checked) => self.illuminate = checked,
-         Message::ToggleFilter(checked) => self.show_filter = checked,
+         Message::ToggleIllumination => self.illuminate = !self.illuminate,
+         Message::ToggleFilter => self.show_filter = !self.show_filter,
          Message::ToggleRun => self.run = !self.run,
          Message::ToggleAutosave(checked) => self.autosave = checked,
          Message::ToggleAutorun(checked) => self.autorun = checked,
@@ -64,90 +48,65 @@ impl Controls {
    }
 
    pub fn view(
-      & mut self,
+      &self,
    ) -> Element<Message> {
-      // Project controls
-      let buttons = Row::new()
-      .padding(10)
-      .spacing(10)
-      .align_items(Align::Center)
 
-      .push(
-         Button::new(
-               &mut self.illuminate_button,
-               self.res.image(if self.illuminate {Images::IlluminateOn} else {Images::IlluminateOff}),
+      row![
+         // Toggle illuminate
+         button(
+            self.res.image(if self.illuminate {Images::IlluminateOn} else {Images::IlluminateOff})
          )
-         .on_press(Message::ToggleIllumination(!self.illuminate))
-         .style(style::Button),
-      )
+         .on_press(Message::ToggleIllumination)
+         .style(theme::Button::Secondary),
 
-      .push(
-         Button::new(
-               &mut self.filter_button,
-               self.res.image(if self.show_filter {Images::ShowFilter} else {Images::HideFilter}),
+         // Show or hide filter panel
+         button(
+            self.res.image(if self.show_filter {Images::ShowFilter} else {Images::HideFilter}),
          )
-         .on_press(Message::ToggleFilter(!self.show_filter))
-         .style(style::Button),
-      )
+         .on_press(Message::ToggleFilter)
+         .style(theme::Button::Secondary),
 
-      .push(
-         Button::new(
-               &mut self.pause_button,
-               self.res.image(if self.run {Images::ModelPlay} else {Images::ModelPause}),
+         // Pause or run
+         button(
+            self.res.image(if self.run {Images::ModelPlay} else {Images::ModelPause}),
          )
          .on_press(Message::ToggleRun)
-         .style(style::Button),
-      )
+         .style(theme::Button::Secondary),
 
-      .push(
-         Button::new(
-               &mut self.new_button,
-               Text::new("New"),
-         )
+         // Project commands
+         button("New")
          .on_press(Message::New)
-         .style(style::Button),
-      )
+         .style(theme::Button::Secondary),
 
-      .push(
-         Button::new(
-               &mut self.load_button,
-               Text::new("Load"),
-         )
+         button("Load")
          .on_press(Message::Load)
-         .style(style::Button),
-      )
+         .style(theme::Button::Secondary),
 
-      .push(
-         Button::new(
-               &mut self.save_button,
-               Text::new("Save"),
-         )
+         button("Save")
          .on_press(Message::Save)
-         .style(style::Button),
-      )
+         .style(theme::Button::Secondary),
 
-      .push(
-         Checkbox::new(self.autosave, "Autosave", Message::ToggleAutosave)
+         checkbox("Autosave", self.autosave, Message::ToggleAutosave)
          .size(16)
          .spacing(5)
          .text_size(16),
-      )
-
-      .push(
-         Checkbox::new(self.autorun, "Autorun", Message::ToggleAutorun)
+   
+         checkbox("Autorun", self.autorun, Message::ToggleAutorun)
          .size(16)
          .spacing(5)
          .text_size(16),
-      );
-
-      buttons.into()
+      ]
+      .padding(10)
+      .spacing(10)
+      .align_items(Alignment::Center)
+      .into()
    }
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
-   ToggleIllumination(bool),
-   ToggleFilter(bool),
+   ToggleIllumination,
+   ToggleFilter,
    New,
    Load,
    Save,

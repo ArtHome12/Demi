@@ -9,18 +9,19 @@ Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 use iced::{
-   canvas::event::{self, Event},
-   canvas::{self, Cache, Canvas, Cursor, Frame, Geometry, Path, Text, Stroke, },
+   widget::canvas::event::{self, Event},
+   widget::canvas::{self, Cache, Canvas, Cursor, Frame, Geometry, Path, Text, Stroke, },
    mouse, Color, Element, Length, Point, Rectangle,
-   Size, Vector, VerticalAlignment,
+   Size, Vector, alignment, Theme,
 };
+
 use std::{ops::RangeInclusive, rc::Rc, cell::RefCell};
 
 use crate::world::{World, };
 use crate::update_rate::*;
 
 pub struct Grid {
-   interaction: Interaction,
+   // interaction: Interaction,
    life_cache: Cache,
    grid_cache: Cache,
    translation: Vector,
@@ -33,7 +34,16 @@ pub struct Grid {
 
 #[derive(Debug, Clone)]
 pub enum Message {
+   Translated(Vector),
+   Scaled(f32, Option<Vector>),
 }
+
+// impl Default for Grid {
+//    fn default() -> Self {
+//        Self::from_preset(Preset::default())
+//    }
+// }
+
 
 impl Grid {
    // Default size of one cell
@@ -52,7 +62,7 @@ impl Grid {
 
    pub fn new(world: Rc<RefCell<World>>) -> Self {
       Self {
-         interaction: Interaction::None,
+         // interaction: Interaction::None,
          life_cache: Cache::default(),
          grid_cache: Cache::default(),
          translation: Vector::default(),
@@ -64,7 +74,31 @@ impl Grid {
       }
    }
 
-   pub fn view<'a>(&'a mut self) -> Element<'a, Message> {
+   pub fn update(&mut self, message: Message) {
+      match message {
+
+         Message::Translated(translation) => {
+            self.translation = translation;
+
+            self.life_cache.clear();
+            self.grid_cache.clear();
+         }
+
+         Message::Scaled(scaling, translation) => {
+            self.scaling = scaling;
+
+            if let Some(translation) = translation {
+               self.translation = translation;
+            }
+
+            self.life_cache.clear();
+            self.grid_cache.clear();
+         }
+      }
+   }
+
+
+   pub fn view<'a>(&'a self) -> Element<'a, Message> {
       Canvas::new(self)
          .width(Length::Fill)
          .height(Length::Fill)
@@ -125,14 +159,18 @@ impl Grid {
 }
 
 impl<'a> canvas::Program<Message> for Grid {
+
+   type State = Interaction;
+
    fn update(
-      &mut self,
+      &self,
+      interaction: &mut Interaction,
       event: Event,
       bounds: Rectangle,
       cursor: Cursor,
    ) -> (event::Status, Option<Message>) {
       if let Event::Mouse(mouse::Event::ButtonReleased(_)) = event {
-         self.interaction = Interaction::None;
+         *interaction = Interaction::None;
       }
 
       let cursor_position = if let Some(position) = cursor.position_in(&bounds) {position}
@@ -145,7 +183,7 @@ impl<'a> canvas::Program<Message> for Grid {
             mouse::Event::ButtonPressed(button) => {
                match button {
                   mouse::Button::Right => {
-                     self.interaction = Interaction::Panning {
+                     *interaction = Interaction::Panning {
                            translation: self.translation,
                            start: cursor_position,
                      };
@@ -156,16 +194,18 @@ impl<'a> canvas::Program<Message> for Grid {
                (event::Status::Captured, None)
             }
             mouse::Event::CursorMoved { .. } => {
-                  match self.interaction {
+                  match *interaction {
                      Interaction::Panning { translation, start } => {
-                        self.set_translation(translation + (cursor_position - start) * (1.0 / self.scaling));
-                        self.life_cache.clear();
-                        self.grid_cache.clear();
+                        Some(Message::Translated(
+                           translation
+                               + (cursor_position - start)
+                                   * (1.0 / self.scaling),
+                        ))
                      }
-                     _ => (),
+                     _ => None,
                   };
 
-                  let event_status = match self.interaction {
+                  let event_status = match *interaction {
                      Interaction::None => event::Status::Ignored,
                      _ => event::Status::Captured,
                   };
@@ -177,24 +217,30 @@ impl<'a> canvas::Program<Message> for Grid {
                      if y < 0.0 && self.scaling > Self::MIN_SCALING || y > 0.0 && self.scaling < Self::MAX_SCALING {
                         let old_scaling = self.scaling;
 
-                        self.scaling = (self.scaling * (1.0 + y / Self::CELL_SIZE))
-                        .max(Self::MIN_SCALING)
-                        .min(Self::MAX_SCALING);
+                        let scaling = (self.scaling * (1.0 + y / Self::CELL_SIZE))
+                           .max(Self::MIN_SCALING)
+                           .min(Self::MAX_SCALING);
 
-                        if let Some(cursor_to_center) = cursor.position() {
-                              let factor = self.scaling - old_scaling;
+                           let translation = 
+                              if let Some(cursor_to_center) = cursor.position() {
+                                 let factor = self.scaling - old_scaling;
 
-                              self.set_translation(self.translation - Vector::new(
-                                 cursor_to_center.x * factor / (old_scaling * old_scaling),
-                                 cursor_to_center.y * factor / (old_scaling * old_scaling),
-                              ));
-                        }
+                                 Some(
+                                    self.translation - Vector::new(
+                                       cursor_to_center.x * factor / (old_scaling * old_scaling),
+                                       cursor_to_center.y * factor / (old_scaling * old_scaling),
+                                    )
+                                 )
+                              } else {
+                                 None
+                              };
 
-                        self.life_cache.clear();
-                        self.grid_cache.clear();
+                        (event::Status::Captured, Some(Message::Scaled(scaling, translation)))
+
+
+                     } else {
+                        (event::Status::Captured, None)
                      }
-
-                     (event::Status::Captured, None)
                   }
             },
             _ => (event::Status::Ignored, None),
@@ -203,7 +249,13 @@ impl<'a> canvas::Program<Message> for Grid {
       }
    }
 
-   fn draw(&self, bounds: Rectangle, cursor: Cursor) -> Vec<Geometry> {
+   fn draw(
+      &self,
+      _interaction: &Interaction,
+      _theme: &Theme,
+      bounds: Rectangle,
+      cursor: Cursor,
+   ) -> Vec<Geometry> {
 
       let life = {
          let mut frame = Frame::new(bounds.size());
@@ -280,7 +332,7 @@ impl<'a> canvas::Program<Message> for Grid {
          // Text object
          let text = Text {
             color: Color::WHITE,
-            vertical_alignment: VerticalAlignment::Bottom,
+            vertical_alignment: alignment::Vertical::Bottom,
             ..Text::default()
          };
 
@@ -350,24 +402,22 @@ impl<'a> canvas::Program<Message> for Grid {
          // No grid at small scale, only outer border
          if self.scaling < 0.2 {
             // Prepare style
-            let stroke = Stroke {
-               width: 1.0,
-               color: special_color,
-               ..Stroke::default()
-           };
+            let stroke = Stroke::default()
+            .with_width(1.0)
+            .with_color(special_color);
 
            // Draw horizontal lines
            for row in 0..=outer_rows {
                let from = Point::new(columns_start, (row * world_height) as f32);
                let to = Point::new(total_columns as f32, (row * world_height) as f32);
-               frame.stroke(&Path::line(from, to), stroke);
+               frame.stroke(&Path::line(from, to), stroke.to_owned());
             }
 
             // Draw vertical lines
             for column in 0..=outer_columns {
                let from = Point::new((column * world_width) as f32, rows_start);
                let to = Point::new((column * world_width) as f32, total_rows as f32);
-               frame.stroke(&Path::line(from, to), stroke);
+               frame.stroke(&Path::line(from, to), stroke.to_owned());
             }
          } else {
             // Draw the inner grid
@@ -425,10 +475,11 @@ impl<'a> canvas::Program<Message> for Grid {
 
    fn mouse_interaction(
       &self,
+      interaction: &Interaction,
       _bounds: Rectangle,
       _cursor: Cursor,
    ) -> mouse::Interaction {
-      match self.interaction {
+      match interaction {
          Interaction::Panning { .. } => mouse::Interaction::Grabbing,
          _ => mouse::Interaction::default(),
       }
@@ -469,8 +520,14 @@ impl Region {
    }
 }
 
-enum Interaction {
+pub enum Interaction {
    None,
    Panning { translation: Vector, start: Point },
+}
+
+impl Default for Interaction {
+   fn default() -> Self {
+       Self::None
+   }
 }
 

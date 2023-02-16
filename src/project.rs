@@ -22,6 +22,7 @@ struct Toml {
    pub width: usize,
    pub height_ratio: f32,
    resolution: f32,
+   max_animal_stack: usize,
    elements: Vec<ElementAttributes>,
    chemical: Vec<ReactionAttributes>,
    colors: HashMap<String, Colors>,
@@ -69,6 +70,7 @@ pub struct LucaAttributes {
 pub struct Project {
    pub size: Size,
    pub resolution: f32,
+   pub max_animal_stack: usize,
    pub elements: Vec<Element>,
    pub reactions: Reactions,
    pub ui_reactions: UIReactions,
@@ -155,6 +157,7 @@ impl Project {
       Self {
          size,
          resolution: toml.resolution,
+         max_animal_stack: toml.max_animal_stack,
          elements,
          reactions,
          ui_reactions,

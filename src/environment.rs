@@ -26,6 +26,9 @@ pub struct Environment {
    // How many bits to move (diffusion) elements in one tick
    pub num_points_to_diffuse: usize,
 
+   // Maximum number of organisms at one point
+   max_animal_stack: usize,
+
    // Range for serial number of all bits
    pub bits_count: usize,
 
@@ -39,7 +42,7 @@ impl Environment {
    const DAYS_PER_YEAR: f32 = Self::TICKS_PER_DAY * 365.0;
    const HALF_YEAR: f32 = Self::DAYS_PER_YEAR / 2.0 + 0.5;
 
-   pub fn new(world_size: Size, resolution: f32, luca_reaction: usize) -> Self {
+   pub fn new(world_size: Size, resolution: f32, max_animal_stack: usize, luca_reaction: usize) -> Self {
       let world_height = world_size.y;
 
       // How many bits to move (diffusion) elements in one tick
@@ -59,6 +62,7 @@ impl Environment {
          light_radius: (0.8 * world_height as f32 / 2.0) as usize,
          tropic_height: world_height as f32 / 5.0,
          num_points_to_diffuse,
+         max_animal_stack,
          bits_count,
          luca,
       }

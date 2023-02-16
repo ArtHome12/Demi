@@ -18,12 +18,15 @@ use crate::project::{Project, Element, };
 use crate::organism::*;
 use crate::reactions::{Reactions, UIReactions, };
 
+type Handle = std::thread::JoinHandle<()>;
+
 pub struct World {
    env: Environment,
    mode: Arc<AtomicU8>,
    ticks_elapsed: Arc<AtomicUsize>, // model time - a number ticks elapsed from beginning
    elements_sheets: PtrSheets,
    animal_sheet: Arc<Mutex<AnimalSheet>>, // Mirror from Evaluation
+   thread_handle: Option<Handle>,
 
    // Section for UI
    pub vis_elem_indexes: Vec<bool>, // indexes of visible (non-filtered) elements
@@ -40,7 +43,7 @@ enum ThreadMode {
    Run = 1, // evaluate tick by tick
    Pause = 2, // command from main to pause
    Paused = 3, // signal from thread about pause
-   Exit = 4, // command from main to break loop
+   Shutdown = 4, // command from main to break loop
 }
 
 impl From<u8> for ThreadMode {
@@ -49,7 +52,7 @@ impl From<u8> for ThreadMode {
          1 => ThreadMode::Run,
          2 => ThreadMode::Pause,
          3 => ThreadMode::Paused,
-         4 => ThreadMode::Exit,
+         4 => ThreadMode::Shutdown,
          _ => panic!("world::ThreadMode()"),
       }
    }
@@ -68,10 +71,14 @@ impl World {
          Sheet::new(size, v.init_amount, v.volatility)
       }).collect::<Sheets>();
 
-      let env = Environment::new(size, project.resolution, project.luca_reaction);
+      let env = Environment::new(size,
+         project.resolution,
+         project.max_animal_stack,
+         project.luca_reaction
+      );
 
       // Create animals
-      let animal_sheet = AnimalSheet::new(size);
+      let animal_sheet = AnimalSheet::new(size.max_serial(), project.max_animal_stack);
       let animal_sheet = Arc::new(Mutex::new(animal_sheet));
 
       // Flags for thread control
@@ -81,7 +88,7 @@ impl World {
       let ticks_elapsed = Arc::new(AtomicUsize::new(0));
 
       // Thread for calculate evolution
-      let elements_sheets = Self::spawn(
+      let (thread_handle, elements_sheets) = Self::spawn(
          env.clone(),
          sheets,
          animal_sheet.clone(),
@@ -101,6 +108,7 @@ impl World {
          ticks_elapsed,
          elements_sheets,
          animal_sheet,
+         thread_handle,
 
          vis_elem_indexes,
          vis_reac_indexes,
@@ -111,15 +119,15 @@ impl World {
       }
    }
 
-   fn spawn(env: Environment, elements: Sheets, animal_sheet: Arc<Mutex<AnimalSheet>>, reactions: Reactions, mode: Arc<AtomicU8>, ticks: Arc<AtomicUsize>) -> PtrSheets {
+   fn spawn(env: Environment, elements: Sheets, animal_sheet: Arc<Mutex<AnimalSheet>>, reactions: Reactions, mode: Arc<AtomicU8>, ticks: Arc<AtomicUsize>) -> (Option<Handle>, PtrSheets) {
       // Evolution algorithm
       let mut evolution = Evolution::new(elements, animal_sheet, reactions);
 
       // Store raw pointers to elements
-      let elements_sheets = PtrSheets::create(&evolution.sheets);
+      let elements_sheets = PtrSheets::new(&evolution.sheets);
 
       // Thread for calculate evolution
-      tokio::task::spawn_blocking(move || {
+      let thread_handle = std::thread::spawn(move || {
          let sleep_time = Duration::from_millis(100);
          
          // Running until program not closed
@@ -139,7 +147,7 @@ impl World {
                   mode.store(ThreadMode::Paused as u8, Ordering::Release);
                }
                ThreadMode::Paused => std::thread::sleep(sleep_time),
-               ThreadMode::Exit => {
+               ThreadMode::Shutdown => {
                   mode.store(ThreadMode::Paused as u8, Ordering::Release);
                   break;
                }
@@ -147,7 +155,7 @@ impl World {
          }
       });
 
-      elements_sheets
+      (Some(thread_handle), elements_sheets)
    }
 
    // Return dot at display position
@@ -173,7 +181,7 @@ impl World {
       let energy = self.elements_sheets.get(0, serial_bit);
 
       // Find the dot color among animals
-      let unlocked_sheet =self.animal_sheet.lock().unwrap();
+      /* let unlocked_sheet =self.animal_sheet.lock().unwrap();
       let stack = unlocked_sheet.get(serial_bit);
 
       // Among animals determines with visible reaction and alive or not
@@ -188,7 +196,8 @@ impl World {
          } else {
             None
          }
-      });
+      }); */
+      let animal_color = None;
 
       let mut color = if let Some(color) = animal_color {
          color
@@ -229,7 +238,7 @@ impl World {
       let mut remaining_lines = max_lines;
 
       // Collect info among animals
-      let unlocked_sheet = self.animal_sheet.lock().unwrap();
+      /* let unlocked_sheet = self.animal_sheet.lock().unwrap();
       let stack = unlocked_sheet.get(serial_bit);
 
       // Among animals determines with visible reaction and alive or not
@@ -252,7 +261,8 @@ impl World {
          remaining_lines -= 1;
 
          format!("{}[{}۩ {}]{}", acc, age, o, delimiter)
-      });
+      }); */
+      let animal_desc = String::default();
 
       // Inanimal world
       self.vis_elem_indexes.iter()
@@ -275,6 +285,16 @@ impl World {
 
       // Transfer new signal to thread
       self.mode.store(state as u8, Ordering::Release);
+   }
+
+   // Finish thread
+   pub fn shutdown(&mut self) {
+      let state = ThreadMode::Shutdown;
+      self.mode.store(state as u8, Ordering::Release);
+      let handle = self.thread_handle.take();
+      if let Some(handle) = handle {
+         handle.join();
+      }
    }
 
    // Returns model time - a number ticks elapsed from beginning

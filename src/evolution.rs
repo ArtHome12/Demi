@@ -63,16 +63,7 @@ impl Evolution {
       // Process animal
 
       // At least LUCA should always to be first at 0,0
-      let luca_point = self.animal_sheet.get_mut(0);
-      let first_alive = luca_point.iter()
-      .find(|o| o.alive());
-      if first_alive.is_none() {
-         let mut luca = env.luca.to_owned();
-         luca.birthday = tick;
-
-         // self.organisms.push(Arc::downgrade(&luca));
-         luca_point.push(luca);
-      }
+      self.animal_sheet.implantation(&env.luca, tick);
 
       // Behavior
       Evolution::transfer(env, &mut self.animal_sheet);
@@ -152,29 +143,23 @@ impl Evolution {
       let rnd_dir = Uniform::from(0..8);
 
       (0..env.num_points_to_diffuse).for_each(|_| {
-         // Get a random point
+         // Get a random source point
          let origin_bit = rnd_bit.sample(&mut rng);
 
-         let organism = sheet.get_mut(origin_bit).pop();
+         // Get destination point as source plus direction
+         let dir = rnd_dir.sample(&mut rng);
+         let dest_bit = env.distance(dir.into());
+         let mut dest_bit = origin_bit as isize + dest_bit;
 
-         // If there is something to transfer
-         if let Some(organism) = organism {
-            // Point to transfer the organism
-            let dir = rnd_dir.sample(&mut rng);
-            let dest_bit = env.distance(dir.into());
-            let mut dest_bit = origin_bit as isize + dest_bit;
-
-            // Check bounds
-            if dest_bit < 0 {
-               dest_bit = env.bits_count as isize + dest_bit; // negative value
-            } else if dest_bit >= env.bits_count as isize {
-               let delta = dest_bit - env.bits_count as isize; // positive value
-               dest_bit = delta;
-            }
-
-            // Store the organism at new place
-            sheet.get_mut(dest_bit as usize).push(organism);
+         // Check bounds
+         if dest_bit < 0 {
+            dest_bit = env.bits_count as isize + dest_bit; // negative value
+         } else if dest_bit >= env.bits_count as isize {
+            let delta = dest_bit - env.bits_count as isize; // positive value
+            dest_bit = delta;
          }
+
+         sheet.transfer(origin_bit, dest_bit as usize);
       })
    }
 

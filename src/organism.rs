@@ -9,7 +9,12 @@ Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 use std::cmp::max;
+use std::collections::btree_map::OccupiedEntry;
 use std::fmt;
+use itertools::Itertools;
+use std::iter::FilterMap;
+use std::slice::IterMut;
+// use std::option::IterMut;
 use rayon::prelude::*;
 
 use crate::geom::*;
@@ -115,21 +120,76 @@ impl fmt::Display for Organism {
 }
 
 
+#[derive(Clone, Debug)]
 // Organisms at one point
-type AnimalStack = Vec<Organism>;
+pub struct AnimalStack {
+   stack: Vec<Option<Organism>>,
+}
+
+impl<'s> AnimalStack {
+
+   pub fn new(max_animal_stack: usize) -> Self {
+      Self{
+         stack: vec![None; max_animal_stack],
+      }
+   }
+
+   // Returns iterator over alive organism in stack, if such exists
+   pub fn get_mut_alive(&'s mut self) -> impl Iterator<Item = &mut Organism> + 's {
+      self.stack
+      .iter_mut()
+      .filter_map(|item| item.as_mut().and_then(|o| o.alive().then(|| o)))
+   }
+
+   // Return index of first empty or occuped item
+   pub fn get_slot_index(&'s self, occuped: bool) -> Option<usize> {
+      self.stack
+      .iter()
+      .position(|opt| opt.is_some() == occuped)
+   }
+
+   pub fn get_slot_mut(&'s mut self, occuped: bool) -> Option<&mut Option<Organism>> {
+      self.stack
+      .iter_mut()
+      .find(|opt| opt.is_some() == occuped)
+   }
+
+   pub fn reproduction(&mut self, now: usize) {
+      // Checking for free space at the point
+      let free_slot = self.get_slot_index(false);
+
+
+      if let Some(free_slot) = free_slot {
+
+         // For optimization
+         let mut randoms = Randoms::new();
+
+         // Looking for among all living organisms at a point capable of reproducing. The first gets priority
+         let opt_new_born = self
+         .get_mut_alive()
+         .find_map(|animal| animal.reproduction(&mut randoms));
+
+         // Ask about birth
+         if let Some(mut new_born) = opt_new_born {
+            // Place new organism
+            new_born.birthday = now;
+            self.stack[free_slot] = Some(new_born);
+         };
+      }
+   }
+}
+
 
 #[derive(Clone, Debug)]
 // Keeps live and death organisms in the grid
 pub struct AnimalSheet(Vec<AnimalStack>);
 
 impl<'a> AnimalSheet {
-   pub fn new(size: Size, ) -> Self {
-
-      // Amount of points
-      let prod = size.max_serial();
-
-      let mut matrix = Vec::with_capacity(prod);
-      (0..prod).for_each(|_| matrix.push(AnimalStack::new()));
+   pub fn new(max_serial: usize, max_animal_stack: usize) -> Self {
+      let matrix = Vec::with_capacity(max_serial);
+      (0..max_serial)
+      .map(|_| AnimalStack::new(max_animal_stack))
+      .collect::<Vec<AnimalStack>>();
 
       Self {
          0: matrix,
@@ -149,17 +209,16 @@ impl<'a> AnimalSheet {
 
 
    pub fn digestion(&mut self, elements: &mut Sheets, reactions: &Reactions) {
-      let ptr_elements = PtrSheets::create(elements);
+      let ptr_elements = PtrSheets::new(elements);
 
       // Each point on the ground
       self.0
       .par_iter_mut()
       .enumerate()
       .for_each(|(serial, animals)| {
-         // Each organism at the point
+         // Each alive organism at the point
          animals
-         .iter_mut()
-         .filter(|animal| animal.alive())
+         .get_mut_alive()
          .for_each(|animal| {
             animal.digestion(&ptr_elements, serial, reactions)
          })
@@ -171,26 +230,40 @@ impl<'a> AnimalSheet {
       // Each point on the ground
       self.0
       .par_iter_mut()
-      .for_each(|animals| {
-         // For optimization
-         let mut randoms = Randoms::new();
-         let mut newborns = AnimalStack::new();
+      .for_each(|animals| animals.reproduction(now))
+   }
 
-         // Each organism at the point
-         animals
-         .iter_mut()
-         .filter(|animal| animal.alive())
-         .for_each(|animal| {
-            // Ask about birth
-            if let Some(mut new_born) = animal.reproduction(&mut randoms) {
-               // Place new organism
-               new_born.birthday = now;
-               newborns.push(new_born)
-            }
-         });
+   // Try to transfer organism between points
+   pub fn transfer(&mut self, origin: usize, dest: usize) {
 
-         animals.append(&mut newborns);
-      })
+      // If there is something to transfer and free space at destinaton
+      if let Some(source_index) = self.get(origin).get_slot_index(true) {
+         if let Some(dest_index) = self.get(dest).get_slot_index(false) {
+
+            // Extract organism from previous place
+            let origin_stack = self.get_mut(origin);
+            let origin_place = &mut origin_stack.stack[source_index];
+            let organism = std::mem::replace(origin_place, None);
+
+            // And put it to the new place
+            let dest_stack = self.get_mut(dest);
+            dest_stack.stack[dest_index] = organism;
+         }
+      }
+   }
+
+   pub fn implantation(&mut self, luca: &Organism, now: usize) {
+      let stack = self.get_mut(0);
+      let first_alive = stack.get_mut_alive().next();
+      if first_alive.is_none() {
+
+         // Check free place
+         if let Some(free_slot) = stack.get_slot_index(false) {
+            let mut luca = luca.to_owned();
+            luca.birthday = now;
+            stack.stack[free_slot] = Some(luca);
+         }
+      }
    }
 
 
@@ -198,19 +271,17 @@ impl<'a> AnimalSheet {
       // Each point on the ground
       self.0
       .par_iter_mut()
-      .for_each(|animals| {
-         // Each organism at the point
-         animals
-         .iter_mut()
+      .for_each(|stack| {
+         // Each alive organism at the point
+         stack
+         .get_mut_alive()
          .for_each(|animal| {
-            if animal.alive() {
-               // Decrease vitality on methabolism
-               animal.vitality = animal.vitality.saturating_sub(max(1, animal.metabolism));
+            // Decrease vitality on methabolism
+            animal.vitality = animal.vitality.saturating_sub(max(1, animal.metabolism));
 
-               // In case of death keep the age
-               if animal.vitality == 0 {
-                  animal.birthday = now - animal.birthday + 1;
-               }
+            // In case of death keep the age
+            if animal.vitality == 0 {
+               animal.birthday = now - animal.birthday + 1;
             }
          })
       })
@@ -231,3 +302,5 @@ impl<'a> AnimalSheet {
 //       self.sheet.get(self.coord.serial())
 //    }
 // }
+
+pub struct PtrAnimalSheet(Vec<Vec<usize>>);

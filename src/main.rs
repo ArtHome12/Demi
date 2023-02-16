@@ -9,7 +9,6 @@ Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 mod project_controls;
-mod style;
 mod grid;
 mod dot;
 mod world;
@@ -25,18 +24,26 @@ mod genes;
 mod organism;
 
 use grid::Grid;
-use iced::{Application, Column, Command, Container, Element, Length, Settings,
-   Subscription, time, executor, PaneGrid, pane_grid, Clipboard,
+use iced::{Application, Command, Element, Length, Settings,
+   Subscription, time, executor, Alignment, window,
+};
+use iced::widget::{
+   Container, column, Column, text, container, scrollable,
+   PaneGrid, pane_grid,
    pane_grid::{Pane, Axis, },
 };
+use iced::theme::Theme;
+use iced_lazy::responsive;
+
 use std::time::{Duration, Instant};
 use std::{rc::Rc, cell::RefCell, };
 
 
-#[tokio::main]
-async fn main() -> iced::Result {
+// #[tokio::main]
+pub fn main() -> iced::Result {
    Demi::run(Settings {
       antialiasing: true,
+      exit_on_close_request: false,
       ..Settings::default()
    })
 }
@@ -57,6 +64,7 @@ enum Message {
    Illuminate(bool),
    ToggleRun,
    WorldSave,
+   EventOccurred(iced_native::Event),
 }
 
 
@@ -71,6 +79,7 @@ struct Demi {
 
 impl Application for Demi {
    type Message = Message;
+   type Theme = Theme;
    type Executor = executor::Default;
    type Flags = ();
 
@@ -104,7 +113,7 @@ impl Application for Demi {
       String::from("Demi")
    }
 
-   fn update(&mut self, message: Message, _clipboard: &mut Clipboard) -> Command<Message> {
+   fn update(&mut self, message: Message) -> Command<Message> {
       match message {
          Message::ProjectMessage(message) => {
 
@@ -114,8 +123,8 @@ impl Application for Demi {
             // Translate from project message to own and create new command
             let cmd = match message {
                project_controls::Message::ToggleRun => Some(Message::ToggleRun),
-               project_controls::Message::ToggleIllumination(is_on) => Some(Message::Illuminate(is_on)),
-               project_controls::Message::ToggleFilter(show) => Some(Message::ShowFilter(show)),
+               project_controls::Message::ToggleIllumination => Some(Message::Illuminate(self.controls.illuminate)),
+               project_controls::Message::ToggleFilter => Some(Message::ShowFilter(self.controls.show_filter)),
                project_controls::Message::Save => Some(Message::WorldSave),
                _ => None,
             };
@@ -168,23 +177,33 @@ impl Application for Demi {
          Message::ToggleRun => self.world.borrow().toggle_run(),
 
          Message::WorldSave => self.world.borrow().save(),
+
+         Message::EventOccurred(event) => {
+            if let iced_native::Event::Window(window::Event::CloseRequested) = event {
+               self.world.borrow_mut().shutdown();
+               return window::close();
+            }
+        }
       }
       Command::none()
    }
 
    fn subscription(&self) -> Subscription<Message> {
-      time::every(Duration::from_millis(30))
-      .map(Message::Cadence)
+      // time::every(Duration::from_millis(30))
+      // .map(Message::Cadence)
+      iced_native::subscription::events().map(Message::EventOccurred)
    }
 
-   fn view(&mut self) -> Element<Message> {
+   fn view(&self) -> Element<Message> {
 
       // Place project controls at top line
       let controls = self.controls.view().map(Message::ProjectMessage);
 
       // Client area contains grid with the world's dots and sometimes filter for showing elements
-      let pane_grid = PaneGrid::new(&mut self.panes, |_pane, content| {
-         pane_grid::Content::new(content.view())
+      let pane_grid = PaneGrid::new(&self.panes, |id, _pane, _is_maximized| {
+         pane_grid::Content::new(responsive(move |size| {
+            view_content(id, size)
+         }))
       })
       .width(Length::Fill)
       .height(Length::Fill)
@@ -197,9 +216,30 @@ impl Application for Demi {
       Container::new(content)
       .width(Length::Fill)
       .height(Length::Fill)
-      .style(style::Container)
+      // .style(style::Container)
       .into()
    }
+}
+
+fn view_content<'a>(
+   _pane: pane_grid::Pane,
+   size: iced::Size,
+) -> Element<'a, Message> {
+
+   let label = format!("{}x{}", size.width, size.height);
+   let content = column![
+      text(label).size(24),
+      ]
+   .width(Length::Fill)
+   .spacing(10)
+   .align_items(Alignment::Center);
+
+   container(scrollable(content))
+       .width(Length::Fill)
+       .height(Length::Fill)
+       .padding(5)
+       .center_y()
+       .into()
 }
 
 impl Demi {
@@ -243,8 +283,8 @@ impl Content {
             content,
        }
    }
-   fn view(&mut self,) -> Element<Message> {
-      match &mut self.content {
+   fn view(&self,) -> Element<Message> {
+      match &self.content {
          PaneContent::Grid(grid) => grid.view().map(move |message| Message::GridMessage(message)),
          PaneContent::Filter(filter) => filter.view().map(move |message| Message::FilterMessage(message)),
       }
