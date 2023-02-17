@@ -5,7 +5,7 @@ The world as a set of dots.
 ----------------------------------------------------------------------------
 Licensed under the terms of the GPL version 3.
 http://www.gnu.org/licenses/gpl-3.0.html
-Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
+Copyright (c) 2013-2023 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 use std::sync::{Arc, atomic::{Ordering, AtomicUsize, AtomicU8}, Mutex, };
@@ -27,14 +27,14 @@ pub struct World {
    elements_sheets: PtrSheets,
    animal_sheet: Arc<Mutex<AnimalSheet>>, // Mirror from Evaluation
    thread_handle: Option<Handle>,
+   reactions: Reactions,
 
    // Section for UI
    pub vis_elem_indexes: Vec<bool>, // indexes of visible (non-filtered) elements
    pub vis_reac_indexes: Vec<bool>, // indexes of visible (non-filtered) reactions
-   pub vis_dead: bool,
-   pub reactions: Reactions,
-   pub ui_reactions: UIReactions,
-   pub elements: Vec<Element>,
+   pub vis_dead: bool,              // to show or not dead organisms
+   pub ui_reactions: UIReactions,   // description of reactions
+   pub elements: Vec<Element>,      // description of elements
 }
 
 // Modes of operation of the calculated thread
@@ -53,7 +53,7 @@ impl From<u8> for ThreadMode {
          2 => ThreadMode::Pause,
          3 => ThreadMode::Paused,
          4 => ThreadMode::Shutdown,
-         _ => panic!("world::ThreadMode()"),
+         _ => panic!("world::ThreadMode({})", n),
       }
    }
 }
@@ -88,11 +88,17 @@ impl World {
       let ticks_elapsed = Arc::new(AtomicUsize::new(0));
 
       // Thread for calculate evolution
-      let (thread_handle, elements_sheets) = Self::spawn(
+
+      // Evolution algorithm
+      let evolution = Evolution::new(sheets, Arc::clone(&animal_sheet), reactions.clone());
+
+      // Store raw pointers to elements
+      let elements_sheets = PtrSheets::new(&evolution.sheets);
+
+
+      let thread_handle = Self::spawn(
          env.clone(),
-         sheets,
-         animal_sheet.clone(),
-         reactions.clone(),
+         evolution,
          mode.clone(),
          ticks_elapsed.clone()
       );
@@ -119,13 +125,7 @@ impl World {
       }
    }
 
-   fn spawn(env: Environment, elements: Sheets, animal_sheet: Arc<Mutex<AnimalSheet>>, reactions: Reactions, mode: Arc<AtomicU8>, ticks: Arc<AtomicUsize>) -> (Option<Handle>, PtrSheets) {
-      // Evolution algorithm
-      let mut evolution = Evolution::new(elements, animal_sheet, reactions);
-
-      // Store raw pointers to elements
-      let elements_sheets = PtrSheets::new(&evolution.sheets);
-
+   fn spawn(env: Environment, mut evolution: Evolution, mode: Arc<AtomicU8>, ticks: Arc<AtomicUsize>) -> Option<Handle> {
       // Thread for calculate evolution
       let thread_handle = std::thread::spawn(move || {
          let sleep_time = Duration::from_millis(100);
@@ -155,7 +155,7 @@ impl World {
          }
       });
 
-      (Some(thread_handle), elements_sheets)
+      Some(thread_handle)
    }
 
    // Return dot at display position

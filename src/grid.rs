@@ -5,7 +5,7 @@ Grid of world.
 ----------------------------------------------------------------------------
 Licensed under the terms of the GPL version 3.
 http://www.gnu.org/licenses/gpl-3.0.html
-Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
+Copyright (c) 2013-2023 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 use iced::{
@@ -126,20 +126,22 @@ impl Grid {
       (x, y)
    }
 
-   /* fn set_translation(&mut self, new_translation: Vector) {
-      self.translation = new_translation;
+   fn adjust_translation(&self, translation: Vector) -> Vector {
+      let mut t = translation;
 
       // World size in pixels
       let crate::geom::Size {x: w, y: h} = self.world.borrow().size();
       let w = w as f32 * Self::CELL_SIZE;
       let h = h as f32 * Self::CELL_SIZE;
       // To prevent overflow translation in coninious world
-      if self.translation.x <= 0.0 {self.translation.x += w}
-      else if self.translation.x >= w {self.translation.x -= w}
+      if t.x <= 0.0 {t.x += w}
+      else if t.x >= w {t.x -= w}
 
-      if self.translation.y <= 0.0 {self.translation.y += h}
-      else if self.translation.y >= h {self.translation.y -= h}
-   } */
+      if t.y <= 0.0 {t.y += h}
+      else if t.y >= h {t.y -= h}
+
+      t
+   }
 
    // Update rate counters
    pub fn clock_chime(&mut self) {
@@ -187,55 +189,48 @@ impl<'a> canvas::Program<Message> for Grid {
 
                (event::Status::Captured, None)
             }
+
             mouse::Event::CursorMoved { .. } => {
-                  match *interaction {
-                     Interaction::Panning { translation, start } => {
-                        Some(Message::Translated(
-                           translation
-                               + (cursor_position - start)
-                                   * (1.0 / self.scaling),
-                        ))
-                     }
-                     _ => None,
-                  };
+               match *interaction {
+                  Interaction::Panning { translation, start } => {
+                     let translation = translation + (cursor_position - start) * (1.0 / self.scaling);
+                     let translation = self.adjust_translation(translation);
+                     let msg = Message::Translated(translation);
 
-                  let event_status = match *interaction {
-                     Interaction::None => event::Status::Ignored,
-                     _ => event::Status::Captured,
-                  };
-
-                  (event_status, None)
+                     (event::Status::Captured, Some(msg))
+                  }
+                  Interaction::None => (event::Status::Ignored, None),
+                  _ => (event::Status::Captured, None),
+               }
             }
             mouse::Event::WheelScrolled { delta } => match delta {
-                  mouse::ScrollDelta::Lines { y, .. } | mouse::ScrollDelta::Pixels { y, .. } => {
-                     if y < 0.0 && self.scaling > Self::MIN_SCALING || y > 0.0 && self.scaling < Self::MAX_SCALING {
-                        let old_scaling = self.scaling;
+               mouse::ScrollDelta::Lines { y, .. } | mouse::ScrollDelta::Pixels { y, .. } => {
+                  if y < 0.0 && self.scaling > Self::MIN_SCALING || y > 0.0 && self.scaling < Self::MAX_SCALING {
+                     let old_scaling = self.scaling;
 
-                        let scaling = (self.scaling * (1.0 + y / Self::CELL_SIZE))
-                           .max(Self::MIN_SCALING)
-                           .min(Self::MAX_SCALING);
+                     let scaling = (old_scaling * (1.0 + y / Self::CELL_SIZE))
+                        .max(Self::MIN_SCALING)
+                        .min(Self::MAX_SCALING);
 
-                           let translation = 
-                              if let Some(cursor_to_center) = cursor.position() {
-                                 let factor = self.scaling - old_scaling;
+                     let translation = 
+                        if let Some(cursor_to_center) = cursor.position() {
+                           let factor = scaling - old_scaling;
 
-                                 Some(
-                                    self.translation - Vector::new(
-                                       cursor_to_center.x * factor / (old_scaling * old_scaling),
-                                       cursor_to_center.y * factor / (old_scaling * old_scaling),
-                                    )
-                                 )
-                              } else {
-                                 None
-                              };
-
-                        (event::Status::Captured, Some(Message::Scaled(scaling, translation)))
-
-
-                     } else {
-                        (event::Status::Captured, None)
-                     }
+                           let translation = self.translation - Vector::new(
+                              cursor_to_center.x * factor / (old_scaling * old_scaling),
+                              cursor_to_center.y * factor / (old_scaling * old_scaling),
+                           );
+                           Some(translation)
+                        } else {
+                           None
+                        };
+                        
+                     (event::Status::Captured, Some(Message::Scaled(scaling, translation)))
+                  } else {
+                     (event::Status::Captured, None)
                   }
+
+               }
             },
             _ => (event::Status::Ignored, None),
          },

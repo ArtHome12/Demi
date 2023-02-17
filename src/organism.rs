@@ -9,15 +9,9 @@ Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 use std::cmp::max;
-use std::collections::btree_map::OccupiedEntry;
 use std::fmt;
-use itertools::Itertools;
-use std::iter::FilterMap;
-use std::slice::IterMut;
-// use std::option::IterMut;
 use rayon::prelude::*;
 
-use crate::geom::*;
 use crate::genes::*;
 use crate::reactions::Reactions;
 use crate::dot::*;
@@ -186,10 +180,11 @@ pub struct AnimalSheet(Vec<AnimalStack>);
 
 impl<'a> AnimalSheet {
    pub fn new(max_serial: usize, max_animal_stack: usize) -> Self {
-      let matrix = Vec::with_capacity(max_serial);
+      let mut matrix = Vec::with_capacity(max_serial);
+
+      // Fill points with stacks for futures animals
       (0..max_serial)
-      .map(|_| AnimalStack::new(max_animal_stack))
-      .collect::<Vec<AnimalStack>>();
+      .for_each(|_| matrix.push(AnimalStack::new(max_animal_stack)));
 
       Self {
          0: matrix,
