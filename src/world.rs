@@ -73,7 +73,7 @@ impl World {
 
       let env = Environment::new(size,
          project.resolution,
-         project.max_animal_stack,
+         // project.max_animal_stack,
          project.luca_reaction
       );
 

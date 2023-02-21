@@ -15,7 +15,7 @@ use iced::{
    Size, Vector, alignment, Theme,
 };
 
-use std::{ops::RangeInclusive, rc::Rc, cell::RefCell};
+use std::{rc::Rc, cell::RefCell};
 
 use crate::world::{World, };
 use crate::update_rate::*;
@@ -25,8 +25,9 @@ pub struct Grid {
    life_cache: Cache,
    grid_cache: Cache,
    translation: Vector,
-   scaling: f32,
+   scale: f32,
    world: Rc<RefCell<World>>,
+   world_size: Size,
    fps: RefCell<FPS>,  // screen refresh rate
    tps: TPS, // model time rate, ticks per second
    illumination: bool,
@@ -49,19 +50,26 @@ impl Grid {
    // Height for line of text
    const CELL_TEXT_HEIGHT: f32 = 21.0;
 
-   const MIN_SCALING: f32 = 0.1;
-   const MAX_SCALING: f32 = 200.0;
+   const MIN_SCALING: f32 = 0.9;
+   const MAX_SCALING: f32 = 3.0;
+
+   const SCALE_STEP_DOWN: f32 = 0.9;
+   const SCALE_STEP_UP: f32 = 1.111111111111;
 
    const STATUS_BAR_HEIGHT: f32 = 30.0;
 
    pub fn new(world: Rc<RefCell<World>>) -> Self {
+      let crate::geom::Size {x: w, y: h} = world.borrow().size();
+      let world_size = Size::<f32>::new(w as f32, h as f32);
+
       Self {
          // interaction: Interaction::None,
          life_cache: Cache::default(),
          grid_cache: Cache::default(),
          translation: Vector::default(),
-         scaling: 1.0,
+         scale: 1.0,
          world,
+         world_size,
          fps: RefCell::new(FPS::default()),
          tps: TPS::default(),
          illumination: false,
@@ -72,18 +80,20 @@ impl Grid {
       match message {
 
          Message::Translated(translation) => {
-            self.translation = translation;
+            self.translation = self.adjust_translation(translation);
 
             self.life_cache.clear();
             self.grid_cache.clear();
          }
 
-         Message::Scaled(scaling, translation) => {
-            self.scaling = scaling;
+         Message::Scaled(scale, translation) => {
+            self.scale = scale;
+            // self.scale = (scale * 10.0).round() / 10.0;
 
             if let Some(translation) = translation {
-               self.translation = translation;
+               self.translation = self.adjust_translation(translation);
             }
+            println!("scroll translation {:?}, scale {}", self.translation, scale);
 
             self.life_cache.clear();
             self.grid_cache.clear();
@@ -100,8 +110,8 @@ impl Grid {
    }
 
    fn visible_region(&self, size: Size) -> Region {
-      let width = size.width / self.scaling;
-      let height = size.height / self.scaling;
+      let width = size.width / self.scale;
+      let height = size.height / self.scale;
 
       Region {
          x: -self.translation.x,
@@ -115,8 +125,8 @@ impl Grid {
       let region = self.visible_region(size);
 
       Point::new(
-         position.x / self.scaling + region.x,
-         position.y / self.scaling + region.y,
+         position.x / self.scale + region.x,
+         position.y / self.scale + region.y,
       )
    }
 
@@ -127,20 +137,12 @@ impl Grid {
    }
 
    fn adjust_translation(&self, translation: Vector) -> Vector {
-      let mut t = translation;
-
-      // World size in pixels
-      let crate::geom::Size {x: w, y: h} = self.world.borrow().size();
-      let w = w as f32 * Self::CELL_SIZE;
-      let h = h as f32 * Self::CELL_SIZE;
       // To prevent overflow translation in coninious world
-      if t.x <= 0.0 {t.x += w}
-      else if t.x >= w {t.x -= w}
-
-      if t.y <= 0.0 {t.y += h}
-      else if t.y >= h {t.y -= h}
-
-      t
+      let w = self.world_size.width * Self::CELL_SIZE;
+      let h = self.world_size.height * Self::CELL_SIZE;
+      let x = (translation.x % w).round();
+      let y = (translation.y % h).round();
+      Vector::new(x, y)
    }
 
    // Update rate counters
@@ -152,6 +154,36 @@ impl Grid {
    pub fn set_illumination(&mut self, checked: bool) {
       self.illumination = checked;
    }
+
+   fn draw_lines(&self, frame: &mut Frame, color: Color, step: Size, bounds: Rectangle) {
+      // Prepare style
+      let stroke = Stroke::default()
+      .with_width(1.0)
+      .with_color(color);
+
+      // Starting position
+      let mut x = self.translation.x % step.width  * self.scale;
+      let mut y = self.translation.y % step.height * self.scale;
+
+      let step = Size::new(step.width * self.scale, step.height * self.scale);
+
+      // Draw vertical lines
+      while x < bounds.width {
+         let from = Point::new(x, 0.0);
+         let to = Point::new(x, bounds.height);
+         frame.stroke(&Path::line(from, to), stroke.to_owned());
+         x += step.width;
+      }
+
+      // Draw horizontal lines
+      while y < bounds.height {
+         let from = Point::new(0.0, y);
+         let to = Point::new(bounds.width, y);
+         frame.stroke(&Path::line(from, to), stroke.to_owned());
+         y += step.height;
+      }
+   }
+
 }
 
 impl<'a> canvas::Program<Message> for Grid {
@@ -193,39 +225,50 @@ impl<'a> canvas::Program<Message> for Grid {
             mouse::Event::CursorMoved { .. } => {
                match *interaction {
                   Interaction::Panning { translation, start } => {
-                     let translation = translation + (cursor_position - start) * (1.0 / self.scaling);
-                     let translation = self.adjust_translation(translation);
+                     let translation = translation + (cursor_position - start) * (1.0 / self.scale);
                      let msg = Message::Translated(translation);
 
                      (event::Status::Captured, Some(msg))
                   }
                   Interaction::None => (event::Status::Ignored, None),
-                  _ => (event::Status::Captured, None),
                }
             }
             mouse::Event::WheelScrolled { delta } => match delta {
                mouse::ScrollDelta::Lines { y, .. } | mouse::ScrollDelta::Pixels { y, .. } => {
-                  if y < 0.0 && self.scaling > Self::MIN_SCALING || y > 0.0 && self.scaling < Self::MAX_SCALING {
-                     let old_scaling = self.scaling;
+                  if y < 0.0 && self.scale > Self::MIN_SCALING || y > 0.0 && self.scale < Self::MAX_SCALING {
 
-                     let scaling = (old_scaling * (1.0 + y / Self::CELL_SIZE))
-                        .max(Self::MIN_SCALING)
-                        .min(Self::MAX_SCALING);
+                     let step = if y < 0.0 { Self::SCALE_STEP_DOWN } else { Self::SCALE_STEP_UP };
+                     let scale = (self.scale * step)
+                     .clamp(Self::MIN_SCALING, Self::MAX_SCALING);
 
                      let translation = 
-                        if let Some(cursor_to_center) = cursor.position() {
-                           let factor = scaling - old_scaling;
+                        if let Some(cursor) = cursor.position_in(&bounds) {
 
-                           let translation = self.translation - Vector::new(
-                              cursor_to_center.x * factor / (old_scaling * old_scaling),
-                              cursor_to_center.y * factor / (old_scaling * old_scaling),
-                           );
+                           // Window coordinates under mouse pointer(pixels).
+                           let cursor = Vector::new(cursor.x, cursor.y);
+
+                           // Global coordinates of cursor
+                           let point = self.translation + cursor * self.scale;
+
+                           // Relation of coordinates and window size
+                           let relative = Vector::new(bounds.width / cursor.x, bounds.height / cursor.y);
+
+                           // Size of visible fragment after scaling
+                           let fragment = Vector::new(bounds.width * scale, bounds.height * scale);
+                           
+                           let t = Vector::new(fragment.x / relative.x, fragment.y / relative.y);
+                           let translation = point - t;
+
+                           let old_x = self.translation.x + cursor.x * self.scale;
+                           let new_x = translation.x + cursor.x * scale;
+                           println!("old x={}, new x={}", old_x, new_x);
+
                            Some(translation)
                         } else {
                            None
                         };
                         
-                     (event::Status::Captured, Some(Message::Scaled(scaling, translation)))
+                     (event::Status::Captured, Some(Message::Scaled(scale, translation)))
                   } else {
                      (event::Status::Captured, None)
                   }
@@ -246,7 +289,7 @@ impl<'a> canvas::Program<Message> for Grid {
       cursor: Cursor,
    ) -> Vec<Geometry> {
 
-      let life = {
+      /* let life = {
          let mut frame = Frame::new(bounds.size());
 
          let background = Path::rectangle(Point::ORIGIN, frame.size());
@@ -298,7 +341,7 @@ impl<'a> canvas::Program<Message> for Grid {
          });
 
          frame.into_geometry()
-      };
+      };*/
 
       // Update FPS, once upon refresh
       self.fps.borrow_mut().make_tick();
@@ -329,7 +372,8 @@ impl<'a> canvas::Program<Message> for Grid {
          let (years, days) = self.world.borrow().date();
          frame.fill_text(Text{
             position: Point::new(3.0, frame_height - 3.0),
-            content: format!("{}Y:{}D {} FPS {} TPS", years, days, self.fps.borrow().rate, self.tps.rate),
+            // content: format!("{}Y:{}D {} FPS {} TPS", years, days, self.fps.borrow().rate, self.tps.rate),
+            content: format!("{:?}, scale {}", self.translation, self.scale),
             ..text
          });
 
@@ -341,7 +385,7 @@ impl<'a> canvas::Program<Message> for Grid {
 
             // Tune scale and offset
             frame.with_save(|frame| {
-               frame.scale(self.scaling);             // scale to user's choice
+               frame.scale(self.scale);             // scale to user's choice
                frame.translate(self.translation);     // consider the offset of the displayed area
                frame.scale(Self::CELL_SIZE);        // scale so that the cell with its dimensions occupies exactly one unit
 
@@ -351,7 +395,8 @@ impl<'a> canvas::Program<Message> for Grid {
                   Size::UNIT,
                   Color {
                      a: 0.5,
-                     ..Color::BLACK
+                     ..Color::WHITE
+                     // ..Color::BLACK
                   },
                );
             });
@@ -360,8 +405,10 @@ impl<'a> canvas::Program<Message> for Grid {
             let dot = self.world.borrow().dot(x as isize, y as isize);
             let description = self.world.borrow().description(&dot, 30, ' ');
             frame.fill_text(Text{
-               position: Point::new(210.0, frame_height - 3.0),
-               content: format!("{}:{} {}", dot.x, dot.y, description),
+               position: Point::new(350.0, frame_height - 3.0),
+               content: format!("{}:{} {}:{}", dot.x, dot.y, (cursor_position.x + self.translation.x) * self.scale, cursor_position.y + self.translation.y),
+               // position: Point::new(210.0, frame_height - 3.0),
+               // content: format!("{}:{} {}", dot.x, dot.y, description),
                ..text
             });
          }
@@ -370,96 +417,27 @@ impl<'a> canvas::Program<Message> for Grid {
       };
 
       let grid = self.grid_cache.draw(bounds.size(), |frame| {
-         frame.scale(self.scaling);
-         frame.translate(self.translation);
-         frame.scale(Self::CELL_SIZE);
 
-         let region = self.visible_region(frame.size());
-         let rows = region.rows();
-         let columns = region.columns();
-         let (total_rows, total_columns) = (rows.clone().count(), columns.clone().count());
-         let (rows_start, columns_start) = (*rows.start() as f32, *columns.start() as f32);
-         let crate::geom::Size {x: world_width, y: world_height} = self.world.borrow().size();
+         let background = Path::rectangle(Point::ORIGIN, bounds.size());
+         frame.fill(&background, Color::BLACK);
 
-         // Amount of lines for border around the world
-         let outer_rows = total_rows / world_height;
-         let outer_columns = total_columns / world_width;
-
-         // Color for world's borders
-         let special_color = Color::from_rgb8(255, 74, 83);
-
-         // No grid at small scale, only outer border
-         if self.scaling < 0.2 {
-            // Prepare style
-            let stroke = Stroke::default()
-            .with_width(1.0)
-            .with_color(special_color);
-
-           // Draw horizontal lines
-           for row in 0..=outer_rows {
-               let from = Point::new(columns_start, (row * world_height) as f32);
-               let to = Point::new(total_columns as f32, (row * world_height) as f32);
-               frame.stroke(&Path::line(from, to), stroke.to_owned());
-            }
-
-            // Draw vertical lines
-            for column in 0..=outer_columns {
-               let from = Point::new((column * world_width) as f32, rows_start);
-               let to = Point::new((column * world_width) as f32, total_rows as f32);
-               frame.stroke(&Path::line(from, to), stroke.to_owned());
-            }
-         } else {
-            // Draw the inner grid
-            let width = 2.0 / Self::CELL_SIZE;
+         // Draw the inner grid if not too small scale
+         if self.scale > 0.2 {
             let color = Color::from_rgb8(70, 74, 83);
-
-            frame.translate(Vector::new(-width / 2.0, -width / 2.0));
-
-           // Draw horizontal lines
-           for row in rows {
-               // There must be a special border when crossing the edge of the world, skipping for optimization
-               if row != 0 {
-                  frame.fill_rectangle(
-                     Point::new(columns_start, row as f32),
-                     Size::new(total_columns as f32, width),
-                     color,
-                  );
-               }
-            }
-
-            // Draw vertical lines
-            for column in columns {
-               // There must be a special border when crossing the edge of the world, skipping for optimization
-               if column != 0 {
-                  frame.fill_rectangle(
-                     Point::new(column as f32, rows_start),
-                     Size::new(width, total_rows as f32),
-                     color,
-                  );
-               }
-            }
-
-            // Draw outer borders - horizontal lines
-            for row in 0..=outer_rows {
-               frame.fill_rectangle(
-                  Point::new(columns_start, (row * world_height) as f32),
-                  Size::new(total_columns as f32, width),
-                  special_color,
-               );
-            }
-
-            // Draw outer borders - vertical lines
-            for column in 0..=outer_columns {
-               frame.fill_rectangle(
-                  Point::new((column * world_width) as f32, rows_start),
-                  Size::new(width, total_rows as f32),
-                  special_color,
-               );
-            }
+            let step = Size::new(Self::CELL_SIZE, Self::CELL_SIZE);
+            self.draw_lines(frame, color, step, bounds);
          }
+
+         // Draw outer borders - lines for border around the world
+         let color = Color::from_rgb8(255, 74, 83);
+         let w = self.world_size.width * Self::CELL_SIZE;
+         let h = self.world_size.height * Self::CELL_SIZE;
+         self.draw_lines(frame, color, Size::new(w, h), bounds);
       });
 
-      vec![life, grid, overlay]
+      // vec![life, grid, overlay]
+      vec![grid, overlay]
+
    }
 
    fn mouse_interaction(
@@ -489,25 +467,50 @@ pub struct Region {
    height: f32,
 }
 
-impl Region {
-   fn rows(&self) -> RangeInclusive<isize> {
-      let first_row = (self.y / Grid::CELL_SIZE).floor() as isize;
-
-      let visible_rows =
-         (self.height / Grid::CELL_SIZE).ceil() as isize;
-
-      first_row..=first_row + visible_rows
+/* impl Region {
+   fn rows_count(&self) -> usize {
+      (self.height / Grid::CELL_SIZE) as usize
    }
 
-   fn columns(&self) -> RangeInclusive<isize> {
-      let first_column = (self.x / Grid::CELL_SIZE).floor() as isize;
-
-      let visible_columns =
-         (self.width / Grid::CELL_SIZE).ceil() as isize;
-
-      first_column..=first_column + visible_columns
+   fn rows_start(&self) -> f32 {
+      (self.y / Grid::CELL_SIZE).floor()
    }
-}
+
+   fn rows(&self) -> Range<isize> {
+      let first_row = self.rows_start() as isize;
+      let visible_rows = self.rows_count() as isize;
+
+      first_row..first_row + visible_rows
+   }
+
+   fn columns_count(&self) -> usize {
+      (self.width / Grid::CELL_SIZE) as usize
+   }
+
+   fn columns_start(&self) -> f32 {
+      (self.x / Grid::CELL_SIZE).floor()
+   }
+
+   fn columns(&self) -> Range<isize> {
+      let first_column = self.columns_start() as isize;
+      let visible_columns = self.columns_count() as isize;
+
+      first_column..first_column + visible_columns
+   }
+
+   fn h_inc_range(&self) -> RangeInclusive<isize> {
+      let start = self.x as isize;
+      let len = self.width as isize;
+      start..=start + len
+   }
+
+   fn v_inc_range(&self) -> RangeInclusive<isize> {
+      let start = self.y as isize;
+      let len = self.height as isize;
+      start..=start + len
+   }
+
+} */
 
 pub enum Interaction {
    None,
