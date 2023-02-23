@@ -117,7 +117,7 @@ impl Application for Demi {
          Message::ProjectMessage(message) => {
 
             // Reflecting the interface change immediately
-            self.controls.update(message.clone());
+            _ = self.controls.update(message.clone());
 
             // Translate from project message to own and create new command
             let cmd = match message {
