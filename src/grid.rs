@@ -138,9 +138,9 @@ impl Grid {
 
    fn adjust_translation(&self, translation: Vector) -> Vector {
       // To prevent overflow translation in coninious world
-      let s: Vector = (self.world_size * Self::CELL_SIZE).into();
-      let v = translation % s;
-      Vector::new(v.x.round(), v.y.round())
+      // let s: Vector = (self.world_size * Self::CELL_SIZE).into();
+      // translation % s
+      translation
    }
 
    // Update rate counters
@@ -427,9 +427,11 @@ impl<'a> canvas::Program<Message> for Grid {
             // Output info at bottom left edge
             let dot = self.world.borrow().dot(x as isize, y as isize);
             let _description = self.world.borrow().description(&dot, 30, ' ');
+            let curs = Vector::new(cursor_position.x, cursor_position.y);
+            let abs: Vector = self.translation + curs * self.scale;
             frame.fill_text(Text{
                position: Point::new(350.0, frame_height - 3.0),
-               content: format!("{}:{} {}:{}", dot.x, dot.y, self.translation.x + cursor_position.x * self.scale, self.translation.y + cursor_position.y * self.scale),
+               content: format!("{}:{} window cursor {}:{} absolute {}:{}", dot.x, dot.y, cursor_position.x, cursor_position.y, abs.x, abs.y),
                // position: Point::new(210.0, frame_height - 3.0),
                // content: format!("{}:{} {}", dot.x, dot.y, description),
                ..text
