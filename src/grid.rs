@@ -159,18 +159,11 @@ impl Grid {
       .with_width(1.0)
       .with_color(color);
 
-      // Starting position
-      let mut p = self.translation % step;
+      // Starting position with correction for a negative value
+      let mut p = ((self.translation * -1.0 % step) + step) % step * self.scale;
+      // let mut p = self.translation;
 
-      // To prevent start draw from invisible area
-      if p.x < 0.0 {
-         p.x += step.x;
-      }
-      if p.y < 0.0 {
-         p.y += step.y;
-      }
-      
-      p *= self.scale;
+      // p *= self.scale;
 
       let step = step * self.scale;
 
@@ -232,7 +225,7 @@ impl<'a> canvas::Program<Message> for Grid {
             mouse::Event::CursorMoved { .. } => {
                match *interaction {
                   Interaction::Panning { translation, start } => {
-                     let translation = translation + (cursor_position - start) / self.scale;
+                     let translation = translation - (cursor_position - start) / self.scale;
                      let msg = Message::Translated(translation);
 
                      (event::Status::Captured, Some(msg))
@@ -254,18 +247,8 @@ impl<'a> canvas::Program<Message> for Grid {
                            // Window coordinates under mouse pointer(pixels).
                            let cursor = Vector::new(cursor.x, cursor.y);
 
-                           // Global coordinates of cursor
-                           let point = self.translation + cursor * self.scale;
-
-                           // Relation of coordinates and window size
-                           let bounds_size: Vector = bounds.size().into();
-                           let relative = bounds_size / cursor;
-
-                           // Size of visible fragment after scaling
-                           let fragment = bounds_size * scale;
-                           
-                           let t = fragment / relative;
-                           let translation = point - t;
+                           let delta = cursor / self.scale - cursor / scale;
+                           let translation = self.translation + delta;
 
                            let old_x = self.translation.x + cursor.x * self.scale;
                            let new_x = translation.x + cursor.x * scale;
@@ -403,18 +386,25 @@ impl<'a> canvas::Program<Message> for Grid {
          // Get dot below cursor
          if let Some(cursor_position) = cursor.position_in(&bounds) {
 
+            let cursor = Vector::new(cursor_position.x, cursor_position.y);
+
+            let abs_cursor: Vector = self.translation + cursor / self.scale;
+
             // Cursor at world coordinates
-            let (x, y) = self.project_to_world(self.project(cursor_position, bounds.size()));
+            let x = (abs_cursor.x / Self::CELL_SIZE).floor();
+            let y = (abs_cursor.y / Self::CELL_SIZE).floor();
+
+            // let (x, y) = self.project_to_world(self.project(cursor_position, bounds.size()));
 
             // Tune scale and offset
             frame.with_save(|frame| {
-               frame.scale(self.scale);             // scale to user's choice
-               frame.translate(self.translation);     // consider the offset of the displayed area
-               frame.scale(Self::CELL_SIZE);        // scale so that the cell with its dimensions occupies exactly one unit
+               frame.scale(self.scale);   // scale to user's choice
+               frame.translate(self.translation * -1.0); // consider the offset of the displayed area
+               frame.scale(Self::CELL_SIZE); // scale so that the cell with its dimensions occupies exactly one unit
 
                // Paint over a square of unit size
                frame.fill_rectangle(
-                  Point::new(x as f32, y as f32),
+                  Point::new(x, y),
                   Size::UNIT,
                   Color {
                      a: 0.5,
@@ -427,11 +417,9 @@ impl<'a> canvas::Program<Message> for Grid {
             // Output info at bottom left edge
             let dot = self.world.borrow().dot(x as isize, y as isize);
             let _description = self.world.borrow().description(&dot, 30, ' ');
-            let curs = Vector::new(cursor_position.x, cursor_position.y);
-            let abs: Vector = self.translation + curs * self.scale;
             frame.fill_text(Text{
                position: Point::new(350.0, frame_height - 3.0),
-               content: format!("{}:{} window cursor {}:{} absolute {}:{}", dot.x, dot.y, cursor_position.x, cursor_position.y, abs.x, abs.y),
+               content: format!("{}:{} window cursor {}:{} absolute {}:{}", dot.x, dot.y, cursor_position.x, cursor_position.y, abs_cursor.x, abs_cursor.y),
                // position: Point::new(210.0, frame_height - 3.0),
                // content: format!("{}:{} {}", dot.x, dot.y, description),
                ..text
