@@ -160,13 +160,13 @@ impl World {
 
    // Return dot at display position
    // The world must be continuous, the first point goes to the right (or bottom) of the last point again
-   pub fn dot(&self, display_x: isize, display_y: isize) -> Dot {
+   pub fn dot(&self, x: isize, y: isize) -> Dot {
       let Size {x: width, y: height} = self.size();
       let width = width as isize;
       let height = height as isize;
 
-      let mut x = display_x;
-      let mut y = display_y;
+      let mut x = x;
+      let mut y = y;
 
       while x < 0 {x += width;}
       while x >= width {x -= width;}
