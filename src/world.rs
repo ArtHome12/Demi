@@ -168,6 +168,7 @@ impl World {
       let mut x = x;
       let mut y = y;
 
+      // TODO! Benchmark and maybe replace with rem_euclid()
       while x < 0 {x += width;}
       while x >= width {x -= width;}
       while y < 0 {y += height;}
@@ -311,7 +312,7 @@ impl World {
       Environment::date(now)
    }
 
-   fn await_for_stop_thread_or_panic(&self) {
+   fn await_for_pause_thread_or_panic(&self) {
       let timeout = Duration::from_secs(5);
       let sleep_time = Duration::from_millis(100);
       let now = Instant::now();
@@ -332,7 +333,7 @@ impl World {
       let prev_state: ThreadMode = self.mode.load(Ordering::Acquire).into();
       if matches!(prev_state, ThreadMode::Run) {
          self.mode.store(ThreadMode::Pause as u8, Ordering::Release);
-         self.await_for_stop_thread_or_panic();
+         self.await_for_pause_thread_or_panic();
       }
 
       // Save

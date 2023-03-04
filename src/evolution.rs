@@ -77,9 +77,9 @@ impl Evolution {
       Evolution::end_of_turn(&mut self.animal_sheet, tick);
 
       // Transfer data to mirror if there no delay
-      if let Ok(ref mut mirror) = self.mirror.try_lock() {
-         mirror.clone_from(&self.animal_sheet);
-      }
+      // if let Ok(ref mut mirror) = self.mirror.try_lock() {
+      //    mirror.clone_from(&self.animal_sheet);
+      // }
    }
 
    // Mirror copy guarantee
