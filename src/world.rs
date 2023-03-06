@@ -129,7 +129,7 @@ impl World {
       // Thread for calculate evolution
       let thread_handle = std::thread::spawn(move || {
          let sleep_time = Duration::from_millis(100);
-         
+
          // Running until program not closed
          loop {
             // Get task
