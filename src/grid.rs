@@ -49,7 +49,6 @@ pub struct ScreenSpace;   // Screen space
 pub struct WorldSpace;   // World space
 
 // Shortcuts
-type RectS = Rect<f32, ScreenSpace>;
 type SizeS = Size2D<f32, ScreenSpace>;
 type SizeW = Size2D<f32, WorldSpace>;
 type PointS = Point2D<f32, ScreenSpace>;
@@ -179,7 +178,7 @@ impl Grid {
       self.life_cache.clear();
    }
 
-   fn draw_lines(&self, frame: &mut Frame, color: Color, step: SizeS, bounds: RectS) {
+   fn draw_lines(&self, frame: &mut Frame, color: Color, step: SizeS, bounds: SizeS) {
       // Prepare style
       let stroke = Stroke::default()
       .with_width(1.0)
@@ -191,21 +190,18 @@ impl Grid {
       let mut y = ((-self.translation.y % step.height) + step.height) % step.height * self.scale.get();
       let step = step * self.scale.get();
 
-      // TODO. May be need check bounds.origin
-      // debug_assert!(bounds.origin == PointS::zero(), "draw_lines::bounds isn't zero");
-
       // Draw vertical lines
-      while x < bounds.size.width {
+      while x < bounds.width {
          let from = Point::new(x, 0.0);
-         let to = Point::new(x, bounds.size.height);
+         let to = Point::new(x, bounds.height);
          frame.stroke(&Path::line(from, to), stroke.to_owned());
          x += step.width;
       }
 
       // Draw horizontal lines
-      while y < bounds.size.height {
+      while y < bounds.height {
          let from = Point::new(0.0, y);
-         let to = Point::new(bounds.size.width, y);
+         let to = Point::new(bounds.width, y);
          frame.stroke(&Path::line(from, to), stroke.to_owned());
          y += step.height;
       }
@@ -389,20 +385,18 @@ impl<'a> canvas::Program<Message> for Grid {
 
       let grid = self.grid_cache.draw(bounds.size(), |frame| {
 
-         let origin = PointS::new(bounds.x, bounds.y);
-         let size = SizeS::new(bounds.width, bounds.height);
-         let rect = RectS::new(origin, size);
+         let bounds = SizeS::new(bounds.width, bounds.height);
 
          // Draw the inner grid if not too small scale
          if Self::CELL_SIZE * self.scale.get() > Self::MIN_VISIBLE_CELL_BORDER {
             let color = Color::from_rgb8(70, 74, 83);
             let step = SizeS::splat(Self::CELL_SIZE);
-            self.draw_lines(frame, color, step, rect);
+            self.draw_lines(frame, color, step, bounds);
          }
 
          // Draw outer borders - lines for border around the world
          let color = Color::from_rgb8(255, 74, 83);
-         self.draw_lines(frame, color, self.nonscaled_size, rect);
+         self.draw_lines(frame, color, self.nonscaled_size, bounds);
       });
 
       // Update FPS, once upon refresh
