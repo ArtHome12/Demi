@@ -31,7 +31,7 @@ pub struct Grid {
    scale_down: f32,
 
    world: Rc<RefCell<World>>,
-   nonscaled_size: SizeS, // for performance, world size * CELL_SIZE
+   nonscaled_size: SizeW, // for performance, world size * CELL_SIZE
    fps: RefCell<FPS>,  // screen refresh rate
    tps: TPS, // model time rate, ticks per second
    illumination: bool,
@@ -78,21 +78,20 @@ impl Grid {
 
    pub fn new(world: Rc<RefCell<World>>) -> Self {
       let world_size = world.borrow().size();
-      let x = world_size.x as f32;
-      let y = world_size.y as f32;
+      let world_size = Size2D::<usize, WorldSpace>::new(world_size.x, world_size.y);
+      let world_size = world_size.cast::<f32>();
 
       // Scaling range
       let max_scale = ScaleWS::new(Self::MIN_SCREEN_WIDTH / Self::CELL_SIZE);   // about one cell on the screen
-      let min_scale = ScaleWS::new(max_scale.get() / x);  // the whole world on the screen
+      let min_scale = ScaleWS::new(max_scale.get() / world_size.width);  // the whole world on the screen
    
       // Scale range, after down by 10% it is needs to up to (1-0.1^n)/(1-0.1)
       let scale_up = (1.0 - Self::SCALE_STEP.powi(10)) / (1.0 - Self::SCALE_STEP);
       let scale_down = 1.0 - Self::SCALE_STEP;
 
-      let nonscaled_size = SizeS::new(x, y) * Self::CELL_SIZE;
+      let nonscaled_size = world_size * Self::CELL_SIZE;
 
       Self {
-         // interaction: Interaction::None,
          life_cache: Cache::default(),
          grid_cache: Cache::default(),
          translation: PointW::default(),
@@ -146,10 +145,11 @@ impl Grid {
       let t = translation;
       let s = self.nonscaled_size;
 
-      // Need to PR to Euclid
-      let x = ((t.x % s.width) + s.width) % s.width;
-      let y = ((t.y % s.height) + s.height) % s.height;
-      PointW::new(x, y)
+      // Before PR to euclid
+      // let x = ((t.x % s.width) + s.width) % s.width;
+      // let y = ((t.y % s.height) + s.height) % s.height;
+      // PointW::new(x, y)
+      t.rem_euclid(&s)
    }
 
    fn translation_for_scale(&self, cursor: PointS, scale: ScaleWS) -> PointW {
@@ -178,32 +178,34 @@ impl Grid {
       self.life_cache.clear();
    }
 
-   fn draw_lines(&self, frame: &mut Frame, color: Color, step: SizeS, bounds: SizeS) {
+   fn draw_lines(&self, frame: &mut Frame, color: Color, step: SizeW, bounds: SizeS) {
       // Prepare style
       let stroke = Stroke::default()
       .with_width(1.0)
       .with_color(color);
 
       // Starting position with correction for a negative value
-      // Need PR to euclid
-      let mut x = ((-self.translation.x % step.width) + step.width) % step.width * self.scale.get();
-      let mut y = ((-self.translation.y % step.height) + step.height) % step.height * self.scale.get();
-      let step = step * self.scale.get();
+      // Before PR to euclid
+      // let mut x = ((-self.translation.x % step.width) + step.width) % step.width * self.scale.get();
+      // let mut y = ((-self.translation.y % step.height) + step.height) % step.height * self.scale.get();
+      let p = (-self.translation).rem_euclid(&step);
+      let mut p = self.scale.transform_point(p);
+      let step = step * self.scale;
 
       // Draw vertical lines
-      while x < bounds.width {
-         let from = Point::new(x, 0.0);
-         let to = Point::new(x, bounds.height);
+      while p.x < bounds.width {
+         let from = Point::new(p.x, 0.0);
+         let to = Point::new(p.x, bounds.height);
          frame.stroke(&Path::line(from, to), stroke.to_owned());
-         x += step.width;
+         p.x += step.width;
       }
 
       // Draw horizontal lines
-      while y < bounds.height {
-         let from = Point::new(0.0, y);
-         let to = Point::new(bounds.width, y);
+      while p.y < bounds.height {
+         let from = Point::new(0.0, p.y);
+         let to = Point::new(bounds.width, p.y);
          frame.stroke(&Path::line(from, to), stroke.to_owned());
-         y += step.height;
+         p.y += step.height;
       }
    }
 
@@ -388,9 +390,9 @@ impl<'a> canvas::Program<Message> for Grid {
          let bounds = SizeS::new(bounds.width, bounds.height);
 
          // Draw the inner grid if not too small scale
-         if Self::CELL_SIZE * self.scale.get() > Self::MIN_VISIBLE_CELL_BORDER {
+         if self.scale.get() * Self::CELL_SIZE > Self::MIN_VISIBLE_CELL_BORDER {
             let color = Color::from_rgb8(70, 74, 83);
-            let step = SizeS::splat(Self::CELL_SIZE);
+            let step = SizeW::splat(Self::CELL_SIZE);
             self.draw_lines(frame, color, step, bounds);
          }
 
@@ -436,14 +438,14 @@ impl<'a> canvas::Program<Message> for Grid {
          if let Some(cursor_position) = cursor.position_in(&bounds) {
 
             let cursor = PointS::new(cursor_position.x, cursor_position.y);
+
+            // Cursor at world coordinates
             let cursor = cursor / self.scale;
             let offset = SizeW::new(cursor.x, cursor.y);
 
-            let abs_cursor = self.translation + offset;
-
-            // Cursor at world coordinates
-            let x = (abs_cursor.x / Self::CELL_SIZE).floor();
-            let y = (abs_cursor.y / Self::CELL_SIZE).floor();
+            // Position at world coordinates
+            let p = ((self.translation + offset) / Self::CELL_SIZE).floor();
+            let top_left = Point::new(p.x, p.y);
 
             // Tune scale and offset
             frame.with_save(|frame| {
@@ -454,7 +456,7 @@ impl<'a> canvas::Program<Message> for Grid {
 
                // Paint over a square of unit size
                frame.fill_rectangle(
-                  Point::new(x, y),
+                  top_left,
                   Size::UNIT,
                   Color {
                      a: 0.5,
@@ -464,7 +466,8 @@ impl<'a> canvas::Program<Message> for Grid {
             });
 
             // Output info at bottom left edge
-            let dot = self.world.borrow().dot(x as isize, y as isize);
+            let p = p.cast::<isize>();
+            let dot = self.world.borrow().dot(p.x, p.y);
             let description = self.world.borrow().description(&dot, 30, ' ');
             frame.fill_text(Text{
                position: Point::new(210.0, frame_height - 3.0),
