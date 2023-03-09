@@ -42,6 +42,9 @@ pub struct Grid {
 pub enum Message {
    Translated(PointW),
    Scaled(ScaleWS, Option<PointW>),
+   ClockChime, // Update rate counters
+   Illumination(bool),
+   FilterChanged,
 }
 
 // Adress spaces for Euclid crate
@@ -129,6 +132,13 @@ impl Grid {
             self.life_cache.clear();
             self.grid_cache.clear();
          }
+
+         Message::ClockChime => self.clock_chime(),
+         Message::Illumination(is_on) => {
+            self.illumination = is_on;
+            self.life_cache.clear();
+         }
+         Message::FilterChanged => self.life_cache.clear(),
       }
    }
 
@@ -160,7 +170,7 @@ impl Grid {
 }
 
 // Update rate counters
-   pub fn clock_chime(&mut self) {
+   fn clock_chime(&mut self) {
       self.fps.borrow_mut().clock_chime();
 
       let tick = self.world.borrow().ticks_elapsed();
@@ -171,11 +181,6 @@ impl Grid {
          self.last_tick = tick;
          self.life_cache.clear();
       }
-   }
-
-   pub fn set_illumination(&mut self, checked: bool) {
-      self.illumination = checked;
-      self.life_cache.clear();
    }
 
    fn draw_lines(&self, frame: &mut Frame, color: Color, step: SizeW, bounds: SizeS) {

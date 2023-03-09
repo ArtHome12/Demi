@@ -130,19 +130,25 @@ impl Application for Demi {
 
             // Create a new command if it necessary
             if let Some(cmd) = cmd {
-               return Command::perform(async {}, move |_| cmd.clone())
-            };
+               return Command::perform(async {}, move |_| cmd)
+            }
          }
 
          Message::GridMessage(message) => self.grid_mut().update(message),
+         Message::FilterMessage(message) => {
+            self.filter_mut().update(message);
 
-         Message::FilterMessage(message) => self.filter_mut().update(message),
+            let grid_msg = grid::Message::FilterChanged;
+            return Command::perform(async {}, move |_| Message::GridMessage(grid_msg))
+         }
 
          Message::Cadence(ts) => {
             // Update rates once a second
             if ts.duration_since(self.last_one_second_time) >= Duration::new(1, 0) {
                self.last_one_second_time = ts;
-               self.grid_mut().clock_chime();
+
+               let grid_msg = grid::Message::ClockChime;
+               return Command::perform(async {}, move |_| Message::GridMessage(grid_msg))
             }
          }
 
@@ -171,7 +177,10 @@ impl Application for Demi {
             }
          }
 
-         Message::Illuminate(is_on) => self.grid_mut().set_illumination(is_on),
+         Message::Illuminate(is_on) => {
+            let grid_msg = grid::Message::Illumination(is_on);
+            return Command::perform(async {}, move |_| Message::GridMessage(grid_msg))
+         }
 
          Message::ToggleRun => self.world.borrow().toggle_run(),
 
@@ -180,7 +189,7 @@ impl Application for Demi {
          Message::EventOccurred(event) => {
             if let iced_native::Event::Window(window::Event::CloseRequested) = event {
                self.world.borrow_mut().shutdown();
-               return window::close();
+               return window::close()
             }
         }
       }
