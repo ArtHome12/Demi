@@ -16,7 +16,7 @@ pub use crate::dot::{Dot, Sheets, PtrSheets};
 use crate::geom::*;
 use crate::project::{Project, Element, };
 use crate::organism::*;
-use crate::reactions::{Reactions, UIReactions, };
+use crate::reactions::{/* Reactions, */ UIReactions, };
 
 type Handle = std::thread::JoinHandle<()>;
 
@@ -27,7 +27,7 @@ pub struct World {
    elements_sheets: PtrSheets,
    animal_sheet: Arc<Mutex<AnimalSheet>>, // Mirror from Evaluation
    thread_handle: Option<Handle>,
-   reactions: Reactions,
+   // reactions: Reactions,
 
    // Section for UI
    pub vis_elem_indexes: Vec<bool>, // indexes of visible (non-filtered) elements
@@ -119,7 +119,7 @@ impl World {
          vis_elem_indexes,
          vis_reac_indexes,
          vis_dead: true,
-         reactions,
+         // reactions,
          ui_reactions,
          elements,
       }
@@ -161,44 +161,37 @@ impl World {
    // Return dot at display position
    // The world must be continuous, the first point goes to the right (or bottom) of the last point again
    pub fn dot(&self, x: isize, y: isize) -> Dot {
-      let Size {x: width, y: height} = self.size();
-      let width = width as isize;
-      let height = height as isize;
+      let s = &self.size();
 
-      let mut x = x;
-      let mut y = y;
-
-      // TODO! Benchmark and maybe replace with rem_euclid()
-      while x < 0 {x += width;}
-      while x >= width {x -= width;}
-      while y < 0 {y += height;}
-      while y >= height {y -= height;}
-
-      let x = x as usize;
-      let y = y as usize;
+      let x = x.rem_euclid(s.x as isize) as usize;
+      let y = y.rem_euclid(s.y as isize) as usize;
 
       // Corresponding bit of the world
       let serial_bit = self.size().serial(x, y);
       let energy = self.elements_sheets.get(0, serial_bit);
 
       // Find the dot color among animals
-      /* let unlocked_sheet =self.animal_sheet.lock().unwrap();
+      let unlocked_sheet =self.animal_sheet.lock().unwrap();
       let stack = unlocked_sheet.get(serial_bit);
 
       // Among animals determines with visible reaction and alive or not
-      let animal_color = stack.iter()
+      let animal_color = stack.get_animals()
       .find_map(|o| {
          // Need to be visible and alive or not
-         let reaction = o.reaction_index();
-         let visible = self.vis_reac_indexes[reaction];
-         if visible && (self.vis_dead || o.alive()) {
-            let reaction = self.ui_reactions.get(reaction);
-            Some(reaction.color)
+         if self.vis_dead || o.alive() {
+            let reaction_index = o.reaction_index();
+            let visible = self.vis_reac_indexes[reaction_index];
+
+            if visible {
+               let reaction = self.ui_reactions.get(reaction_index);
+               Some(reaction.color)
+            } else {
+               None
+            }
          } else {
             None
          }
-      }); */
-      let animal_color = None;
+      });
 
       let mut color = if let Some(color) = animal_color {
          color
@@ -239,16 +232,15 @@ impl World {
       let mut remaining_lines = max_lines;
 
       // Collect info among animals
-      /* let unlocked_sheet = self.animal_sheet.lock().unwrap();
+      let unlocked_sheet = self.animal_sheet.lock().unwrap();
       let stack = unlocked_sheet.get(serial_bit);
 
       // Among animals determines with visible reaction and alive or not
-      let filtered_animals = stack.iter()
+      let filtered_animals = stack.get_animals()
       .filter(|o| {
-         // Need to be visible and alive or not
-         let reaction = o.reaction_index();
-         let visible = self.vis_reac_indexes[reaction];
-         visible && (self.vis_dead || o.alive())
+         self.vis_dead || (   // include all
+            o.alive() && self.vis_reac_indexes[o.reaction_index()]   // include only alive with visible reaction
+         )
       });
 
       // Animal world
@@ -262,8 +254,7 @@ impl World {
          remaining_lines -= 1;
 
          format!("{}[{}۩ {}]{}", acc, age, o, delimiter)
-      }); */
-      let animal_desc = String::default();
+      });
 
       // Inanimal world
       self.vis_elem_indexes.iter()

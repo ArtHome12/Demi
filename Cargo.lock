@@ -487,7 +487,7 @@ dependencies = [
 name = "demi"
 version = "0.1.0"
 dependencies = [
- "euclid",
+ "euclid 0.22.7",
  "iced",
  "iced_lazy",
  "iced_native",
@@ -581,6 +581,13 @@ checksum = "64f18991e7bf11e7ffee451b5318b5c1a73c52d0d0ada6e5a3017c8c1ced6a21"
 dependencies = [
  "libc",
  "str-buf",
+]
+
+[[package]]
+name = "euclid"
+version = "0.22.7"
+dependencies = [
+ "num-traits",
 ]
 
 [[package]]
@@ -974,7 +981,7 @@ version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b62d5865c036cb1393e23c50693df631d3f5d7bcca4c04fe4cc0fd592e74a782"
 dependencies = [
- "euclid",
+ "euclid 0.22.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "svg_fmt",
 ]
 
@@ -1059,7 +1066,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d237909aab71ad4b0f005784f9530d3b352eb95b3514bed1a6eb9fc019e9fe04"
 dependencies = [
  "bytemuck",
- "euclid",
+ "euclid 0.22.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "glow",
  "glow_glyph",
  "glyph_brush",
@@ -1346,7 +1353,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "74df1ff0a0147282eb10699537a03baa7d31972b58984a1d44ce0624043fe8ad"
 dependencies = [
  "arrayvec 0.7.2",
- "euclid",
+ "euclid 0.22.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits",
 ]
 

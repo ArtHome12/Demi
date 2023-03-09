@@ -135,6 +135,12 @@ impl<'s> AnimalStack {
       .filter_map(|item| item.as_mut().and_then(|o| o.alive().then(|| o)))
    }
 
+   pub fn get_animals(&'s self) -> impl Iterator<Item = &Organism> + 's {
+      self.stack
+      .iter()
+      .filter_map(|item| item.as_ref())
+   }
+
    // Return index of first empty or occuped item
    pub fn get_slot_index(&'s self, occuped: bool) -> Option<usize> {
       self.stack
@@ -142,11 +148,11 @@ impl<'s> AnimalStack {
       .position(|opt| opt.is_some() == occuped)
    }
 
-   pub fn get_slot_mut(&'s mut self, occuped: bool) -> Option<&mut Option<Organism>> {
-      self.stack
-      .iter_mut()
-      .find(|opt| opt.is_some() == occuped)
-   }
+   // pub fn get_slot_mut(&'s mut self, occuped: bool) -> Option<&mut Option<Organism>> {
+   //    self.stack
+   //    .iter_mut()
+   //    .find(|opt| opt.is_some() == occuped)
+   // }
 
    pub fn reproduction(&mut self, now: usize) {
       // Checking for free space at the point
@@ -298,4 +304,4 @@ impl<'a> AnimalSheet {
 //    }
 // }
 
-pub struct PtrAnimalSheet(Vec<Vec<usize>>);
+// pub struct PtrAnimalSheet(Vec<Vec<usize>>);
