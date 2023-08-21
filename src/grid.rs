@@ -16,7 +16,7 @@ use iced::{
 use std::{rc::Rc, cell::RefCell};
 use euclid::*;
 
-use crate::world::{World, };
+use crate::world::World;
 use crate::update_rate::*;
 
 pub struct Grid {
@@ -27,8 +27,8 @@ pub struct Grid {
    scale: ScaleWS,
    min_scale: ScaleWS,
    max_scale: ScaleWS,
-   scale_up: f32,
-   scale_down: f32,
+   scale_up: ScaleSS,
+   scale_down: ScaleSS,
 
    world: Rc<RefCell<World>>,
    nonscaled_size: SizeW, // for performance, world size * CELL_SIZE
@@ -57,22 +57,25 @@ type SizeW = Size2D<f32, WorldSpace>;
 type PointS = Point2D<f32, ScreenSpace>;
 type PointW = Point2D<f32, WorldSpace>;
 type ScaleWS = Scale<f32, WorldSpace, ScreenSpace>;
+type ScaleSS = Scale<f32, ScreenSpace, ScreenSpace>;
+type LenS = euclid::Length<f32, ScreenSpace>;
+type LenW = euclid::Length<f32, WorldSpace>;
 
 impl Grid {
    // Default size of one cell
-   const CELL_SIZE: f32 = 30.0;
+   const CELL_SIZE: LenW = LenW::new(30.0);
 
    // Minimum size to draw a text
-   const CELL_SIZE_FOR_TEXT: f32 = 120.0;
+   const CELL_SIZE_FOR_TEXT: LenS = LenS::new(120.0);
 
    // Height for line of text
-   const CELL_TEXT_HEIGHT: f32 = 21.0;
+   const CELL_TEXT_HEIGHT: LenS = LenS::new(21.0);
 
    // If less, cell borders are not drawn
-   const MIN_VISIBLE_CELL_BORDER: f32 = 5.0;
+   const MIN_VISIBLE_CELL_BORDER: LenS = LenS::new(5.0);
 
    // Screen size defines scaling range
-   const MIN_SCREEN_WIDTH: f32 = 800.0;
+   const MIN_SCREEN_WIDTH: LenW = LenW::new(800.0);
 
    // Scale step
    const SCALE_STEP: f32 = 0.3;
@@ -85,14 +88,15 @@ impl Grid {
       let world_size = world_size.cast::<f32>();
 
       // Scaling range
-      let max_scale = ScaleWS::new(Self::MIN_SCREEN_WIDTH / Self::CELL_SIZE);   // about one cell on the screen
-      let min_scale = ScaleWS::new(max_scale.get() / world_size.width);  // the whole world on the screen
+      let r = Self::MIN_SCREEN_WIDTH / Self::CELL_SIZE;
+      let max_scale = ScaleWS::new(r.get());   // about one cell on the screen
+      let min_scale = ScaleWS::new(r.get() / world_size.width);  // the whole world on the screen
    
       // Scale range, after down by 10% it is needs to up to (1-0.1^n)/(1-0.1)
-      let scale_up = (1.0 - Self::SCALE_STEP.powi(10)) / (1.0 - Self::SCALE_STEP);
-      let scale_down = 1.0 - Self::SCALE_STEP;
+      let scale_up = ScaleSS::new((1.0 - Self::SCALE_STEP.powi(10)) / (1.0 - Self::SCALE_STEP));
+      let scale_down = ScaleSS::new(1.0 - Self::SCALE_STEP);
 
-      let nonscaled_size = world_size * Self::CELL_SIZE;
+      let nonscaled_size = world_size * Self::CELL_SIZE.get();
 
       Self {
          life_cache: Cache::default(),
@@ -169,7 +173,7 @@ impl Grid {
       self.translation + offset
 }
 
-// Update rate counters
+   // Update rate counters
    fn clock_chime(&mut self) {
       self.fps.borrow_mut().clock_chime();
 
@@ -194,7 +198,7 @@ impl Grid {
       // let mut x = ((-self.translation.x % step.width) + step.width) % step.width * self.scale.get();
       // let mut y = ((-self.translation.y % step.height) + step.height) % step.height * self.scale.get();
       let p = (-self.translation).rem_euclid(&step);
-      let mut p = self.scale.transform_point(p);
+      let mut p = p * self.scale;
       let step = step * self.scale;
 
       // Draw vertical lines
@@ -283,15 +287,13 @@ impl<'a> canvas::Program<Message> for Grid {
                   if y < 0.0 && self.scale > self.min_scale || y > 0.0 && self.scale < self.max_scale {
 
                      let step = if y < 0.0 { self.scale_down } else { self.scale_up };
-                     let scale = self.scale.get() * step;
-                     let scale = scale.clamp(self.min_scale.get(), self.max_scale.get());
-                     let scale = ScaleWS::new(scale);
+                     let scale = self.scale * step;
+                     let scale = scale.clamp(self.min_scale, self.max_scale);
                      let translation = self.translation_for_scale(cursor_position, scale);
                      (event::Status::Captured, Some(Message::Scaled(scale, Some(translation))))
                   } else {
                      (event::Status::Captured, None)
                   }
-
                }
             },
             _ => (event::Status::Ignored, None),
@@ -317,21 +319,22 @@ impl<'a> canvas::Program<Message> for Grid {
          frame.scale(self.scale.get());
          let neg_iced_vector = Vector::new(-self.translation.x, -self.translation.y);
          frame.translate(neg_iced_vector);
-         frame.scale(Self::CELL_SIZE);
+         frame.scale(Self::CELL_SIZE.get());
 
          let frame_size: [f32; 2] = frame.size().into();
          let frame_size = SizeS::from(frame_size);
 
          // Ranges in region to draw
-         let t = self.translation / Self::CELL_SIZE;
-         let s: SizeW = frame_size / self.scale / Self::CELL_SIZE + SizeW::splat(1.0); // size in cells +1 for last incomplete cell
+         let t = self.translation / Self::CELL_SIZE.get();
+         let s: SizeW = frame_size / self.scale / Self::CELL_SIZE.get() + SizeW::splat(1.0); // size in cells +1 for last incomplete cell
          let rx = t.x as isize .. (t.x + s.width) as isize;
          let ry = t.y as isize .. (t.y + s.height) as isize;
 
          // Closure for scaling
-         let scaled_cell = self.scale.get() * Self::CELL_SIZE;
+         // let scaled_cell = self.scale.get() * Self::CELL_SIZE;
+         let scaled_cell = Self::CELL_SIZE * self.scale;
          let c = |i: isize| -> isize {
-            (i as f32 * scaled_cell) as isize
+            (i as f32 * scaled_cell.get()) as isize
          };
 
          // If frame is not large enough we need to exclude some cells
@@ -342,9 +345,9 @@ impl<'a> canvas::Program<Message> for Grid {
          let iy = ry.filter(|y| no_filter || c(*y - 1) != c(*y));
 
          // The max number of lines of text to fit
-         let pixels = self.scale.get() * Self::CELL_SIZE;
-         let lines_number = if pixels > Self::CELL_SIZE_FOR_TEXT {
-            (pixels / Self::CELL_TEXT_HEIGHT) as usize
+         let pixels = Self::CELL_SIZE * self.scale;
+         let lines = if pixels > Self::CELL_SIZE_FOR_TEXT {
+            (pixels / Self::CELL_TEXT_HEIGHT).get() as usize
          } else {0};
 
          // Draw each point
@@ -367,8 +370,8 @@ impl<'a> canvas::Program<Message> for Grid {
             );
 
             // Draw the text if it fits
-            if lines_number > 0 {
-               let content = self.world.borrow().description(&dot, lines_number, '\n');
+            if lines > 0 {
+               let content = self.world.borrow().description(&dot, lines, '\n');
                let text = Text {
                   content,
                   position: p,
@@ -395,9 +398,9 @@ impl<'a> canvas::Program<Message> for Grid {
          let bounds = SizeS::new(bounds.width, bounds.height);
 
          // Draw the inner grid if not too small scale
-         if self.scale.get() * Self::CELL_SIZE > Self::MIN_VISIBLE_CELL_BORDER {
+         if Self::CELL_SIZE * self.scale > Self::MIN_VISIBLE_CELL_BORDER {
             let color = Color::from_rgb8(70, 74, 83);
-            let step = SizeW::splat(Self::CELL_SIZE);
+            let step = SizeW::splat(Self::CELL_SIZE.get()); // need PR
             self.draw_lines(frame, color, step, bounds);
          }
 
@@ -449,7 +452,7 @@ impl<'a> canvas::Program<Message> for Grid {
             let offset = SizeW::new(cursor.x, cursor.y);
 
             // Position at world coordinates
-            let p = ((self.translation + offset) / Self::CELL_SIZE).floor();
+            let p = ((self.translation + offset) / Self::CELL_SIZE.get()).floor();
             let top_left = Point::new(p.x, p.y);
 
             // Tune scale and offset
@@ -457,7 +460,7 @@ impl<'a> canvas::Program<Message> for Grid {
                frame.scale(self.scale.get());   // scale to user's choice
                let neg_iced_vector = Vector::new(-self.translation.x, -self.translation.y);
                frame.translate(neg_iced_vector);   // consider the offset of the displayed area
-               frame.scale(Self::CELL_SIZE); // scale so that the cell with its dimensions occupies exactly one unit
+               frame.scale(Self::CELL_SIZE.get()); // scale so that the cell with its dimensions occupies exactly one unit
 
                // Paint over a square of unit size
                frame.fill_rectangle(

@@ -29,7 +29,7 @@ use iced::{Application, Command, Element, Length, Settings,
 };
 use iced::widget::{
    Container, column, PaneGrid, pane_grid,
-   pane_grid::{Axis, },
+   pane_grid::Axis,
 };
 use iced::theme::Theme;
 use iced_lazy::responsive;
@@ -226,7 +226,6 @@ impl Application for Demi {
       Container::new(content)
       .width(Length::Fill)
       .height(Length::Fill)
-      // .style(style::Container)
       .into()
    }
 }
