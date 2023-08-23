@@ -7,19 +7,15 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-iced = { path = "../iced",  features = ["canvas", "tokio", "image"] }
-iced_native = { path = "../iced/native" }
-iced_lazy = { path = "../iced/lazy" }
+iced = { path = "../iced",  features = ["canvas", "tokio", "image", "lazy"] }
 # iced = { version = "0.8.0",  features = ["canvas", "image"] }
-# iced_native = "0.9.1"
-# iced_lazy = "0.5.0"
 
 itertools = "0.11.0"
 rustc-hash = "1.1.0"
 serde = "1.0.154"
-serde_derive = "1.0.154"
+serde_derive = "1.0.185"
 rand = "0.8.5"
 rayon = "1.7.0"
-toml = "0.7.2"
-euclid = "0.22.8"
+toml = "0.7.6"
+euclid = "0.22.9"
 # euclid = { path = "../euclid" }

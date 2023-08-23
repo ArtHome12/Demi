@@ -40,7 +40,7 @@ impl Resources {
       }
    }
 
-   pub fn image(&self, image: Images) -> Image {
+   pub fn image(&self, image: Images) -> Image<Handle> {
       let handle = match image {
          Images::IlluminateOn => self.illuminate_on.clone(),
          Images::IlluminateOff => self.illuminate_off.clone(),

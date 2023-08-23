@@ -10,8 +10,10 @@ Copyright (c) 2013-2023 by Artem Khomenko _mag12@yahoo.com.
 
 use iced::{
    widget::canvas::event::{self, Event},
-   widget::canvas::{self, Cache, Canvas, Cursor, Frame, Geometry, Path, Text, Stroke, },
-   mouse, Color, Element, Length, Point, Rectangle, Vector, Size, alignment, Theme,
+   widget::canvas::{self, Cache, Canvas, Frame, Geometry, Path, Text, Stroke, },
+   Color, Element, Length, Point, Rectangle, Vector, Size, alignment, Theme,
+   mouse::{self, Cursor,},
+   Renderer,
 };
 use std::{rc::Rc, cell::RefCell};
 use euclid::*;
@@ -158,11 +160,6 @@ impl Grid {
       // To prevent overflow translation in coninious world
       let t = translation;
       let s = self.nonscaled_size;
-
-      // Before PR to euclid
-      // let x = ((t.x % s.width) + s.width) % s.width;
-      // let y = ((t.y % s.height) + s.height) % s.height;
-      // PointW::new(x, y)
       t.rem_euclid(&s)
    }
 
@@ -194,9 +191,6 @@ impl Grid {
       .with_color(color);
 
       // Starting position with correction for a negative value
-      // Before PR to euclid
-      // let mut x = ((-self.translation.x % step.width) + step.width) % step.width * self.scale.get();
-      // let mut y = ((-self.translation.y % step.height) + step.height) % step.height * self.scale.get();
       let p = (-self.translation).rem_euclid(&step);
       let mut p = p * self.scale;
       let step = step * self.scale;
@@ -235,7 +229,7 @@ impl<'a> canvas::Program<Message> for Grid {
          *interaction = Interaction::None;
       }
 
-      let cursor_position = if let Some(position) = cursor.position_in(&bounds) {
+      let cursor_position = if let Some(position) = cursor.position_in(bounds) {
          PointS::new(position.x, position.y)
       } else {
          return (event::Status::Ignored, None);
@@ -305,6 +299,7 @@ impl<'a> canvas::Program<Message> for Grid {
    fn draw(
       &self,
       _interaction: &Interaction,
+      renderer: &Renderer,
       _theme: &Theme,
       bounds: Rectangle,
       cursor: Cursor,
@@ -331,7 +326,6 @@ impl<'a> canvas::Program<Message> for Grid {
          let ry = t.y as isize .. (t.y + s.height) as isize;
 
          // Closure for scaling
-         // let scaled_cell = self.scale.get() * Self::CELL_SIZE;
          let scaled_cell = Self::CELL_SIZE * self.scale;
          let c = |i: isize| -> isize {
             (i as f32 * scaled_cell.get()) as isize
@@ -386,34 +380,36 @@ impl<'a> canvas::Program<Message> for Grid {
          };
       };
 
-      let life = self.life_cache.draw(
+      let life = self.life_cache.draw(renderer,
          bounds.size(), |frame| {
             let region = Rectangle::with_size(bounds.size());
             frame.with_clip(region, |frame| life_closure(frame))
          }
       );
 
-      let grid = self.grid_cache.draw(bounds.size(), |frame| {
+      let grid = self.grid_cache.draw(renderer,
+         bounds.size(),
+         |frame| {
+            let bounds = SizeS::new(bounds.width, bounds.height);
 
-         let bounds = SizeS::new(bounds.width, bounds.height);
+            // Draw the inner grid if not too small scale
+            if Self::CELL_SIZE * self.scale > Self::MIN_VISIBLE_CELL_BORDER {
+               let color = Color::from_rgb8(70, 74, 83);
+               let step = SizeW::splat(Self::CELL_SIZE.get()); // need PR
+               self.draw_lines(frame, color, step, bounds);
+            }
 
-         // Draw the inner grid if not too small scale
-         if Self::CELL_SIZE * self.scale > Self::MIN_VISIBLE_CELL_BORDER {
-            let color = Color::from_rgb8(70, 74, 83);
-            let step = SizeW::splat(Self::CELL_SIZE.get()); // need PR
-            self.draw_lines(frame, color, step, bounds);
-         }
-
-         // Draw outer borders - lines for border around the world
-         let color = Color::from_rgb8(255, 74, 83);
-         self.draw_lines(frame, color, self.nonscaled_size, bounds);
-      });
+            // Draw outer borders - lines for border around the world
+            let color = Color::from_rgb8(255, 74, 83);
+            self.draw_lines(frame, color, self.nonscaled_size, bounds);
+            }
+      );
 
       // Update FPS, once upon refresh
       self.fps.borrow_mut().make_tick();
 
       let overlay = {
-         let mut frame = Frame::new(bounds.size());
+         let mut frame = Frame::new(renderer, bounds.size());
 
          // Translucent bar at the bottom of the window
          let frame_width = frame.width();
@@ -443,7 +439,7 @@ impl<'a> canvas::Program<Message> for Grid {
          });
 
          // Get dot below cursor
-         if let Some(cursor_position) = cursor.position_in(&bounds) {
+         if let Some(cursor_position) = cursor.position_in(bounds) {
 
             let cursor = PointS::new(cursor_position.x, cursor_position.y);
 

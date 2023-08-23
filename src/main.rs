@@ -25,14 +25,12 @@ mod organism;
 
 use grid::Grid;
 use iced::{Application, Command, Element, Length, Settings,
-   Subscription, executor, window,
+   Subscription, subscription, executor, window, Event, theme::Theme,
 };
 use iced::widget::{
-   Container, column, PaneGrid, pane_grid,
+   Container, column, PaneGrid, pane_grid, responsive,
    pane_grid::Axis,
 };
-use iced::theme::Theme;
-use iced_lazy::responsive;
 
 use std::time::{Duration, Instant};
 use std::{rc::Rc, cell::RefCell, };
@@ -63,7 +61,7 @@ enum Message {
    Illuminate(bool),
    ToggleRun,
    WorldSave,
-   EventOccurred(iced_native::Event),
+   EventOccurred(Event),
 }
 
 
@@ -187,7 +185,7 @@ impl Application for Demi {
          Message::WorldSave => self.world.borrow().save(),
 
          Message::EventOccurred(event) => {
-            if let iced_native::Event::Window(window::Event::CloseRequested) = event {
+            if let Event::Window(window::Event::CloseRequested) = event {
                self.world.borrow_mut().shutdown();
                return window::close()
             }
@@ -198,7 +196,7 @@ impl Application for Demi {
 
    fn subscription(&self) -> Subscription<Message> {
       let subs = vec![window::frames().map(Message::Cadence),
-         iced_native::subscription::events().map(Message::EventOccurred),
+         subscription::events().map(Message::EventOccurred),
       ];
       Subscription::batch(subs)
    }
