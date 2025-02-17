@@ -129,13 +129,13 @@ impl<'s> AnimalStack {
    }
 
    // Returns iterator over alive organism in stack, if such exists
-   pub fn get_mut_alive(&'s mut self) -> impl Iterator<Item = &mut Organism> + 's {
+   pub fn get_mut_alive(&'s mut self) -> impl Iterator<Item = &'s mut Organism> {
       self.stack
       .iter_mut()
       .filter_map(|item| item.as_mut().and_then(|o| o.alive().then(|| o)))
    }
 
-   pub fn get_animals(&'s self) -> impl Iterator<Item = &Organism> + 's {
+   pub fn get_animals(&'s self) -> impl Iterator<Item = &'s Organism> {
       self.stack
       .iter()
       .filter_map(|item| item.as_ref())

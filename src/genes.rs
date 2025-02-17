@@ -9,7 +9,7 @@ Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 use rand::prelude::*;
-use rand::distributions::Uniform;
+use rand::distr::Uniform;
 
 
 pub struct Randoms {
@@ -20,8 +20,8 @@ pub struct Randoms {
 impl Randoms {
    pub fn new() -> Self {
       Self {
-         rng: rand::thread_rng(),
-         variability: Uniform::from(0..=2),
+         rng: rand::rng(),
+         variability: Uniform::try_from(0..=2).unwrap(),
       }
    }
 

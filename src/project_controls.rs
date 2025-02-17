@@ -8,7 +8,7 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2023 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use iced::{Alignment, Command, Element, theme, };
+use iced::{Alignment, Element, };
 use iced::widget::{checkbox, row, button};
 
 use crate::resources::*;
@@ -35,7 +35,7 @@ impl Controls {
       }
    }
 
-   pub fn update(&mut self, message: Message) -> Command<Message> {
+   pub fn update(&mut self, message: Message) {
       match message {
          Message::ToggleIllumination => self.illuminate = !self.illuminate,
          Message::ToggleFilter => self.show_filter = !self.show_filter,
@@ -44,7 +44,6 @@ impl Controls {
          Message::ToggleAutorun(checked) => self.autorun = checked,
          _ => ()
       }
-      Command::none()
    }
 
    pub fn view(
@@ -56,49 +55,51 @@ impl Controls {
          button(
             self.res.image(if self.illuminate {Images::IlluminateOn} else {Images::IlluminateOff})
          )
-         .on_press(Message::ToggleIllumination)
-         .style(theme::Button::Secondary),
+         .style(button::secondary)
+         .on_press(Message::ToggleIllumination),
 
          // Show or hide filter panel
          button(
             self.res.image(if self.show_filter {Images::ShowFilter} else {Images::HideFilter}),
          )
-         .on_press(Message::ToggleFilter)
-         .style(theme::Button::Secondary),
+         .style(button::secondary)
+         .on_press(Message::ToggleFilter),
 
          // Pause or run
          button(
             self.res.image(if self.run {Images::ModelPlay} else {Images::ModelPause}),
          )
-         .on_press(Message::ToggleRun)
-         .style(theme::Button::Secondary),
+         .style(button::secondary)
+         .on_press(Message::ToggleRun),
 
          // Project commands
          button("New")
-         .on_press(Message::New)
-         .style(theme::Button::Secondary),
+         .style(button::secondary)
+         .on_press(Message::New),
 
          button("Load")
-         .on_press(Message::Load)
-         .style(theme::Button::Secondary),
+         .style(button::secondary)
+         .on_press(Message::Load),
 
          button("Save")
-         .on_press(Message::Save)
-         .style(theme::Button::Secondary),
+         .style(button::secondary)
+         .on_press(Message::Save),
 
-         checkbox("Autosave", self.autosave, Message::ToggleAutosave)
+         checkbox("Autosave", self.autosave)
          .size(16)
          .spacing(5)
-         .text_size(16),
+         .text_size(16)
+         .on_toggle(Message::ToggleAutosave),
    
-         checkbox("Autorun", self.autorun, Message::ToggleAutorun)
+         checkbox("Autorun", self.autorun)
          .size(16)
          .spacing(5)
-         .text_size(16),
+         .text_size(16)
+         .on_toggle(Message::ToggleAutorun),
       ]
       .padding(10)
       .spacing(10)
-      .align_items(Alignment::Center)
+      .align_y(Alignment::Center)
       .into()
    }
 }

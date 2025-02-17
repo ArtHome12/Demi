@@ -10,7 +10,7 @@ Copyright (c) 2013-2023 by Artem Khomenko _mag12@yahoo.com.
 
 use std::{ops::RangeInclusive, ptr};
 use std::sync::{Arc, Mutex, };
-use rand::distributions::{Distribution, Uniform};
+use rand::distr::{Distribution, Uniform};
 use rayon::prelude::*;
 
 use crate::dot::*;
@@ -89,9 +89,9 @@ impl Evolution {
    }
 
    fn diffusion(env: &Environment, sheet: &mut Sheet) {
-      let mut rng = rand::thread_rng();
-      let rnd_bit = Uniform::from(0..env.bits_count);
-      let rnd_dir = Uniform::from(0..8);
+      let mut rng = rand::rng();
+      let rnd_bit = Uniform::try_from(0..env.bits_count).unwrap();
+      let rnd_dir = Uniform::try_from(0..8).unwrap();
 
       // Bounds for pointer
       let first = ptr::addr_of_mut!(sheet.matrix[0]);
@@ -138,9 +138,9 @@ impl Evolution {
 
 
    fn transfer(env: &Environment, sheet: &mut AnimalSheet) {
-      let mut rng = rand::thread_rng();
-      let rnd_bit = Uniform::from(0..env.bits_count);
-      let rnd_dir = Uniform::from(0..8);
+      let mut rng = rand::rng();
+      let rnd_bit = Uniform::try_from(0..env.bits_count).unwrap();
+      let rnd_dir = Uniform::try_from(0..8).unwrap();
 
       (0..env.num_points_to_diffuse).for_each(|_| {
          // Get a random source point

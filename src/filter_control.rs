@@ -10,9 +10,9 @@ Copyright (c) 2013-2023 by Artem Khomenko _mag12@yahoo.com.
 
 use std::{rc::Rc, cell::RefCell, };
 
-use iced::{Element, Length, Alignment,};
-use iced::widget::{
-   Container, Column, Checkbox, Text, column,
+use iced::{Element, Length};
+use iced::widget::{scrollable,
+   Container, column, Column, Checkbox, text,
 };
 
 
@@ -23,7 +23,7 @@ use crate::world::World;
 pub enum Message {
    ItemToggledElement(usize, bool), // index, checked
    ItemToggledAnimal(usize, bool), // index, checked
-   ItemToggledDead(bool), // index, checked
+   ItemToggledDead(bool), // checked
 }
 
 
@@ -59,20 +59,16 @@ impl Controls {
       .iter()
       .enumerate()
       .fold(Column::new().spacing(10), |column, (index, item)| {
-         column.push(Checkbox::new(
-            &item.name,
-            world.vis_elem_indexes[index],
-            move |b| Message::ItemToggledElement(index, b),
-            ).text_size(16)
+         column.push(
+            Checkbox::new(&item.name, world.vis_elem_indexes[index])
+            .on_toggle(move |b| Message::ItemToggledElement(index, b))
+            .text_size(16)
             .size(16)
          )
       });
 
-      let dead_check_box = Checkbox::new(
-         "Include dead",
-         world.vis_dead,
-         move |b| Message::ItemToggledDead(b),
-         )
+      let dead_check_box = Checkbox::new("Include dead", world.vis_dead)
+      .on_toggle(Message::ItemToggledDead)
       .text_size(16)
       .size(16);
 
@@ -81,33 +77,23 @@ impl Controls {
       .enumerate()
       .fold(Column::new().spacing(10), |column, (index, item)| {
          // Reaction name
-         column.push(Checkbox::new(
-            &item.name,
-            world.vis_reac_indexes[index],
-            move |b| Message::ItemToggledAnimal(index, b),
-            ).text_size(16)
+         column.push(
+            Checkbox::new(&item.name, world.vis_reac_indexes[index])
+            .on_toggle(move |b| Message::ItemToggledAnimal(index, b))
+            .text_size(16)
             .size(16)
          )
       });
-
-      let content = column![
-         Text::new("Elements to show:").size(16),
-         elements_check_boxes,
-         Text::new("Animals to show:").size(16),
-         dead_check_box,
-         animal_check_boxes
-      ]
-      .width(Length::Fill)
-      .align_items(Alignment::Start)
-      .spacing(10);
-
-      // let content = Scrollable::new(content)
-         // .push(Space::with_height(Length::Units(600)))
-         // .push(Text::new("Elements to show:").size(16))
-         // .push(elements_check_boxes)
-         // .push(Text::new("Animals ro show:").size(16))
-         // .push(dead_check_box)
-         // .push(animal_check_boxes);
+     
+      let content = scrollable(
+         column![
+            text("Elements to show:"),
+            elements_check_boxes,
+            text("Animals to show:"),
+            dead_check_box,
+            animal_check_boxes
+         ].spacing(8)
+      );
 
       Container::new(content)
          .width(Length::Fill)

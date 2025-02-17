@@ -24,9 +24,7 @@ mod genes;
 mod organism;
 
 use grid::Grid;
-use iced::{Application, Command, Element, Length, Settings,
-   Subscription, subscription, executor, window, Event, theme::Theme,
-};
+use iced::{Element, Subscription, window, Task, window::Id};
 use iced::widget::{
    Container, column, PaneGrid, pane_grid, responsive,
    pane_grid::Axis,
@@ -38,13 +36,12 @@ use std::{rc::Rc, cell::RefCell, };
 
 // #[tokio::main]
 pub fn main() -> iced::Result {
-   Demi::run(Settings {
-      antialiasing: true,
-      exit_on_close_request: false,
-      ..Settings::default()
-   })
+   iced::application(Demi::title, Demi::update, Demi::view)
+      .subscription(Demi::subscription)
+      .exit_on_close_request(false)
+      .antialiasing(true)
+      .run_with(Demi::new)
 }
-
 
 #[derive(Debug, Clone)]
 enum Message {
@@ -61,7 +58,7 @@ enum Message {
    Illuminate(bool),
    ToggleRun,
    WorldSave,
-   EventOccurred(Event),
+   CloseEvent(Id),
 }
 
 
@@ -70,17 +67,13 @@ struct Demi {
    controls: project_controls::Controls,
    panes: pane_grid::State<PaneState>,
    grid_pane: pane_grid::Pane,
+   filter_pane: Option<pane_grid::Pane>,
    grid_pane_ratio: f32, // Width of grid when filter visible too
    last_one_second_time: Instant,   // for FPS/TPS evaluations
 }
 
-impl Application for Demi {
-   type Message = Message;
-   type Theme = Theme;
-   type Executor = executor::Default;
-   type Flags = ();
-
-   fn new(_flags: ()) -> (Self, Command<Message>) {
+impl Demi {
+   fn new() -> (Self, Task<Message>) {
       // Project contains info for create model
       let project = project::Project::new("./demi.toml");
 
@@ -92,17 +85,19 @@ impl Application for Demi {
       let controls = project_controls::Controls::new(resources::Resources::new("./res"));
 
       // Put the grid into pane and get back ref to it
-      let (panes, grid_pane) = pane_grid::State::new(PaneState::new(PaneContent::Grid(Grid::new(grid_world))));
+      let grid = Grid::new(grid_world);
+      let (panes, grid_pane) = pane_grid::State::new(PaneState::new(PaneContent::Grid(grid)));
       (
          Self {
             world,
             controls,
             panes,
             grid_pane,
+            filter_pane: None,
             grid_pane_ratio: 0.8,
             last_one_second_time: Instant::now(),
          },
-         Command::none(),
+         Task::none(),
       )
    }
 
@@ -110,7 +105,7 @@ impl Application for Demi {
       String::from("Demi")
    }
 
-   fn update(&mut self, message: Message) -> Command<Message> {
+   fn update(&mut self, message: Message) -> Task<Message> {
       match message {
          Message::ProjectMessage(message) => {
 
@@ -126,9 +121,9 @@ impl Application for Demi {
                _ => None,
             };
 
-            // Create a new command if it necessary
+            // If necessary, try again with a new command.
             if let Some(cmd) = cmd {
-               return Command::perform(async {}, move |_| cmd)
+               return self.update(cmd)
             }
          }
 
@@ -136,8 +131,9 @@ impl Application for Demi {
          Message::FilterMessage(message) => {
             self.filter_mut().update(message);
 
-            let grid_msg = grid::Message::FilterChanged;
-            return Command::perform(async {}, move |_| Message::GridMessage(grid_msg))
+            let grid_cmd = grid::Message::FilterChanged;
+            let cmd = Message::GridMessage(grid_cmd);
+            return self.update(cmd)
          }
 
          Message::Cadence(ts) => {
@@ -145,58 +141,63 @@ impl Application for Demi {
             if ts.duration_since(self.last_one_second_time) >= Duration::new(1, 0) {
                self.last_one_second_time = ts;
 
-               let grid_msg = grid::Message::ClockChime;
-               return Command::perform(async {}, move |_| Message::GridMessage(grid_msg))
+               let grid_cmd = grid::Message::ClockChime;
+               let cmd = Message::GridMessage(grid_cmd);
+               return self.update(cmd)
             }
          }
 
          Message::Resized(pane_grid::ResizeEvent { split, ratio }) => {
             self.grid_pane_ratio = ratio;
-            self.panes.resize(&split, ratio);
+            self.panes.resize(split, ratio);
          }
 
          Message::ShowFilter(show) => {
             if show {
-               // Construct filter pane
+               // Construct filter pane. Maybe it should be converted to an asynchronous version.
                let w = self.world.clone();
                let content = filter_control::Controls::new(w);
                let content = PaneContent::Filter(content);
                let content = PaneState::new(content);
-               let pair = self.panes.split(Axis::Vertical, &self.grid_pane, content);
+               let pair = self.panes.split(Axis::Vertical, self.grid_pane, content);
 
-               // Restore ratio
-               if let Some(pair) = pair {
-                  self.panes.resize(&pair.1, self.grid_pane_ratio);
-               }
+               // Store pane and restore ratio
+               self.filter_pane = if let Some(pair) = pair {
+                  self.panes.resize(pair.1, self.grid_pane_ratio);
+                  Some(pair.0)
+               } else {
+                  None
+               };
+
             } else {
-               // Find filter pane from panes and close it
-               let filter_pane = self.filter_pane();
-               self.panes.close(&filter_pane);
+               // Close filter
+               let filter_pane = self.filter_pane.expect("update() Attempt to close non-existent filter_pane");
+               self.panes.close(filter_pane);
+               self.filter_pane = None;
             }
          }
 
          Message::Illuminate(is_on) => {
-            let grid_msg = grid::Message::Illumination(is_on);
-            return Command::perform(async {}, move |_| Message::GridMessage(grid_msg))
+            let grid_cmd = grid::Message::Illumination(is_on);
+            let cmd = Message::GridMessage(grid_cmd);
+            return self.update(cmd)
          }
 
          Message::ToggleRun => self.world.borrow().toggle_run(),
 
          Message::WorldSave => self.world.borrow().save(),
 
-         Message::EventOccurred(event) => {
-            if let Event::Window(window::Event::CloseRequested) = event {
-               self.world.borrow_mut().shutdown();
-               return window::close()
-            }
+         Message::CloseEvent(_id) => {
+            self.world.borrow_mut().shutdown();
+            return iced::exit()
         }
       }
-      Command::none()
+      Task::none()
    }
 
    fn subscription(&self) -> Subscription<Message> {
       let subs = vec![window::frames().map(Message::Cadence),
-         subscription::events().map(Message::EventOccurred),
+         window::close_requests().map(Message::CloseEvent),
       ];
       Subscription::batch(subs)
    }
@@ -212,8 +213,6 @@ impl Application for Demi {
             pane.view()
          }))
       })
-      .width(Length::Fill)
-      .height(Length::Fill)
       .on_resize(10, Message::Resized);
 
       let content = column![
@@ -222,32 +221,19 @@ impl Application for Demi {
       ];
 
       Container::new(content)
-      .width(Length::Fill)
-      .height(Length::Fill)
       .into()
    }
-}
 
-
-impl Demi {
    fn grid_mut(&mut self) -> &mut Grid {
-      match self.panes.get_mut(&self.grid_pane).unwrap().content {
+      match self.panes.get_mut(self.grid_pane).unwrap().content {
          PaneContent::Grid(ref mut grid) => grid,
          _ => panic!("grid_mut() Pane is not a grid"),
       }
    }
 
-   fn filter_pane(&self) -> pane_grid::Pane {
-      // Find filter pane from panes - it have to be not a grid pane
-      self.panes.iter()
-      .find(|p| p.0 != &self.grid_pane)
-      .unwrap()
-      .0.clone()
-   }
-
    fn filter_mut(&mut self) -> &mut filter_control::Controls {
-      let pane = self.filter_pane();
-      match self.panes.get_mut(&pane).unwrap().content {
+      let pane = self.filter_pane.expect("filter_mut() Attempt to get_mut non-existent filter_pane");
+      match self.panes.get_mut(pane).unwrap().content {
          PaneContent::Filter(ref mut elements) => elements,
          _ => panic!("filter_mut() Pane is not a filter_control::Controls"),
       }
@@ -270,6 +256,7 @@ impl PaneState {
             content,
        }
    }
+   
    fn view(&self,) -> Element<Message> {
       match &self.content {
          PaneContent::Grid(grid) => grid.view().map(move |message| Message::GridMessage(message)),

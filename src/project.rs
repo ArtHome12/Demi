@@ -8,8 +8,7 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use std::{collections::HashMap, };
-use std::{fs, };
+use std::{fs, collections::HashMap, };
 use serde_derive::Deserialize;
 
 use crate::geom::*;
@@ -77,9 +76,9 @@ pub struct Project {
    pub luca_reaction: usize, // first organism
 
    // Section for filter control
-   pub vis_elem_indexes: Vec<bool>, // indexes of visible (non-filtered) elements
-   pub vis_reac_indexes: Vec<bool>, // indexes of visible (non-filtered) reactions
-   pub vis_dead: bool,
+   // vis_elem_indexes: Vec<bool>, // indexes of visible (non-filtered) elements
+   // vis_reac_indexes: Vec<bool>, // indexes of visible (non-filtered) reactions
+   // vis_dead: bool,
 }
 
 #[derive(Debug)]
@@ -145,9 +144,9 @@ impl Project {
       }).collect::<UIReactions>();
 
       // At start all elements should be visible, collect its indexes
-      let len = toml.elements.len();
-      let vis_elem_indexes = vec![true; len];
-      let vis_reac_indexes = vec![true; len];
+      // let len = toml.elements.len();
+      // let vis_elem_indexes = vec![true; len];
+      // let vis_reac_indexes = vec![true; len];
 
       // Check data for first organism
       let reaction_name = &toml.luca.digestion;
@@ -162,9 +161,9 @@ impl Project {
          reactions,
          ui_reactions,
          luca_reaction,
-         vis_elem_indexes,
-         vis_reac_indexes,
-         vis_dead: true,
+         // vis_elem_indexes,
+         // vis_reac_indexes,
+         // vis_dead: true,
       }
    }
 
