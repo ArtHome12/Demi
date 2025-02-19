@@ -49,7 +49,7 @@ enum Message {
    GridMessage(grid::Message), // Messages from grid
    FilterMessage(filter_control::Message), // Messages from filter pane at right
 
-   Cadence(Instant), // called about 30 times per second for screen refresh
+   Refresh(Instant), // called about 30 times per second for screen refresh
 
    Resized(pane_grid::ResizeEvent), // Message from panes
 
@@ -136,15 +136,16 @@ impl Demi {
             return self.update(cmd)
          }
 
-         Message::Cadence(ts) => {
+         Message::Refresh(ts) => {
             // Update rates once a second
-            if ts.duration_since(self.last_one_second_time) >= Duration::new(1, 0) {
+            let one_second_passed = ts.duration_since(self.last_one_second_time) >= Duration::new(1, 0);
+            if one_second_passed {
                self.last_one_second_time = ts;
-
-               let grid_cmd = grid::Message::ClockChime;
-               let cmd = Message::GridMessage(grid_cmd);
-               return self.update(cmd)
             }
+
+            let grid_cmd = grid::Message::ClockChime(one_second_passed);
+            let cmd = Message::GridMessage(grid_cmd);
+            return self.update(cmd)
          }
 
          Message::Resized(pane_grid::ResizeEvent { split, ratio }) => {
@@ -196,7 +197,7 @@ impl Demi {
    }
 
    fn subscription(&self) -> Subscription<Message> {
-      let subs = vec![window::frames().map(Message::Cadence),
+      let subs = vec![window::frames().map(Message::Refresh),
          window::close_requests().map(Message::CloseEvent),
       ];
       Subscription::batch(subs)

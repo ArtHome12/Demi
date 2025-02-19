@@ -8,13 +8,15 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2023 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
+use iif::iif;
 use iced::{
-   widget::canvas::event::{self, Event},
-   widget::canvas::{self, Cache, Canvas, Frame, Geometry, Path, Text, Stroke, },
+   widget::canvas::{self, Cache, Canvas, Frame, Geometry, Path, Text, Stroke, 
+      Event,
+   },
    Color, Element, Length, Point, Rectangle, Vector, Size, alignment, Theme,
-   mouse::{self, Cursor,},
-   Renderer,
+   mouse::{self, Cursor,}, Renderer, 
 };
+
 use std::{rc::Rc, cell::RefCell};
 use euclid::*;
 
@@ -44,7 +46,7 @@ pub struct Grid {
 pub enum Message {
    Translated(PointW),
    Scaled(ScaleWS, Option<PointW>),
-   ClockChime, // Update rate counters
+   ClockChime(bool), // Update screen and rate counters if true
    Illumination(bool),
    FilterChanged,
 }
@@ -139,7 +141,7 @@ impl Grid {
             self.grid_cache.clear();
          }
 
-         Message::ClockChime => self.clock_chime(),
+         Message::ClockChime(is_one_second_passed) => self.clock_chime(is_one_second_passed),
          Message::Illumination(is_on) => {
             self.illumination = is_on;
             self.life_cache.clear();
@@ -171,17 +173,22 @@ impl Grid {
 }
 
    // Update rate counters
-   fn clock_chime(&mut self) {
-      self.fps.borrow_mut().clock_chime();
+   fn clock_chime(&mut self, is_one_second_passed: bool) {
 
-      let tick = self.world.borrow().ticks_elapsed();
-      self.tps.clock_chime(tick);
+      // Update FPS after a second has passed
+      if is_one_second_passed {
+         self.fps.borrow_mut().clock_chime();
+
+         let tick = self.world.borrow().ticks_elapsed();
+         self.tps.clock_chime(tick);
+         if self.last_tick != tick {
+            self.last_tick = tick;
+         }
+      };
 
       // For update screen
-      if self.last_tick != tick {
-         self.last_tick = tick;
-         self.life_cache.clear();
-      }
+      self.life_cache.clear();
+      canvas::Action::<Message>::request_redraw();
    }
 
    fn draw_lines(&self, frame: &mut Frame, color: Color, step: SizeW, bounds: SizeS) {
@@ -221,10 +228,10 @@ impl<'a> canvas::Program<Message> for Grid {
    fn update(
       &self,
       interaction: &mut Interaction,
-      event: Event,
+      event: &Event,
       bounds: Rectangle,
       cursor: Cursor,
-   ) -> (event::Status, Option<Message>) {
+   ) -> Option<canvas::Action<Message>> {
       if let Event::Mouse(mouse::Event::ButtonReleased(_)) = event {
          *interaction = Interaction::None;
       }
@@ -232,7 +239,7 @@ impl<'a> canvas::Program<Message> for Grid {
       let cursor_position = if let Some(position) = cursor.position_in(bounds) {
          PointS::new(position.x, position.y)
       } else {
-         return (event::Status::Ignored, None);
+         return None;
       };
 
       match event {
@@ -248,11 +255,7 @@ impl<'a> canvas::Program<Message> for Grid {
                   }
                   mouse::Button::Middle => {
                      // Choice of action - increase or decrease
-                     let scale = if self.scale.get() > 10.0 * self.min_scale.get() {
-                        self.min_scale
-                     } else {
-                        self.max_scale
-                     };
+                     let scale = iif!(self.scale.get() > 10.0 * self.min_scale.get(), self.min_scale, self.max_scale);
 
                      let translation = self.translation_for_scale(cursor_position, scale);
                      Some(Message::Scaled(scale, Some(translation)))
@@ -260,39 +263,60 @@ impl<'a> canvas::Program<Message> for Grid {
                   _ => None,
                };
 
-               (event::Status::Captured, msg)
+               Some(
+                  msg
+                      .map(canvas::Action::publish)
+                      .unwrap_or(canvas::Action::request_redraw())
+                      .and_capture(),
+              )
             }
 
             mouse::Event::CursorMoved { .. } => {
-               match *interaction {
+               let msg = match *interaction {
                   Interaction::Panning { translation, start } => {
                      let offset = (cursor_position - start) / self.scale;
                      let offset = SizeW::new(offset.x, offset.y);
                      let translation = translation - offset;
-                     let msg = Message::Translated(translation);
-
-                     (event::Status::Captured, Some(msg))
+                     Some(Message::Translated(translation))
                   }
-                  Interaction::None => (event::Status::Ignored, None),
-               }
-            }
-            mouse::Event::WheelScrolled { delta } => match delta {
-               mouse::ScrollDelta::Lines { y, .. } | mouse::ScrollDelta::Pixels { y, .. } => {
-                  if y < 0.0 && self.scale > self.min_scale || y > 0.0 && self.scale < self.max_scale {
+                  Interaction::None => None,
+               };
 
-                     let step = if y < 0.0 { self.scale_down } else { self.scale_up };
+               let action = msg
+               .map(canvas::Action::publish)
+               .unwrap_or(canvas::Action::request_redraw());
+
+               Some(match interaction {
+                     Interaction::None => action,
+                     _ => action.and_capture(),
+               })
+            }
+            mouse::Event::WheelScrolled { delta } => match *delta {
+               mouse::ScrollDelta::Lines { y, .. } | mouse::ScrollDelta::Pixels { y, .. } => {
+                  let is_inside = y < 0.0 && self.scale > self.min_scale 
+                     || y > 0.0 && self.scale < self.max_scale;
+
+                  let action = if is_inside {
+                     let step = iif!(y < 0.0, self.scale_down, self.scale_up);
                      let scale = self.scale * step;
                      let scale = scale.clamp(self.min_scale, self.max_scale);
                      let translation = self.translation_for_scale(cursor_position, scale);
-                     (event::Status::Captured, Some(Message::Scaled(scale, Some(translation))))
+                     
+                     canvas::Action::publish(Message::Scaled(
+                           scale,
+                           Some(translation),
+                     ))
+                     .and_capture()
                   } else {
-                     (event::Status::Captured, None)
-                  }
+                     canvas::Action::capture()
+                  };
+
+                  Some(action)
                }
             },
-            _ => (event::Status::Ignored, None),
+            _ => None,
          },
-         _ => (event::Status::Ignored, None),
+         _ => None,
       }
    }
 
@@ -304,6 +328,9 @@ impl<'a> canvas::Program<Message> for Grid {
       bounds: Rectangle,
       cursor: Cursor,
    ) -> Vec<Geometry> {
+
+      // Update FPS, once upon refresh
+      self.fps.borrow_mut().make_tick();
 
       // Closure for draw world content
       let life_closure = |frame: &mut Frame| {
@@ -404,9 +431,6 @@ impl<'a> canvas::Program<Message> for Grid {
             self.draw_lines(frame, color, self.nonscaled_size, bounds);
             }
       );
-
-      // Update FPS, once upon refresh
-      self.fps.borrow_mut().make_tick();
 
       let overlay = {
          let mut frame = Frame::new(renderer, bounds.size());
