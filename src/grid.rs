@@ -175,19 +175,21 @@ impl Grid {
    // Update rate counters
    fn clock_chime(&mut self, is_one_second_passed: bool) {
 
+      // Current model time
+      let tick = self.world.borrow().ticks_elapsed();
+
       // Update FPS after a second has passed
       if is_one_second_passed {
          self.fps.borrow_mut().clock_chime();
 
-         let tick = self.world.borrow().ticks_elapsed();
          self.tps.clock_chime(tick);
-         if self.last_tick != tick {
-            self.last_tick = tick;
-         }
       };
 
       // For update screen
-      self.life_cache.clear();
+      if self.last_tick != tick {
+         self.last_tick = tick;
+         self.life_cache.clear();
+      }
       canvas::Action::<Message>::request_redraw();
    }
 
