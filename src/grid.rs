@@ -367,10 +367,13 @@ impl<'a> canvas::Program<Message> for Grid {
          let no_filter = s.height < frame_size.height;
          let iy = ry.filter(|y| no_filter || c(*y - 1) != c(*y));
 
+         // Scale for text inside cells
+         let cell_scaled_size = Self::CELL_SIZE * self.scale;
+         let text_scale = 1.0 / cell_scaled_size.get();
+         
          // The max number of lines of text to fit
-         let pixels = Self::CELL_SIZE * self.scale;
-         let lines = if pixels > Self::CELL_SIZE_FOR_TEXT {
-            (pixels / Self::CELL_TEXT_HEIGHT).get() as usize
+         let lines = if cell_scaled_size > Self::CELL_SIZE_FOR_TEXT {
+            (cell_scaled_size / Self::CELL_TEXT_HEIGHT).get() as usize
          } else {0};
 
          // Draw each point
@@ -395,14 +398,24 @@ impl<'a> canvas::Program<Message> for Grid {
             // Draw the text if it fits
             if lines > 0 {
                let content = self.world.borrow().description(&dot, lines, '\n');
+               let s = cell_scaled_size.get();
+               let position = Point::new(p.x * s + 3.0, p.y * s); // with an indent from the left edge
+
+               // Contrast color
+               let avg_color = (color.r * color.a + color.g * color.a + color.b * color.a) / 3.0;
+               let color = if avg_color < 0.2 { Color::from_rgb8(210, 210, 210) }
+                  else if avg_color < 0.5 { Color::WHITE }
+                  else { Color::BLACK };
+
                let text = Text {
                   content,
-                  position: p,
+                  position,
+                  color,
                   ..Text::default()
                };
 
                frame.with_save(|frame| {
-                  frame.translate(Vector::new(0.03, 0.03));
+                  frame.scale(text_scale);
                   frame.fill_text(text);
                });
             }
@@ -431,7 +444,7 @@ impl<'a> canvas::Program<Message> for Grid {
             // Draw outer borders - lines for border around the world
             let color = Color::from_rgb8(255, 74, 83);
             self.draw_lines(frame, color, self.nonscaled_size, bounds);
-            }
+         }
       );
 
       let overlay = {
@@ -508,9 +521,6 @@ impl<'a> canvas::Program<Message> for Grid {
 
          frame.into_geometry()
       };
-
-      // let handle = Handle::from_path(String::from("./res") + "/illuminate_on.png");
-      // let v = iced::widget::image::viewer(handle);
 
       vec![life, grid, overlay]
    }
