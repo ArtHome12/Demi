@@ -47,7 +47,7 @@ impl Gene for Digestion {
 
 #[derive(Debug, Clone)]
 pub struct Reproduction {
-   pub level: usize, // the level of strength required to divide
+   pub level: usize, // the level of strength (vitality) required to divide
 }
 
 impl Gene for Reproduction {

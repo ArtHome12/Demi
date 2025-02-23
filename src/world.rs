@@ -133,7 +133,7 @@ impl World {
          // Running until program not closed
          loop {
             // Get task
-            let task = mode.load(Ordering::Acquire).into();
+            let task = mode.load(Ordering::Relaxed).into();
             match task {
                ThreadMode::Run => {
                   // Increase model time
@@ -144,11 +144,11 @@ impl World {
                }
                ThreadMode::Pause => {
                   evolution.mirror_data(); // mirror copy guarantee, at tick it may be skipped
-                  mode.store(ThreadMode::Paused as u8, Ordering::Release);
+                  mode.store(ThreadMode::Paused as u8, Ordering::Relaxed);
                }
                ThreadMode::Paused => std::thread::sleep(sleep_time),
                ThreadMode::Shutdown => {
-                  mode.store(ThreadMode::Paused as u8, Ordering::Release);
+                  mode.store(ThreadMode::Paused as u8, Ordering::Relaxed);
                   break;
                }
             }

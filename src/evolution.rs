@@ -153,10 +153,9 @@ impl Evolution {
 
          // Check bounds
          if dest_bit < 0 {
-            dest_bit = env.bits_count as isize + dest_bit; // negative value
+            dest_bit += env.bits_count as isize; // negative value
          } else if dest_bit >= env.bits_count as isize {
-            let delta = dest_bit - env.bits_count as isize; // positive value
-            dest_bit = delta;
+            dest_bit -= env.bits_count as isize; // positive value;
          }
 
          sheet.transfer(origin_bit, dest_bit as usize);
