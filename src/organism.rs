@@ -103,13 +103,8 @@ impl Organism {
 
 
 impl fmt::Display for Organism {
-   // This trait requires `fmt` with this exact signature.
    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-       // Write strictly the first element into the supplied output
-       // stream: `f`. Returns `fmt::Result` which indicates whether the
-       // operation succeeded or failed. Note that `write!` uses syntax which
-       // is very similar to `println!`.
-       write!(f, "{}❤ {}ߐ", self.vitality, self.gene_reproduction.level)
+       write!(f, "{}˄ {}Δ", self.vitality, self.gene_reproduction.level)
    }
 }
 
