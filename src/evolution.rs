@@ -26,22 +26,17 @@ pub struct Evolution {
 
    reactions: Reactions,
    // organisms: Organisms, // separate list of organisms
-   animal_sheet: AnimalSheet, // organisms at points of the world
-   mirror: Arc<Mutex<AnimalSheet>>, // mirror for world
+   animal_sheet: Arc<Mutex<AnimalSheet>>, // organisms at points of the world, shared with world.rs
 }
 
 impl Evolution {
 
    pub fn new(sheets: Sheets, animal_sheet: Arc<Mutex<AnimalSheet>>, reactions: Reactions) -> Self {
-      // Extract initial values from mirror
-      let animals = animal_sheet.lock().unwrap().clone();
-
       Self {
          sheets,
          reactions,
          // organisms: Vec::new(),
-         animal_sheet: animals,
-         mirror: animal_sheet,
+         animal_sheet,
       }
    }
 
@@ -61,31 +56,21 @@ impl Evolution {
       });
 
       // Process animal
+      let mut animal_sheet = self.animal_sheet.lock().unwrap();
 
       // At least LUCA should always to be first at 0,0
-      self.animal_sheet.implantation(&env.luca, tick);
+      animal_sheet.implantation(&env.luca, tick);
 
       // Behavior
-      Evolution::transfer(env, &mut self.animal_sheet);
-      Evolution::escape(&mut self.animal_sheet);
-      Evolution::digestion(&mut self.sheets, &mut self.animal_sheet, &self.reactions);
-      Evolution::attack(&mut self.animal_sheet);
-      Evolution::catch(&mut self.animal_sheet);
-      Evolution::cheese(&mut self.animal_sheet);
-      Evolution::walk(&mut self.animal_sheet);
-      Evolution::reproduction(&mut self.animal_sheet, tick);
-      Evolution::end_of_turn(&mut self.animal_sheet, tick);
-
-      // Transfer data to mirror if there no delay
-      if let Ok(ref mut mirror) = self.mirror.try_lock() {
-         mirror.clone_from(&self.animal_sheet);
-      }
-   }
-
-   // Mirror copy guarantee
-   pub fn mirror_data(&mut self) {
-      let mut mirror = self.mirror.lock().unwrap();
-      mirror.clone_from(&self.animal_sheet);
+      Evolution::transfer(env, &mut animal_sheet);
+      Evolution::escape(&mut animal_sheet);
+      Evolution::digestion(&mut self.sheets, &mut animal_sheet, &self.reactions);
+      Evolution::attack(&mut animal_sheet);
+      Evolution::catch(&mut animal_sheet);
+      Evolution::cheese(&mut animal_sheet);
+      Evolution::walk(&mut animal_sheet);
+      Evolution::reproduction(&mut animal_sheet, tick);
+      Evolution::end_of_turn(&mut animal_sheet, tick);
    }
 
    fn diffusion(env: &Environment, sheet: &mut Sheet) {

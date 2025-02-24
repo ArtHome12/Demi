@@ -90,7 +90,7 @@ impl World {
       // Thread for calculate evolution
 
       // Evolution algorithm
-      let evolution = Evolution::new(sheets, Arc::clone(&animal_sheet), reactions.clone());
+      let evolution = Evolution::new(sheets, Arc::clone(&animal_sheet), reactions);
 
       // Store raw pointers to elements
       let elements_sheets = PtrSheets::new(&evolution.sheets);
@@ -119,7 +119,6 @@ impl World {
          vis_elem_indexes,
          vis_reac_indexes,
          vis_dead: true,
-         // reactions,
          ui_reactions,
          elements,
       }
@@ -143,7 +142,6 @@ impl World {
                   evolution.make_tick(&env, tick);
                }
                ThreadMode::Pause => {
-                  evolution.mirror_data(); // mirror copy guarantee, at tick it may be skipped
                   mode.store(ThreadMode::Paused as u8, Ordering::Relaxed);
                }
                ThreadMode::Paused => std::thread::sleep(sleep_time),

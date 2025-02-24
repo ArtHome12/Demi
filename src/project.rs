@@ -74,11 +74,6 @@ pub struct Project {
    pub reactions: Reactions,
    pub ui_reactions: UIReactions,
    pub luca_reaction: usize, // first organism
-
-   // Section for filter control
-   // vis_elem_indexes: Vec<bool>, // indexes of visible (non-filtered) elements
-   // vis_reac_indexes: Vec<bool>, // indexes of visible (non-filtered) reactions
-   // vis_dead: bool,
 }
 
 #[derive(Debug)]
