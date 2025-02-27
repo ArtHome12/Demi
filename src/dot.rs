@@ -26,14 +26,14 @@ pub struct Dot {
 
 // Storage amount by points of one element
 #[derive(Debug)]
-pub struct Sheet {
+pub struct ElementsSheet {
    pub matrix: Vec<usize>,
 
    // How much the fraction moves during diffusion, from 0 to 1 for elements and <0 for energy
    pub volatility: f32,
 }
 
-impl Sheet {
+impl ElementsSheet {
    pub fn new(size: Size, initial_amount: usize, volatility: f32) -> Self {
 
       // Amount of points
@@ -50,29 +50,29 @@ impl Sheet {
    }
 }
 
-pub struct Sheets(Vec<Sheet>);
+pub struct ElementsSheets(Vec<ElementsSheet>);
 
-impl Sheets {
-   pub fn get(&self) -> &Vec<Sheet> {
+impl ElementsSheets {
+   pub fn get(&self) -> &Vec<ElementsSheet> {
       &self.0
    }
 
-   pub fn get_mut(&mut self) -> &mut Vec<Sheet> {
+   pub fn get_mut(&mut self) -> &mut Vec<ElementsSheet> {
       &mut self.0
    }
 }
 
-impl std::iter::FromIterator<Sheet> for Sheets {
-   fn from_iter<I: IntoIterator<Item = Sheet>>(iter: I) -> Self {
+impl std::iter::FromIterator<ElementsSheet> for ElementsSheets {
+   fn from_iter<I: IntoIterator<Item = ElementsSheet>>(iter: I) -> Self {
       Self(iter.into_iter().collect())
    }
 }
 
 // Fast unsafe access to elements for mirroring and rayon
-pub struct PtrSheets(Vec<usize>);
+pub struct PtrElements(Vec<usize>);
 
-impl PtrSheets {
-   pub fn new(sheets: &Sheets) -> Self {
+impl PtrElements {
+   pub fn new(sheets: &ElementsSheets) -> Self {
       // Store raw pointers to elements
       let ptr = sheets.get().iter()
       .map(|sheet| ptr::addr_of!(sheet.matrix[0]) as usize)

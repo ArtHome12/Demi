@@ -8,8 +8,7 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use std::cmp::max;
-use std::fmt;
+use std::{cmp::max, fmt, ptr, marker::PhantomData};
 use rayon::prelude::*;
 
 use crate::genes::*;
@@ -44,7 +43,7 @@ impl Organism {
    }
 
 
-   pub fn digestion(&mut self, ptr: &PtrSheets, serial: usize, reactions: &Reactions) {
+   pub fn digestion(&mut self, ptr: &PtrElements, serial: usize, reactions: &Reactions) {
       // Check the availability of resources for digestion
       let r = self.gene_digestion.reaction;
       let r = reactions.get(r);
@@ -111,11 +110,11 @@ impl fmt::Display for Organism {
 
 #[derive(Clone, Debug)]
 // Organisms at one point
-pub struct AnimalStack {
+pub struct AnimalsStack {
    stack: Vec<Option<Organism>>,
 }
 
-impl<'s> AnimalStack {
+impl<'s> AnimalsStack {
 
    pub fn new(max_animal_stack: usize) -> Self {
       Self{
@@ -130,11 +129,6 @@ impl<'s> AnimalStack {
       .filter_map(|item| item.as_mut().and_then(|o| o.alive().then(|| o)))
    }
 
-   pub fn get_animals(&'s self) -> impl Iterator<Item = &'s Organism> {
-      self.stack
-      .iter()
-      .filter_map(|item| item.as_ref())
-   }
 
    // Return index of first empty or occuped item
    pub fn get_slot_index(&'s self, occuped: bool) -> Option<usize> {
@@ -143,11 +137,6 @@ impl<'s> AnimalStack {
       .position(|opt| opt.is_some() == occuped)
    }
 
-   // pub fn get_slot_mut(&'s mut self, occuped: bool) -> Option<&mut Option<Organism>> {
-   //    self.stack
-   //    .iter_mut()
-   //    .find(|opt| opt.is_some() == occuped)
-   // }
 
    pub fn reproduction(&mut self, now: usize) {
       // Checking for free space at the point
@@ -177,15 +166,15 @@ impl<'s> AnimalStack {
 
 #[derive(Clone, Debug)]
 // Keeps live and death organisms in the grid
-pub struct AnimalSheet(Vec<AnimalStack>);
+pub struct AnimalsSheet(Vec<AnimalsStack>);
 
-impl<'a> AnimalSheet {
+impl AnimalsSheet {
    pub fn new(max_serial: usize, max_animal_stack: usize) -> Self {
       let mut matrix = Vec::with_capacity(max_serial);
 
       // Fill points with stacks for futures animals
       (0..max_serial)
-      .for_each(|_| matrix.push(AnimalStack::new(max_animal_stack)));
+      .for_each(|_| matrix.push(AnimalsStack::new(max_animal_stack)));
 
       Self {
          0: matrix,
@@ -194,18 +183,18 @@ impl<'a> AnimalSheet {
 
 
    // Return stack of organisms at point
-   pub fn get(&self, index: usize) -> &AnimalStack {
+   pub fn get(&self, index: usize) -> &AnimalsStack {
       &self.0[index]
    }
 
 
-   pub fn get_mut(&mut self, index: usize) -> &mut AnimalStack {
+   pub fn get_mut(&mut self, index: usize) -> &mut AnimalsStack {
       &mut self.0[index]
    }
 
 
-   pub fn digestion(&mut self, elements: &mut Sheets, reactions: &Reactions) {
-      let ptr_elements = PtrSheets::new(elements);
+   pub fn digestion(&mut self, elements: &mut ElementsSheets, reactions: &Reactions) {
+      let ptr_elements = PtrElements::new(elements);
 
       // Each point on the ground
       self.0
@@ -229,6 +218,7 @@ impl<'a> AnimalSheet {
       .for_each(|animals| animals.reproduction(now))
    }
 
+
    // Try to transfer organism between points
    pub fn transfer(&mut self, origin: usize, dest: usize) {
 
@@ -247,6 +237,7 @@ impl<'a> AnimalSheet {
          }
       }
    }
+
 
    pub fn implantation(&mut self, luca: &Organism, now: usize) {
       let stack = self.get_mut(0);
@@ -285,18 +276,54 @@ impl<'a> AnimalSheet {
 }
 
 
+// Pointers to fast unsafe access to organisms
+pub struct PtrAnimals(Vec<usize>);
 
-// Point of organisms sheet with coordinates
-// #[derive(Debug, Clone, Copy)]
-// pub struct AnimalPoint<'a> {
-//    pub sheet: &'a AnimalSheet,
-//    pub coord: Coord,
-// }
+impl PtrAnimals {
+   pub fn new(animals: &AnimalsSheet) -> Self {
+      // Store raw pointers to elements
+      let ptr = animals.0.iter()
+      .map(|sheet| ptr::addr_of!(sheet.stack[0]) as usize)
+      .collect();
 
-// impl<'a> AnimalPoint<'a> {
-//    pub fn get(&self) -> &'a AnimalStack {
-//       self.sheet.get(self.coord.serial())
-//    }
-// }
+      Self(ptr)
+   }
 
-// pub struct PtrAnimalSheet(Vec<Vec<usize>>);
+   pub fn stack(&self, serial: usize) -> PtrAnimalsStack {
+      PtrAnimalsStack {
+         start: self.0[serial],
+         curr: 0,
+         len: 12,
+         phantom: PhantomData,
+      }
+   }
+}
+
+
+#[derive(Clone, Debug)]
+// Organisms at one point
+pub struct PtrAnimalsStack<'a> {
+   start: usize,  // address of first element in stack
+   curr: usize,   // The ordinal number of the next element of the iterator
+   len: usize,    // The number of elements in the stack
+   phantom: PhantomData<&'a Option<Organism>>
+}
+
+
+impl<'a> Iterator for PtrAnimalsStack<'a> {
+   type Item = &'a Option<Organism>;
+
+   fn next(&mut self) -> Option<Self::Item> {
+      if self.curr < self.len {
+         let res = unsafe{ (self.start as *const Option<Organism>)
+            .add(self.curr)
+            .as_ref().unwrap()   // replace with as_ref_unchecked() once it is stable
+         };
+         self.curr += 1;
+
+         Some(res)
+      } else {
+         None
+      }
+   }
+}

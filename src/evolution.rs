@@ -9,7 +9,6 @@ Copyright (c) 2013-2023 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 use std::{ops::RangeInclusive, ptr};
-use std::sync::{Arc, Mutex, };
 use rand::distr::{Distribution, Uniform};
 use rayon::prelude::*;
 
@@ -22,28 +21,29 @@ use crate::reactions::Reactions;
 pub struct Evolution {
 
    // Solar energy and elements
-   pub sheets: Sheets,
+   pub elements: ElementsSheets,
 
+   // Organisms at points of the world
+   pub animals: AnimalsSheet,
+
+   // Kind of organisms
    reactions: Reactions,
-   // organisms: Organisms, // separate list of organisms
-   animal_sheet: Arc<Mutex<AnimalSheet>>, // organisms at points of the world, shared with world.rs
 }
 
 impl Evolution {
 
-   pub fn new(sheets: Sheets, animal_sheet: Arc<Mutex<AnimalSheet>>, reactions: Reactions) -> Self {
+   pub fn new(elements: ElementsSheets, animals: AnimalsSheet, reactions: Reactions) -> Self {
       Self {
-         sheets,
+         elements,
+         animals,
          reactions,
-         // organisms: Vec::new(),
-         animal_sheet,
       }
    }
 
 
    pub fn make_tick(&mut self, env: &Environment, tick: usize) {
       // Process inanimal
-      self.sheets.get_mut()
+      self.elements.get_mut()
       .as_parallel_slice_mut()
       .into_par_iter()
       .for_each(|mut sheet| {
@@ -56,24 +56,22 @@ impl Evolution {
       });
 
       // Process animal
-      let mut animal_sheet = self.animal_sheet.lock().unwrap();
-
       // At least LUCA should always to be first at 0,0
-      animal_sheet.implantation(&env.luca, tick);
+      self.animals.implantation(&env.luca, tick);
 
       // Behavior
-      Evolution::transfer(env, &mut animal_sheet);
-      Evolution::escape(&mut animal_sheet);
-      Evolution::digestion(&mut self.sheets, &mut animal_sheet, &self.reactions);
-      Evolution::attack(&mut animal_sheet);
-      Evolution::catch(&mut animal_sheet);
-      Evolution::cheese(&mut animal_sheet);
-      Evolution::walk(&mut animal_sheet);
-      Evolution::reproduction(&mut animal_sheet, tick);
-      Evolution::end_of_turn(&mut animal_sheet, tick);
+      Evolution::transfer(env, &mut self.animals);
+      Evolution::escape(&mut self.animals);
+      Evolution::digestion(&mut self.elements, &mut self.animals, &self.reactions);
+      Evolution::attack(&mut self.animals);
+      Evolution::catch(&mut self.animals);
+      Evolution::cheese(&mut self.animals);
+      Evolution::walk(&mut self.animals);
+      Evolution::reproduction(&mut self.animals, tick);
+      Evolution::end_of_turn(&mut self.animals, tick);
    }
 
-   fn diffusion(env: &Environment, sheet: &mut Sheet) {
+   fn diffusion(env: &Environment, sheet: &mut ElementsSheet) {
       let mut rng = rand::rng();
       let rnd_bit = Uniform::try_from(0..env.bits_count).unwrap();
       let rnd_dir = Uniform::try_from(0..8).unwrap();
@@ -122,7 +120,7 @@ impl Evolution {
    }
 
 
-   fn transfer(env: &Environment, sheet: &mut AnimalSheet) {
+   fn transfer(env: &Environment, sheet: &mut AnimalsSheet) {
       let mut rng = rand::rng();
       let rnd_bit = Uniform::try_from(0..env.bits_count).unwrap();
       let rnd_dir = Uniform::try_from(0..8).unwrap();
@@ -148,47 +146,47 @@ impl Evolution {
    }
 
 
-   fn escape(_sheet: &mut AnimalSheet) {
+   fn escape(_sheet: &mut AnimalsSheet) {
       // At this stage there are no predators
    }
 
 
-   fn digestion(elements: &mut Sheets, animals_sheet: &mut AnimalSheet, reactions: &Reactions) {
+   fn digestion(elements: &mut ElementsSheets, animals_sheet: &mut AnimalsSheet, reactions: &Reactions) {
       animals_sheet.digestion(elements, reactions)
    }
 
 
-   fn attack(_sheet: &mut AnimalSheet) {
+   fn attack(_sheet: &mut AnimalsSheet) {
       // At this stage there are no predators
    }
 
 
-   fn catch(_sheet: &mut AnimalSheet) {
+   fn catch(_sheet: &mut AnimalsSheet) {
       // At this stage there are no predators
    }
 
 
-   fn cheese(_sheet: &mut AnimalSheet) {
+   fn cheese(_sheet: &mut AnimalsSheet) {
       // At this stage there are no muscle
    }
 
 
-   fn walk(_sheet: &mut AnimalSheet) {
+   fn walk(_sheet: &mut AnimalsSheet) {
       // At this stage there are no walk
    }
 
 
-   fn reproduction(animals_sheet: &mut AnimalSheet, now: usize) {
+   fn reproduction(animals_sheet: &mut AnimalsSheet, now: usize) {
       animals_sheet.reproduction(now)
    }
 
 
-   fn end_of_turn(sheet: &mut AnimalSheet, now: usize) {
+   fn end_of_turn(sheet: &mut AnimalsSheet, now: usize) {
       sheet.end_of_turn(now)
    }
 
 
-   fn shine(env: &Environment, sheet: &mut Sheet, tick: usize) {
+   fn shine(env: &Environment, sheet: &mut ElementsSheet, tick: usize) {
 
       // Inspired by itertools::iproduct!
       type I = RangeInclusive<isize>;

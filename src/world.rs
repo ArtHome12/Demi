@@ -8,11 +8,11 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2023 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use std::sync::{Arc, atomic::{Ordering, AtomicUsize, AtomicU8}, Mutex, };
+use std::sync::{Arc, atomic::{Ordering, AtomicUsize, AtomicU8}, };
 use std::time::{Duration, Instant, };
 
-use crate::{dot::Sheet, evolution::Evolution, environment::*};
-pub use crate::dot::{Dot, Sheets, PtrSheets};
+use crate::{dot::ElementsSheet, evolution::Evolution, environment::*};
+pub use crate::dot::{Dot, ElementsSheets, PtrElements};
 use crate::geom::*;
 use crate::project::{Project, Element, };
 use crate::organism::*;
@@ -24,17 +24,16 @@ pub struct World {
    env: Environment,
    mode: Arc<AtomicU8>,
    ticks_elapsed: Arc<AtomicUsize>, // model time - a number ticks elapsed from beginning
-   elements_sheets: PtrSheets,
-   animal_sheet: Arc<Mutex<AnimalSheet>>, // Mirror from Evaluation
+   ptr_elements: PtrElements,       // Contents of inanimate nature calculations
+   ptr_animals: PtrAnimals,         // Contents of living nature calculations
    thread_handle: Option<Handle>,
-   // reactions: Reactions,
 
    // Section for UI
    pub vis_elem_indexes: Vec<bool>, // indexes of visible (non-filtered) elements
    pub vis_reac_indexes: Vec<bool>, // indexes of visible (non-filtered) reactions
    pub vis_dead: bool,              // to show or not dead organisms
    pub ui_reactions: UIReactions,   // description of reactions
-   pub elements: Vec<Element>,      // description of elements
+   pub ui_elements: Vec<Element>,      // description of elements
 }
 
 // Modes of operation of the calculated thread
@@ -61,15 +60,15 @@ impl From<u8> for ThreadMode {
 impl World {
    pub fn new(project: Project) -> Self {
       // Initialize structures from project
-      let elements = project.elements;
+      let ui_elements = project.elements;
       let reactions = project.reactions;
       let ui_reactions = project.ui_reactions;
       let size = project.size;
 
-      // Create sheets with initial amounts
-      let sheets = elements.iter().map(|v| {
-         Sheet::new(size, v.init_amount, v.volatility)
-      }).collect::<Sheets>();
+      // Create sheets of elements with initial amounts
+      let elements = ui_elements.iter().map(|v| {
+         ElementsSheet::new(size, v.init_amount, v.volatility)
+      }).collect::<ElementsSheets>();
 
       let env = Environment::new(size,
          project.resolution,
@@ -78,8 +77,7 @@ impl World {
       );
 
       // Create animals
-      let animal_sheet = AnimalSheet::new(size.max_serial(), project.max_animal_stack);
-      let animal_sheet = Arc::new(Mutex::new(animal_sheet));
+      let animals = AnimalsSheet::new(size.max_serial(), project.max_animal_stack);
 
       // Flags for thread control
       let mode = Arc::new(AtomicU8::new(ThreadMode::Paused as u8));
@@ -90,11 +88,11 @@ impl World {
       // Thread for calculate evolution
 
       // Evolution algorithm
-      let evolution = Evolution::new(sheets, Arc::clone(&animal_sheet), reactions);
+      let evolution = Evolution::new(elements, animals, reactions);
 
-      // Store raw pointers to elements
-      let elements_sheets = PtrSheets::new(&evolution.sheets);
-
+      // Store raw pointers to content
+      let ptr_elements = PtrElements::new(&evolution.elements);
+      let ptr_animals = PtrAnimals::new(&evolution.animals);
 
       let thread_handle = Self::spawn(
          env.clone(),
@@ -104,7 +102,7 @@ impl World {
       );
 
       // At start all elements should be visible, collect its indexes
-      let len = elements.len();
+      let len = ui_elements.len();
       let vis_elem_indexes = vec![true; len];
       let vis_reac_indexes = vec![true; len];
 
@@ -112,15 +110,15 @@ impl World {
          env,
          mode,
          ticks_elapsed,
-         elements_sheets,
-         animal_sheet,
+         ptr_elements,
+         ptr_animals,
          thread_handle,
 
          vis_elem_indexes,
          vis_reac_indexes,
          vis_dead: true,
          ui_reactions,
-         elements,
+         ui_elements,
       }
    }
 
@@ -166,15 +164,13 @@ impl World {
 
       // Corresponding bit of the world
       let serial_bit = self.size().serial(x, y);
-      let energy = self.elements_sheets.get(0, serial_bit);
+      let energy = self.ptr_elements.get(0, serial_bit);
 
       // Find the dot color among animals
-      let unlocked_sheet =self.animal_sheet.lock().unwrap();
-      let stack = unlocked_sheet.get(serial_bit);
+      let mut stack = self.ptr_animals.stack(serial_bit);
 
-      // Among animals determines with visible reaction and alive or not
-      let animal_color = stack.get_animals()
-      .find_map(|o| {
+      // Let's take out the color definition code - determine animal with visible reaction and alive or not
+      let closure = |o: &Organism| {
          // Need to be visible and alive or not
          if self.vis_dead || o.alive() {
             let reaction_index = o.reaction_index();
@@ -189,6 +185,11 @@ impl World {
          } else {
             None
          }
+      };
+
+      let animal_color = stack
+      .find_map(|o| {
+         o.as_ref().and_then(|o| closure(o))
       });
 
       let mut color = if let Some(color) = animal_color {
@@ -198,8 +199,8 @@ impl World {
          let color = self.vis_elem_indexes.iter()
          .enumerate()
          .find_map(|(item_index, visible)| {
-            if *visible && self.elements_sheets.get(item_index, serial_bit) > 0 {
-               Some(self.elements[item_index].color)
+            if *visible && self.ptr_elements.get(item_index, serial_bit) > 0 {
+               Some(self.ui_elements[item_index].color)
             } else {
                None
             }
@@ -230,11 +231,9 @@ impl World {
       let mut remaining_lines = max_lines;
 
       // Collect info among animals
-      let unlocked_sheet = self.animal_sheet.lock().unwrap();
-      let stack = unlocked_sheet.get(serial_bit);
+      let stack = self.ptr_animals.stack(serial_bit);
 
-      // Among animals determines with visible reaction and alive or not
-      let filtered_animals = stack.get_animals()
+      let filtered_animals = stack.into_iter().flatten()
       .filter(|o| {
          self.vis_dead || (   // include all
             o.alive() && self.vis_reac_indexes[o.reaction_index()]   // include only alive with visible reaction
@@ -260,7 +259,7 @@ impl World {
       .filter(|(_index, vis)| **vis)
       .take(remaining_lines)
       .fold(animal_desc, |acc, (vis_index, _)| {
-         format!("{}{}: {}{}", acc, self.elements[vis_index].name, self.elements_sheets.get(vis_index, serial_bit), delimiter)
+         format!("{}{}: {}{}", acc, self.ui_elements[vis_index].name, self.ptr_elements.get(vis_index, serial_bit), delimiter)
       })
    }
 

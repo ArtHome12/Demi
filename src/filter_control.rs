@@ -55,7 +55,7 @@ impl Controls {
 
       let world = &self.world.borrow();
       
-      let elements_check_boxes = world.elements
+      let elements_check_boxes = world.ui_elements
       .iter()
       .enumerate()
       .fold(Column::new().spacing(10), |column, (index, item)| {
