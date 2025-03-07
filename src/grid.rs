@@ -9,13 +9,9 @@ Copyright (c) 2013-2023 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 use iif::iif;
-use iced::{
-   widget::canvas::{self, Cache, Canvas, Frame, Geometry, Path, Text, Stroke, 
-      Event,
-   },
-   Color, Element, Length, Point, Rectangle, Vector, Size, alignment, Theme,
-   mouse::{self, Cursor,}, Renderer, 
-};
+use iced::{alignment, mouse::{self, Cursor,}, widget::{canvas::{self, Cache, Canvas, Event, Frame, Geometry, Path, Stroke, Text, }, stack}, Color, Element, Length, Point, Rectangle, Renderer, Size, Theme, Vector,};
+use iced::widget::{image::Handle, Image, image, };
+use iced::advanced::image::Bytes;
 
 use std::{rc::Rc, cell::RefCell};
 use euclid::*;
@@ -151,11 +147,19 @@ impl Grid {
    }
 
 
-   pub fn view<'a>(&'a self) -> Element<'a, Message> {
-      Canvas::new(self)
+   pub fn view(&self, size: iced::Size) -> Element<Message> {
+      let canvas = Canvas::new(self)
          .width(Length::Fill)
          .height(Length::Fill)
-         .into()
+         .into();
+      
+      if self.use_bitmap() {
+         let img: Element<Message> =Element::from(self.world_image(size));
+
+         stack(vec![img, canvas,]).into()
+      } else {
+         canvas.into()
+      }
    }
 
    fn adjust_translation(&self, translation: PointW) -> PointW {
@@ -193,6 +197,7 @@ impl Grid {
       canvas::Action::<Message>::request_redraw();
    }
 
+   /// Draws vertical and horizontal lines with the specified step. Used for cell and world borders.
    fn draw_lines(&self, frame: &mut Frame, color: Color, step: SizeW, bounds: SizeS) {
       // Prepare style
       let stroke = Stroke::default()
@@ -221,6 +226,74 @@ impl Grid {
       }
    }
 
+   /// Generates an image with world points to speed up rendering at small scales.
+   fn world_image(&self, size: iced::Size) -> Image {
+
+      let frame_size = SizeS::new(size.width, size.height);
+
+      // Ranges in region to draw
+      let t = self.translation / Self::CELL_SIZE.get();
+      let s: SizeW = frame_size / self.scale / Self::CELL_SIZE.get()/*  + SizeW::splat(1.0) */; // size in cells +1 for last incomplete cell
+      let rx = t.x as isize .. (t.x as isize + s.width as isize);
+      let ry = t.y as isize .. (t.y as isize + s.height as isize);
+
+      // Closure for scaling
+      let scaled_cell = Self::CELL_SIZE * self.scale;
+      let c = |i: isize| -> isize {
+         (i as f32 * scaled_cell.get()) as isize
+      };
+
+      // If frame is not large enough we need to exclude some cells
+      let no_filter = s.width < frame_size.width;
+      // Iterators skipping invisible points (skip, if the previous argument addresses the same point).
+      let ix = rx.filter(|x| no_filter || c(*x - 1) != c(*x));
+      let no_filter = s.height < frame_size.height;
+      let iy = ry.filter(|y| no_filter || c(*y - 1) != c(*y));
+
+      let mut storage = Vec::new();
+
+      // Draw each point
+      let mut cnt = 0;
+      // "iproduct" runs iterators repeatedly, we need to measure the performance compared to copying.
+      for (y, x) in itertools::iproduct!(iy, ix) {
+         // Get dot for point (allow display dot outside its real x and y)
+         let dot = self.world.borrow().dot(x, y);
+         let mut color = dot.color;
+         if self.illumination {
+            color.a = 1.0;
+         }
+
+         /* if (x == 1 || x == 12) && (y == 1 || y == 12) {
+            color = Color::WHITE
+         } else {
+            color = Color::BLACK
+         } */
+
+         let mut color = Vec::from(color.into_rgba8());
+         storage.append(&mut color);
+         cnt += 1;
+         // print!("x={}, y={}, cnt={} ", x, y, cnt);
+      };
+
+      let pixels = Bytes::from(storage);
+      let handle = Handle::from_rgba(s.width as u32, s.height as u32, pixels);
+
+      // let handle = Handle::from_path("C:/Development/GitHub/Demi/WikiImages/Screen2.png");
+      let image = image(handle)
+         .width(size.width)   // reserved space for the Element, does not affect the display of the image
+         .height(size.height)
+         .scale(self.scale.get() * Self::CELL_SIZE.get())
+         .filter_method(image::FilterMethod::Nearest)
+         .content_fit(iced::ContentFit::None)
+         ;
+      // unimplemented!();
+      image
+   }
+
+   // If true, use bitmap for points drawing else use canvas
+   fn use_bitmap(&self) -> bool {
+      Self::CELL_SIZE * self.scale < Self::MIN_VISIBLE_CELL_BORDER
+   }
 }
 
 impl<'a> canvas::Program<Message> for Grid {
@@ -335,109 +408,115 @@ impl<'a> canvas::Program<Message> for Grid {
       self.fps.borrow_mut().make_tick();
 
       // Closure for draw world content
-      let life_closure = |frame: &mut Frame| {
+      let life = if !self.use_bitmap() {
+         let life_closure = |frame: &mut Frame| {
 
-         let background = Path::rectangle(Point::ORIGIN, frame.size());
-         frame.fill(&background, Color::BLACK);
+            // let background = Path::rectangle(Point::ORIGIN, frame.size());
+            // frame.fill(&background, Color::BLACK);
 
-         frame.scale(self.scale.get());
-         let neg_iced_vector = Vector::new(-self.translation.x, -self.translation.y);
-         frame.translate(neg_iced_vector);
-         frame.scale(Self::CELL_SIZE.get());
+            frame.scale(self.scale.get());
+            let neg_iced_vector = Vector::new(-self.translation.x, -self.translation.y);
+            frame.translate(neg_iced_vector);
+            frame.scale(Self::CELL_SIZE.get());
 
-         let frame_size: [f32; 2] = frame.size().into();
-         let frame_size = SizeS::from(frame_size);
+            let s = &frame.size();
+            let frame_size = SizeS::new(s.width, s.height);
 
-         // Ranges in region to draw
-         let t = self.translation / Self::CELL_SIZE.get();
-         let s: SizeW = frame_size / self.scale / Self::CELL_SIZE.get() + SizeW::splat(1.0); // size in cells +1 for last incomplete cell
-         let rx = t.x as isize .. (t.x + s.width) as isize;
-         let ry = t.y as isize .. (t.y + s.height) as isize;
+            // Ranges in region to draw
+            let t = self.translation / Self::CELL_SIZE.get();
+            let s: SizeW = frame_size / self.scale / Self::CELL_SIZE.get() + SizeW::splat(1.0); // size in cells +1 for last incomplete cell
+            let rx = t.x as isize .. (t.x + s.width) as isize;
+            let ry = t.y as isize .. (t.y + s.height) as isize;
 
-         // Closure for scaling
-         let scaled_cell = Self::CELL_SIZE * self.scale;
-         let c = |i: isize| -> isize {
-            (i as f32 * scaled_cell.get()) as isize
-         };
+            // Closure for scaling
+            let scaled_cell = Self::CELL_SIZE * self.scale;
+            let c = |i: isize| -> isize {
+               (i as f32 * scaled_cell.get()) as isize
+            };
 
-         // If frame is not large enough we need to exclude some cells
-         let no_filter = s.width < frame_size.width;
-         // Iterators skipping invisible points (skip, if the previous argument addresses the same point).
-         let ix = rx.filter(|x| no_filter || c(*x - 1) != c(*x));
-         let no_filter = s.height < frame_size.height;
-         let iy = ry.filter(|y| no_filter || c(*y - 1) != c(*y));
+            // If frame is not large enough we need to exclude some cells
+            let no_filter = s.width < frame_size.width;
+            // Iterators skipping invisible points (skip, if the previous argument addresses the same point).
+            let ix = rx.filter(|x| no_filter || c(*x - 1) != c(*x));
+            let no_filter = s.height < frame_size.height;
+            let iy = ry.filter(|y| no_filter || c(*y - 1) != c(*y));
 
-         // Scale for text inside cells
-         let cell_scaled_size = Self::CELL_SIZE * self.scale;
-         let text_scale = 1.0 / cell_scaled_size.get();
-         
-         // The max number of lines of text to fit
-         let lines = if cell_scaled_size > Self::CELL_SIZE_FOR_TEXT {
-            (cell_scaled_size / Self::CELL_TEXT_HEIGHT).get() as usize
-         } else {0};
+            // Scale for text inside cells
+            let cell_scaled_size = Self::CELL_SIZE * self.scale;
+            let text_scale = 1.0 / cell_scaled_size.get();
+            
+            // The max number of lines of text to fit
+            let lines = if cell_scaled_size > Self::CELL_SIZE_FOR_TEXT {
+               (cell_scaled_size / Self::CELL_TEXT_HEIGHT).get() as usize
+            } else {0};
 
-         // Draw each point
-         // "iproduct" runs iterators repeatedly, we need to measure the performance compared to copying.
-         for (x, y) in itertools::iproduct!(ix, iy) {
-            // Get dot for point (allow display dot outside its real x and y)
-            let dot = self.world.borrow().dot(x, y);
-            let mut color = dot.color;
-            if self.illumination {
-               color.a = 1.0;
-            }
+            // Draw each point
+            // "iproduct" runs iterators repeatedly, we need to measure the performance compared to copying.
+            for (x, y) in itertools::iproduct!(ix, iy) {
+               // Get dot for point (allow display dot outside its real x and y)
+               let dot = self.world.borrow().dot(x, y);
+               let mut color = dot.color;
+               if self.illumination {
+                  color.a = 1.0;
+               }
 
-            let p = Point::new(x as f32, y as f32);
+               let p = Point::new(x as f32, y as f32);
 
-            // Fill cell's area with a primary color
-            frame.fill_rectangle(
-               p,
-               Size::UNIT,
-               color,
-            );
-
-            // Draw the text if it fits
-            if lines > 0 {
-               let content = self.world.borrow().description(&dot, lines, '\n');
-               let s = cell_scaled_size.get();
-               let position = Point::new(p.x * s + 3.0, p.y * s); // with an indent from the left edge
-
-               // Contrast color
-               let avg_color = (color.r * color.a + color.g * color.a + color.b * color.a) / 3.0;
-               let color = if avg_color < 0.2 { Color::from_rgb8(210, 210, 210) }
-                  else if avg_color < 0.5 { Color::WHITE }
-                  else { Color::BLACK };
-
-               let text = Text {
-                  content,
-                  position,
+               // Fill cell's area with a primary color
+               frame.fill_rectangle(
+                  p,
+                  Size::UNIT,
                   color,
-                  ..Text::default()
-               };
+               );
 
-               frame.with_save(|frame| {
-                  frame.scale(text_scale);
-                  frame.fill_text(text);
-               });
+               // Draw the text if it fits
+               if lines > 0 {
+                  let content = self.world.borrow().description(&dot, lines, '\n');
+                  let s = cell_scaled_size.get();
+                  let position = Point::new(p.x * s + 3.0, p.y * s); // with an indent from the left edge
+
+                  // Contrast color
+                  let avg_color = (color.r * color.a + color.g * color.a + color.b * color.a) / 3.0;
+                  let color = if avg_color < 0.2 { Color::from_rgb8(210, 210, 210) }
+                     else if avg_color < 0.5 { Color::WHITE }
+                     else { Color::BLACK };
+
+                  let text = Text {
+                     content,
+                     position,
+                     color,
+                     ..Text::default()
+                  };
+
+                  frame.with_save(|frame| {
+                     frame.scale(text_scale);
+                     frame.fill_text(text);
+                  });
+               }
             }
          };
-      };
 
-      let life = self.life_cache.draw(renderer,
-         bounds.size(), |frame| {
-            let region = Rectangle::with_size(bounds.size());
-            frame.with_clip(region, |frame| life_closure(frame))
-         }
-      );
+         // Return points on the canvas
+         let geom = self.life_cache.draw(renderer,
+            bounds.size(), |frame| {
+               let region = Rectangle::with_size(bounds.size());
+               frame.with_clip(region, |frame| life_closure(frame))
+            }
+         );
+         Some(geom)
+      } else {
+         None
+      };
 
       let grid = self.grid_cache.draw(renderer,
          bounds.size(),
          |frame| {
             let bounds = SizeS::new(bounds.width, bounds.height);
 
-            // Draw the inner grid if not too small scale
-            if Self::CELL_SIZE * self.scale > Self::MIN_VISIBLE_CELL_BORDER {
+            // Draw the inner grid if not too small scale - similar with using bitmap.
+            if life.is_some() {
                let color = Color::from_rgb8(70, 74, 83);
-               let step = SizeW::splat(Self::CELL_SIZE.get()); // need PR
+               let step = SizeW::splat(Self::CELL_SIZE.get());
                self.draw_lines(frame, color, step, bounds);
             }
 
@@ -522,7 +601,10 @@ impl<'a> canvas::Program<Message> for Grid {
          frame.into_geometry()
       };
 
-      vec![life, grid, overlay]
+      match life {
+         Some(geom) => vec![geom, grid, overlay],
+         None => vec![grid, overlay]
+      }
    }
 
    fn mouse_interaction(

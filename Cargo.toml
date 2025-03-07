@@ -1,19 +1,19 @@
 [package]
 name = "demi"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Artem Khomenko <_mag12@yahoo.com>"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-iced = { path = "../iced",  features = ["canvas", "tokio", "image", "lazy"] }
+iced = { path = "../iced",  features = ["advanced", "canvas", "tokio", "image", "lazy"] }
 # iced = { version = "0.13.2",  features = ["canvas", "tokio", "image", "lazy"] }
 
 itertools = "0.14.0"
 rustc-hash = "2.1.1"
-serde = "1.0.217"
-serde_derive = "1.0.217"
+serde = "1.0.218"
+serde_derive = "1.0.218"
 rand = "0.9.0"
 rayon = "1.10.0"
 toml = "0.8.20"

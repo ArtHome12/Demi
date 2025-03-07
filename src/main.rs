@@ -210,8 +210,8 @@ impl Demi {
 
       // Client area contains grid with the world's dots and sometimes filter for showing elements
       let pane_grid = PaneGrid::new(&self.panes, |_id, pane, _is_maximized| {
-         pane_grid::Content::new(responsive(move |_size| {
-            pane.view()
+         pane_grid::Content::new(responsive(move |size| {
+            pane.view(size)
          }))
       })
       .on_resize(10, Message::Resized);
@@ -258,9 +258,9 @@ impl PaneState {
        }
    }
    
-   fn view(&self,) -> Element<Message> {
+   fn view(&self, size: iced::Size) -> Element<Message> {
       match &self.content {
-         PaneContent::Grid(grid) => grid.view().map(move |message| Message::GridMessage(message)),
+         PaneContent::Grid(grid) => grid.view(size).map(move |message| Message::GridMessage(message)),
          PaneContent::Filter(filter) => filter.view().map(move |message| Message::FilterMessage(message)),
       }
    }
