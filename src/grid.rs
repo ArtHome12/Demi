@@ -13,7 +13,7 @@ use iced::{alignment, mouse::{self, Cursor,}, widget::{canvas::{self, Cache, Can
 use iced::widget::{image::Handle, Image, image, };
 use iced::advanced::image::Bytes;
 
-use std::{rc::Rc, cell::RefCell};
+use std::{rc::Rc, cell::RefCell, ptr};
 use euclid::*;
 
 use crate::world::World;
@@ -23,6 +23,7 @@ pub struct Grid {
    life_cache: Cache,
    grid_cache: Cache,
    translation: PointW,
+   bitmap: RefCell<Bitmap>,   // to store the off-screen image used at small scale for performance
 
    scale: ScaleWS,
    min_scale: ScaleWS,
@@ -102,6 +103,7 @@ impl Grid {
          life_cache: Cache::default(),
          grid_cache: Cache::default(),
          translation: PointW::default(),
+         bitmap: RefCell::new(Bitmap::new()),
          scale: ScaleWS::identity(),
          min_scale,
          max_scale,
@@ -121,9 +123,7 @@ impl Grid {
 
          Message::Translated(translation) => {
             self.translation = self.adjust_translation(translation);
-
-            self.life_cache.clear();
-            self.grid_cache.clear();
+            self.clear_cache(true);
          }
 
          Message::Scaled(scale, translation) => {
@@ -132,20 +132,26 @@ impl Grid {
             if let Some(translation) = translation {
                self.translation = self.adjust_translation(translation);
             }
-
-            self.life_cache.clear();
-            self.grid_cache.clear();
+            self.clear_cache(true);
          }
 
          Message::ClockChime(is_one_second_passed) => self.clock_chime(is_one_second_passed),
          Message::Illumination(is_on) => {
             self.illumination = is_on;
-            self.life_cache.clear();
+            self.clear_cache(false);
          }
-         Message::FilterChanged => self.life_cache.clear(),
+         Message::FilterChanged => self.clear_cache(false),
       }
    }
 
+   // Force to redraw the cells and grid
+   fn clear_cache(&mut self, with_grid: bool) {
+      self.life_cache.clear();
+      self.bitmap.borrow_mut().clear();
+      if with_grid {
+         self.grid_cache.clear();
+      }
+   }
 
    pub fn view(&self, size: iced::Size) -> Element<Message> {
       let canvas = Canvas::new(self)
@@ -154,7 +160,10 @@ impl Grid {
          .into();
       
       if self.use_bitmap() {
-         let img: Element<Message> =Element::from(self.world_image(size));
+         let size = SizeS::new(size.width, size.height);
+         let bitmap = self.bitmap.borrow_mut()
+            .update(size, self);
+         let img: Element<Message> =Element::from(bitmap);
 
          stack(vec![img, canvas,]).into()
       } else {
@@ -192,7 +201,7 @@ impl Grid {
       // For update screen
       if self.last_tick != tick {
          self.last_tick = tick;
-         self.life_cache.clear();
+         self.clear_cache(false)
       }
       canvas::Action::<Message>::request_redraw();
    }
@@ -224,70 +233,6 @@ impl Grid {
          frame.stroke(&Path::line(from, to), stroke.to_owned());
          p.y += step.height;
       }
-   }
-
-   /// Generates an image with world points to speed up rendering at small scales.
-   fn world_image(&self, size: iced::Size) -> Image {
-
-      let frame_size = SizeS::new(size.width, size.height);
-
-      // Ranges in region to draw
-      let t = self.translation / Self::CELL_SIZE.get();
-      let s: SizeW = frame_size / self.scale / Self::CELL_SIZE.get()/*  + SizeW::splat(1.0) */; // size in cells +1 for last incomplete cell
-      let rx = t.x as isize .. (t.x as isize + s.width as isize);
-      let ry = t.y as isize .. (t.y as isize + s.height as isize);
-
-      // Closure for scaling
-      let scaled_cell = Self::CELL_SIZE * self.scale;
-      let c = |i: isize| -> isize {
-         (i as f32 * scaled_cell.get()) as isize
-      };
-
-      // If frame is not large enough we need to exclude some cells
-      let no_filter = s.width < frame_size.width;
-      // Iterators skipping invisible points (skip, if the previous argument addresses the same point).
-      let ix = rx.filter(|x| no_filter || c(*x - 1) != c(*x));
-      let no_filter = s.height < frame_size.height;
-      let iy = ry.filter(|y| no_filter || c(*y - 1) != c(*y));
-
-      let mut storage = Vec::new();
-
-      // Draw each point
-      let mut cnt = 0;
-      // "iproduct" runs iterators repeatedly, we need to measure the performance compared to copying.
-      for (y, x) in itertools::iproduct!(iy, ix) {
-         // Get dot for point (allow display dot outside its real x and y)
-         let dot = self.world.borrow().dot(x, y);
-         let mut color = dot.color;
-         if self.illumination {
-            color.a = 1.0;
-         }
-
-         /* if (x == 1 || x == 12) && (y == 1 || y == 12) {
-            color = Color::WHITE
-         } else {
-            color = Color::BLACK
-         } */
-
-         let mut color = Vec::from(color.into_rgba8());
-         storage.append(&mut color);
-         cnt += 1;
-         // print!("x={}, y={}, cnt={} ", x, y, cnt);
-      };
-
-      let pixels = Bytes::from(storage);
-      let handle = Handle::from_rgba(s.width as u32, s.height as u32, pixels);
-
-      // let handle = Handle::from_path("C:/Development/GitHub/Demi/WikiImages/Screen2.png");
-      let image = image(handle)
-         .width(size.width)   // reserved space for the Element, does not affect the display of the image
-         .height(size.height)
-         .scale(self.scale.get() * Self::CELL_SIZE.get())
-         .filter_method(image::FilterMethod::Nearest)
-         .content_fit(iced::ContentFit::None)
-         ;
-      // unimplemented!();
-      image
    }
 
    // If true, use bitmap for points drawing else use canvas
@@ -395,11 +340,12 @@ impl<'a> canvas::Program<Message> for Grid {
       }
    }
 
+   
    fn draw(
       &self,
       _interaction: &Interaction,
       renderer: &Renderer,
-      _theme: &Theme,
+      theme: &Theme,
       bounds: Rectangle,
       cursor: Cursor,
    ) -> Vec<Geometry> {
@@ -410,9 +356,6 @@ impl<'a> canvas::Program<Message> for Grid {
       // Closure for draw world content
       let life = if !self.use_bitmap() {
          let life_closure = |frame: &mut Frame| {
-
-            // let background = Path::rectangle(Point::ORIGIN, frame.size());
-            // frame.fill(&background, Color::BLACK);
 
             frame.scale(self.scale.get());
             let neg_iced_vector = Vector::new(-self.translation.x, -self.translation.y);
@@ -452,9 +395,10 @@ impl<'a> canvas::Program<Message> for Grid {
 
             // Draw each point
             // "iproduct" runs iterators repeatedly, we need to measure the performance compared to copying.
+            let world = self.world.borrow();
             for (x, y) in itertools::iproduct!(ix, iy) {
                // Get dot for point (allow display dot outside its real x and y)
-               let dot = self.world.borrow().dot(x, y);
+               let dot = world.dot(x, y);
                let mut color = dot.color;
                if self.illumination {
                   color.a = 1.0;
@@ -471,7 +415,7 @@ impl<'a> canvas::Program<Message> for Grid {
 
                // Draw the text if it fits
                if lines > 0 {
-                  let content = self.world.borrow().description(&dot, lines, '\n');
+                  let content = world.description(&dot, lines, '\n');
                   let s = cell_scaled_size.get();
                   let position = Point::new(p.x * s + 3.0, p.y * s); // with an indent from the left edge
 
@@ -521,8 +465,7 @@ impl<'a> canvas::Program<Message> for Grid {
             }
 
             // Draw outer borders - lines for border around the world
-            let color = Color::from_rgb8(255, 74, 83);
-            self.draw_lines(frame, color, self.nonscaled_size, bounds);
+            self.draw_lines(frame, theme.palette().text, self.nonscaled_size, bounds);
          }
       );
 
@@ -537,13 +480,13 @@ impl<'a> canvas::Program<Message> for Grid {
             Size::new(frame_width, Self::STATUS_BAR_HEIGHT),
             Color {
                a: 0.9,
-               ..Color::BLACK
+               ..theme.palette().background
             }
          );
 
          // Text object
          let text = Text {
-            color: Color::WHITE,
+            color: theme.palette().text,
             vertical_alignment: alignment::Vertical::Bottom,
             ..Text::default()
          };
@@ -567,25 +510,28 @@ impl<'a> canvas::Program<Message> for Grid {
 
             // Position at world coordinates
             let p = ((self.translation + offset) / Self::CELL_SIZE.get()).floor();
-            let top_left = Point::new(p.x, p.y);
 
-            // Tune scale and offset
-            frame.with_save(|frame| {
-               frame.scale(self.scale.get());   // scale to user's choice
-               let neg_iced_vector = Vector::new(-self.translation.x, -self.translation.y);
-               frame.translate(neg_iced_vector);   // consider the offset of the displayed area
-               frame.scale(Self::CELL_SIZE.get()); // scale so that the cell with its dimensions occupies exactly one unit
+            // Draw a square over the cell if not in bitmap mode
+            if life.is_some() {
+               frame.with_save(|frame| {
+                  // Tune scale and offset
+                  frame.scale(self.scale.get());   // scale to user's choice
+                  let neg_iced_vector = Vector::new(-self.translation.x, -self.translation.y);
+                  frame.translate(neg_iced_vector);   // consider the offset of the displayed area
+                  frame.scale(Self::CELL_SIZE.get()); // scale so that the cell with its dimensions occupies exactly one unit
 
-               // Paint over a square of unit size
-               frame.fill_rectangle(
-                  top_left,
-                  Size::UNIT,
-                  Color {
-                     a: 0.5,
-                     ..Color::BLACK
-                  },
-               );
-            });
+                  // Paint over a square of unit size
+                  let top_left = Point::new(p.x, p.y);
+                  frame.fill_rectangle(
+                     top_left,
+                     Size::UNIT,
+                     Color {
+                        a: 0.5,
+                        ..Color::BLACK
+                     },
+                  )
+               })
+            }
 
             // Output info at bottom left edge
             let p = p.cast::<isize>();
@@ -602,7 +548,7 @@ impl<'a> canvas::Program<Message> for Grid {
       };
 
       match life {
-         Some(geom) => vec![geom, grid, overlay],
+         Some(life) => vec![life, grid, overlay],
          None => vec![grid, overlay]
       }
    }
@@ -632,3 +578,99 @@ impl Default for Interaction {
    }
 }
 
+// To store the off-screen image
+struct Bitmap {
+   capacity: usize,
+   cached: bool,
+   storage: Vec<u8>,
+}
+
+impl Bitmap {
+   fn new() -> Self {
+      Self {
+         capacity: 0,
+         cached: false,
+         storage: Vec::new(),
+      }
+   }
+
+   fn update(&mut self, size: SizeS, grid: &Grid) -> Image {
+
+      // Size in cells, maybe it is necessary +1 for last incomplete column and row.
+      let s: SizeW = size / grid.scale / Grid::CELL_SIZE.get(); 
+
+      // Calculate new capacity. "Size" may be less than "s" due to filtering of points in the iterator.
+      let width = s.width.min(size.width) as usize;
+      let height = s.height.min(size.height) as usize;
+      let capacity = width * height * 4;
+
+      // Recreate the storage when the size changes
+      if self.capacity < capacity {
+         self.capacity = capacity;
+         self.storage = vec![0; capacity];
+         self.cached = false;
+      }
+
+      // Build the image
+      if !self.cached {
+         self.cached = true;
+
+         // Ranges in region to draw
+         let t = grid.translation / Grid::CELL_SIZE.get();
+         let rx = t.x as isize .. (t.x as isize + s.width as isize);
+         let ry = t.y as isize .. (t.y as isize + s.height as isize);
+   
+         // Closure for scaling
+         let scaled_cell = Grid::CELL_SIZE * grid.scale;
+         let c = |i: isize| -> isize {
+            (i as f32 * scaled_cell.get()) as isize
+         };
+   
+         // If frame is not large enough we need to exclude some cells
+         let no_filter = s.width < size.width;
+         // Iterators skipping invisible points (skip, if the previous argument addresses the same point).
+         let ix = rx.filter(|x| no_filter || c(*x - 1) != c(*x));
+         let no_filter = s.height < size.height;
+         let iy = ry.filter(|y| no_filter || c(*y - 1) != c(*y));
+   
+         // Draw each point
+         let world = grid.world.borrow();
+         let mut i = 0; // point index in storage
+         for (y, x) in itertools::iproduct!(iy, ix) {
+            // Get dot for point (allow display dot outside its real x and y)
+            let dot = world.dot(x, y);
+            let mut color = dot.color;
+            if grid.illumination {
+               color.a = 1.0;
+            }
+   
+            let color = Vec::from(color.into_rgba8());
+            unsafe {
+               let dst = self.storage.as_mut_ptr().add(i);
+               ptr::copy_nonoverlapping(color.as_ptr(), dst, 4);
+            }
+            i += 4;
+         };
+      }
+
+      // Return the image
+      let cnt = self.storage.len();
+      let pixels = Bytes::from(self.storage.clone());
+      let height = cnt / width / 4; // the formula is sometimes wrong by one
+      let handle = Handle::from_rgba(width as u32, height as u32, pixels);
+
+      // Only increase, the decrease is taken into account through the size.
+      let scale = (grid.scale.get() * Grid::CELL_SIZE.get()).max(1.0);
+
+      image(handle)
+         .width(size.width)   // reserved space for the Element, does not affect the display of the image
+         .height(size.height)
+         .scale(scale)
+         .filter_method(image::FilterMethod::Nearest)
+         .content_fit(iced::ContentFit::None)
+   }
+
+   fn clear(&mut self) {
+      self.cached = false;
+   }
+}

@@ -24,7 +24,7 @@ mod genes;
 mod organism;
 
 use grid::Grid;
-use iced::{Element, Subscription, window, Task, window::Id};
+use iced::{Element, Subscription, Task, window, window::Id, Theme,};
 use iced::widget::{
    Container, column, PaneGrid, pane_grid, responsive,
    pane_grid::Axis,
@@ -40,6 +40,7 @@ pub fn main() -> iced::Result {
       .subscription(Demi::subscription)
       .exit_on_close_request(false)
       .antialiasing(true)
+      .theme(|_| Theme::Moonfly)
       .run_with(Demi::new)
 }
 
