@@ -9,9 +9,19 @@ Copyright (c) 2013-2023 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 use iif::iif;
-use iced::{alignment, mouse::{self, Cursor,}, widget::{canvas::{self, Cache, Canvas, Event, Frame, Geometry, Path, Stroke, Text, }, stack}, Color, Element, Length, Point, Rectangle, Renderer, Size, Theme, Vector,};
-use iced::widget::{image::Handle, Image, image, };
+
+use iced::{alignment, Color, Element, Length, Point, Rectangle, Size, Theme, Vector,
+   Transformation, Renderer,
+};
+use iced::mouse::{self, Cursor,};
+use iced::widget::{image::Handle, Image, image, stack,};
+use iced::widget::canvas::{self, Cache, Canvas, Event, Frame, Geometry, Path, Stroke, Text, };
+use iced::advanced::renderer;
 use iced::advanced::image::Bytes;
+use iced::advanced::widget::{self, Widget};
+use iced::advanced::layout::{self, Layout};
+use iced::advanced::graphics::color;
+use iced::advanced::graphics::mesh::{self, SolidVertex2D,};
 
 use std::{rc::Rc, cell::RefCell, ptr};
 use euclid::*;
@@ -24,6 +34,7 @@ pub struct Grid {
    grid_cache: Cache,
    translation: PointW,
    bitmap: RefCell<Bitmap>,   // to store the off-screen image used at small scale for performance
+   mesh: RefCell<MeshWidget>,
 
    scale: ScaleWS,
    min_scale: ScaleWS,
@@ -83,6 +94,7 @@ impl Grid {
 
    const STATUS_BAR_HEIGHT: f32 = 30.0;
 
+
    pub fn new(world: Rc<RefCell<World>>) -> Self {
       let world_size = world.borrow().size();
       let world_size = Size2D::<usize, WorldSpace>::new(world_size.x, world_size.y);
@@ -104,6 +116,7 @@ impl Grid {
          grid_cache: Cache::default(),
          translation: PointW::default(),
          bitmap: RefCell::new(Bitmap::new()),
+         mesh: RefCell::new(MeshWidget::new()),
          scale: ScaleWS::identity(),
          min_scale,
          max_scale,
@@ -117,6 +130,7 @@ impl Grid {
          last_tick: usize::MAX,
       }
    }
+
 
    pub fn update(&mut self, message: Message) {
       match message {
@@ -144,14 +158,17 @@ impl Grid {
       }
    }
 
+
    // Force to redraw the cells and grid
    fn clear_cache(&mut self, with_grid: bool) {
       self.life_cache.clear();
       self.bitmap.borrow_mut().clear();
+      self.mesh.borrow_mut().clear();
       if with_grid {
          self.grid_cache.clear();
       }
    }
+
 
    pub fn view(&self, size: iced::Size) -> Element<Message> {
       let canvas = Canvas::new(self)
@@ -159,17 +176,21 @@ impl Grid {
          .height(Length::Fill)
          .into();
       
+      let size = SizeS::new(size.width, size.height);
+
       if self.use_bitmap() {
-         let size = SizeS::new(size.width, size.height);
          let bitmap = self.bitmap.borrow_mut()
             .update(size, self);
          let img: Element<Message> =Element::from(bitmap);
 
          stack(vec![img, canvas,]).into()
       } else {
-         canvas.into()
+         self.mesh.borrow_mut().update(size, self);
+         let geom = self.mesh.borrow().clone().into();
+         stack(vec![geom, canvas,]).into()
       }
    }
+
 
    fn adjust_translation(&self, translation: PointW) -> PointW {
       // To prevent overflow translation in coninious world
@@ -178,12 +199,14 @@ impl Grid {
       t.rem_euclid(&s)
    }
 
+
    fn translation_for_scale(&self, cursor: PointS, scale: ScaleWS) -> PointW {
       let offset = cursor / self.scale - cursor / scale;
       let offset = SizeW::new(offset.x, offset.y);
 
       self.translation + offset
-}
+   }
+
 
    // Update rate counters
    fn clock_chime(&mut self, is_one_second_passed: bool) {
@@ -205,6 +228,7 @@ impl Grid {
       }
       canvas::Action::<Message>::request_redraw();
    }
+
 
    /// Draws vertical and horizontal lines with the specified step. Used for cell and world borders.
    fn draw_lines(&self, frame: &mut Frame, color: Color, step: SizeW, bounds: SizeS) {
@@ -234,6 +258,7 @@ impl Grid {
          p.y += step.height;
       }
    }
+
 
    // If true, use bitmap for points drawing else use canvas
    fn use_bitmap(&self) -> bool {
@@ -360,8 +385,12 @@ impl<'a> canvas::Program<Message> for Grid {
             frame.scale(self.scale.get());
             let neg_iced_vector = Vector::new(-self.translation.x, -self.translation.y);
             frame.translate(neg_iced_vector);
-            frame.scale(Self::CELL_SIZE.get());
+            // frame.scale(Self::CELL_SIZE.get());
 
+            // Scale for text inside cells
+            let text_scale = 1.0 / self.scale.get();
+            frame.scale(text_scale);
+            
             let s = &frame.size();
             let frame_size = SizeS::new(s.width, s.height);
 
@@ -377,6 +406,7 @@ impl<'a> canvas::Program<Message> for Grid {
                (i as f32 * scaled_cell.get()) as isize
             };
 
+            
             // If frame is not large enough we need to exclude some cells
             let no_filter = s.width < frame_size.width;
             // Iterators skipping invisible points (skip, if the previous argument addresses the same point).
@@ -384,40 +414,27 @@ impl<'a> canvas::Program<Message> for Grid {
             let no_filter = s.height < frame_size.height;
             let iy = ry.filter(|y| no_filter || c(*y - 1) != c(*y));
 
-            // Scale for text inside cells
-            let cell_scaled_size = Self::CELL_SIZE * self.scale;
-            let text_scale = 1.0 / cell_scaled_size.get();
-            
             // The max number of lines of text to fit
+            let cell_scaled_size = Self::CELL_SIZE * self.scale;
             let lines = if cell_scaled_size > Self::CELL_SIZE_FOR_TEXT {
                (cell_scaled_size / Self::CELL_TEXT_HEIGHT).get() as usize
             } else {0};
 
-            // Draw each point
-            // "iproduct" runs iterators repeatedly, we need to measure the performance compared to copying.
-            let world = self.world.borrow();
-            for (x, y) in itertools::iproduct!(ix, iy) {
-               // Get dot for point (allow display dot outside its real x and y)
-               let dot = world.dot(x, y);
-               let mut color = dot.color;
-               if self.illumination {
-                  color.a = 1.0;
-               }
+            // Draw the text if it fits
+            if lines > 0 {
+               let world = self.world.borrow();
+               // "iproduct" runs iterators repeatedly, we need to measure the performance compared to copying.
+               for (x, y) in itertools::iproduct!(ix, iy) {
+                  // Get dot for point (allow display dot outside its real x and y)
+                  let dot = world.dot(x, y);
+                  let mut color = dot.color;
+                  if self.illumination {
+                     color.a = 1.0;
+                  }
 
-               let p = Point::new(x as f32, y as f32);
-
-               // Fill cell's area with a primary color
-               frame.fill_rectangle(
-                  p,
-                  Size::UNIT,
-                  color,
-               );
-
-               // Draw the text if it fits
-               if lines > 0 {
                   let content = world.description(&dot, lines, '\n');
                   let s = cell_scaled_size.get();
-                  let position = Point::new(p.x * s + 3.0, p.y * s); // with an indent from the left edge
+                  let position = Point::new(x as f32 * s + 3.0, y as f32 * s); // with an indent from the left edge
 
                   // Contrast color
                   let avg_color = (color.r * color.a + color.g * color.a + color.b * color.a) / 3.0;
@@ -432,10 +449,7 @@ impl<'a> canvas::Program<Message> for Grid {
                      ..Text::default()
                   };
 
-                  frame.with_save(|frame| {
-                     frame.scale(text_scale);
-                     frame.fill_text(text);
-                  });
+                  frame.fill_text(text);
                }
             }
          };
@@ -604,13 +618,15 @@ impl Bitmap {
       let height = s.height.min(size.height) as usize;
       let capacity = width * height * 4;
 
+      // If the size has changed, then the cache is not valid
+      self.cached = self.cached && (self.capacity == capacity);
+
       // Recreate the storage when the size changes
       if self.capacity < capacity {
          self.capacity = capacity;
          self.storage = vec![0; capacity];
-         self.cached = false;
       }
-
+      
       // Build the image
       if !self.cached {
          self.cached = true;
@@ -670,7 +686,198 @@ impl Bitmap {
          .content_fit(iced::ContentFit::None)
    }
 
+
    fn clear(&mut self) {
       self.cached = false;
    }
+}
+
+#[derive(Debug, Clone)]
+struct MeshWidget {
+   capacity: usize,  // capacity of vertices as criterion
+   cached: bool,
+   vertices: Rc<Vec<SolidVertex2D>>,
+   indices: Rc<Vec<u32>>,
+}
+
+impl MeshWidget {
+   fn new() -> Self {
+      Self {
+         capacity: 0,
+         cached: false,
+         vertices: Rc::new(Vec::new()),
+         indices: Rc::new(Vec::new()),
+      }
+   }
+
+
+   fn update(&mut self, size: SizeS, grid: &Grid) {
+
+      // Size in cells +1 for last incomplete column and row and +1 for the right (bottom).
+      let s: SizeW = size / grid.scale / Grid::CELL_SIZE.get() + SizeW::splat(2.0); 
+
+      // Calculate new capacity.
+      let width = s.width as usize;
+      let height = s.height as usize;
+      let capacity = width * height;
+
+      // If the size has changed, then the cache is not valid
+      self.cached = self.cached && (self.capacity == capacity);
+
+      // Recreate the storage when the size changes
+      if self.capacity < capacity {
+         self.capacity = capacity;
+         self.vertices = Rc::new(Vec::with_capacity(capacity));
+         self.indices = Rc::new(Vec::with_capacity((width - 1) * (height - 1) * 6));
+      }
+
+      // Build the image
+      if !self.cached {
+         self.cached = true;
+
+         // Extract data from Rc
+         let vertices = Rc::get_mut(&mut self.vertices).unwrap();
+         let indices = Rc::get_mut(&mut self.indices).unwrap();
+
+         // Clear the storage
+         vertices.clear();
+         indices.clear();
+
+         // Ranges in region to draw
+         let t = grid.translation / Grid::CELL_SIZE.get();
+         let rx = t.x as isize .. (t.x as isize + s.width as isize);
+         let ry = t.y as isize .. (t.y as isize + s.height as isize);
+   
+         // Go through all the points
+         let world = grid.world.borrow();
+         for (y, x) in itertools::iproduct!(ry, rx) {
+            // Get dot for point (allow display dot outside its real x and y)
+            let dot = world.dot(x, y);
+            let mut color = dot.color;
+            if grid.illumination {
+               color.a = 1.0;
+            }
+
+            let scale1 = grid.scale.get();
+            let scale2 = Grid::CELL_SIZE.get();
+            let x = (x as f32 * scale2 - grid.translation.x) * scale1;
+            let y = (y as f32 * scale2 - grid.translation.y) * scale1;
+
+            // Transform to vetex and store
+            let vertex = SolidVertex2D {
+               position: [x, y],
+               color: color::pack(color),
+            };
+            vertices.push(vertex);
+         };
+
+         // Create triange edges
+         Self::indices(indices, width as u32, height as u32);
+      }
+   }
+
+   
+   // A set of indices of triangle edges.
+   fn indices(indices: &mut Vec<u32>, width: u32, height: u32) {
+      for y in 0..height - 1 {
+         for x in 0..width - 1{
+            let i = x + y * width;
+            let i1 = i + 1;
+            let i2 = i + width;
+            let i3 = i + width + 1;
+
+            indices.push(i);
+            indices.push(i1);
+            indices.push(i2);
+
+            indices.push(i1);
+            indices.push(i3);
+            indices.push(i2);
+         }
+      };
+   }
+
+
+   fn clear(&mut self) {
+      self.cached = false;
+   }
+}
+
+impl<Message> Widget<Message, Theme, Renderer> for MeshWidget {
+   fn size(&self) -> Size<Length> {
+       Size {
+           width: Length::Fill,
+           height: Length::Shrink,
+       }
+   }
+
+   fn layout(
+       &self,
+       _tree: &mut widget::Tree,
+       _renderer: &Renderer,
+       limits: &layout::Limits,
+   ) -> layout::Node {
+       let width = limits.max().width;
+
+       layout::Node::new(Size::new(width, width))
+   }
+
+   fn draw(
+       &self,
+       _tree: &widget::Tree,
+       renderer: &mut Renderer,
+       _theme: &Theme,
+       _style: &renderer::Style,
+       layout: Layout<'_>,
+       _cursor: mouse::Cursor,
+       _viewport: &Rectangle,
+   ) {
+       use iced::advanced::Renderer as _;
+       use iced::advanced::graphics::mesh::{
+           Mesh, Renderer as _,
+       };
+
+       // Mesh must not have empty indices
+       if self.indices.is_empty() {
+           return;
+       }
+       
+       let mesh = Mesh::Solid {
+         buffers: mesh::Indexed {
+             vertices: (*self.vertices).clone(),
+             indices: (*self.indices).clone(),
+         },
+         transformation: Transformation::IDENTITY,
+         clip_bounds: Rectangle::INFINITE,
+      };
+
+      let bounds = layout.bounds();
+      renderer.with_translation(
+         Vector::new(bounds.x, bounds.y),
+         |renderer| {
+            renderer.draw_mesh(mesh);
+         },
+       );
+   }
+}
+
+
+impl<Message> From<MeshWidget> for Element<'_, Message> {
+   fn from(mesh_widget: MeshWidget) -> Self {
+       Self::new(mesh_widget)
+   }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_works() {
+         let mut result = Vec::<u32>::new();
+         MeshWidget::indices(&mut result, 4, 3);
+         let answer = vec![0, 1, 4, 1, 5, 4, 1, 2, 5, 2, 6, 5, 2, 3, 6, 3, 7, 6, 4, 5, 8, 5, 9, 8, 5, 6, 9, 6, 10, 9, 6, 7, 10, 7, 11, 10];
+         assert_eq!(result, answer);
+    }
 }
