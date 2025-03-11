@@ -696,8 +696,8 @@ impl Bitmap {
 struct MeshWidget {
    capacity: usize,  // capacity of vertices as criterion
    cached: bool,
-   vertices: Rc<Vec<SolidVertex2D>>,
-   indices: Rc<Vec<u32>>,
+   vertices: Vec<SolidVertex2D>,
+   indices: Vec<u32>,
 }
 
 impl MeshWidget {
@@ -705,8 +705,8 @@ impl MeshWidget {
       Self {
          capacity: 0,
          cached: false,
-         vertices: Rc::new(Vec::new()),
-         indices: Rc::new(Vec::new()),
+         vertices: Vec::new(),
+         indices: Vec::new(),
       }
    }
 
@@ -727,21 +727,17 @@ impl MeshWidget {
       // Recreate the storage when the size changes
       if self.capacity < capacity {
          self.capacity = capacity;
-         self.vertices = Rc::new(Vec::with_capacity(capacity));
-         self.indices = Rc::new(Vec::with_capacity((width - 1) * (height - 1) * 6));
+         self.vertices = Vec::with_capacity(capacity);
+         self.indices = Vec::with_capacity((width - 1) * (height - 1) * 6);
       }
 
       // Build the image
       if !self.cached {
          self.cached = true;
 
-         // Extract data from Rc
-         let vertices = Rc::get_mut(&mut self.vertices).unwrap();
-         let indices = Rc::get_mut(&mut self.indices).unwrap();
-
          // Clear the storage
-         vertices.clear();
-         indices.clear();
+         self.vertices.clear();
+         self.indices.clear();
 
          // Ranges in region to draw
          let t = grid.translation / Grid::CELL_SIZE.get();
@@ -768,11 +764,11 @@ impl MeshWidget {
                position: [x, y],
                color: color::pack(color),
             };
-            vertices.push(vertex);
+            self.vertices.push(vertex);
          };
 
          // Create triange edges
-         Self::indices(indices, width as u32, height as u32);
+         Self::indices(&mut self.indices, width as u32, height as u32);
       }
    }
 
@@ -844,8 +840,8 @@ impl<Message> Widget<Message, Theme, Renderer> for MeshWidget {
        
        let mesh = Mesh::Solid {
          buffers: mesh::Indexed {
-             vertices: (*self.vertices).clone(),
-             indices: (*self.indices).clone(),
+             vertices: self.vertices.clone(),
+             indices: self.indices.clone(),
          },
          transformation: Transformation::IDENTITY,
          clip_bounds: Rectangle::INFINITE,
