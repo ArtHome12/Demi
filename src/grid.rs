@@ -602,7 +602,7 @@ struct Bitmap {
 impl Bitmap {
    fn new() -> Self {
       Self {
-         capacity: 0,
+         capacity: 0,   // capacity as criterion for cache
          cached: false,
          storage: Vec::new(),
       }
@@ -620,10 +620,10 @@ impl Bitmap {
 
       // If the size has changed, then the cache is not valid
       self.cached = self.cached && (self.capacity == capacity);
+      self.capacity = capacity;
 
       // Recreate the storage when the size changes
-      if self.capacity < capacity {
-         self.capacity = capacity;
+      if self.storage.capacity() < capacity {
          self.storage = vec![0; capacity];
       }
       
@@ -694,7 +694,7 @@ impl Bitmap {
 
 #[derive(Debug, Clone)]
 struct MeshWidget {
-   capacity: usize,  // capacity of vertices as criterion
+   capacity: usize,  // capacity of vertices as criterion for cache
    cached: bool,
    vertices: Vec<SolidVertex2D>,
    indices: Vec<u32>,
@@ -713,8 +713,8 @@ impl MeshWidget {
 
    fn update(&mut self, size: SizeS, grid: &Grid) {
 
-      // Size in cells +1 for last incomplete column and row and +1 for the right (bottom).
-      let s: SizeW = size / grid.scale / Grid::CELL_SIZE.get() + SizeW::splat(2.0); 
+      // Size in cells +1 for last incomplete column and row and +1 due to translation.
+      let s: SizeW = size / grid.scale / Grid::CELL_SIZE.get() + SizeW::splat(2.0);
 
       // Calculate new capacity.
       let width = s.width as usize;
@@ -723,15 +723,15 @@ impl MeshWidget {
 
       // If the size has changed, then the cache is not valid
       self.cached = self.cached && (self.capacity == capacity);
+      self.capacity = capacity;
 
       // Recreate the storage when the size changes
-      if self.capacity < capacity {
-         self.capacity = capacity;
-         self.vertices = Vec::with_capacity(capacity);
-         self.indices = Vec::with_capacity((width - 1) * (height - 1) * 6);
+      if self.vertices.capacity() < capacity * 4 {
+         self.vertices = Vec::with_capacity(capacity * 4);
+         self.indices = Vec::with_capacity(capacity * 6);
       }
 
-      // Build the image
+      // Build the mesh
       if !self.cached {
          self.cached = true;
 
@@ -744,34 +744,10 @@ impl MeshWidget {
          let rx = t.x as isize .. (t.x as isize + s.width as isize);
          let ry = t.y as isize .. (t.y as isize + s.height as isize);
 
-         let rect = Box2D::from_origin_and_size(t, s);
-         let world = grid.world.borrow();
-         let c_store_verticle = |x: isize, y: isize| {
-
-            // Get dot for point (allow display dot outside its real x and y)
-            let dot = world.dot(x, y);
-            let mut color = dot.color;
-            if grid.illumination {
-               color.a = 1.0;
-            }
-
-            let scale1 = grid.scale.get();
-            let scale2 = Grid::CELL_SIZE.get();
-            let x = (x as f32 * scale2 - grid.translation.x) * scale1;
-            let y = (y as f32 * scale2 - grid.translation.y) * scale1;
-
-            // Transform to vetex and store
-            let vertex = SolidVertex2D {
-               position: [x, y],
-               color: color::pack(color),
-            };
-            self.vertices.push(vertex);
-         };
-
          // Go through all the points
-         Self::verticles(c_store_verticle, rect);
-
-         /* // Go through all the points
+         let scale1 = Grid::CELL_SIZE.get();
+         let scale2 = grid.scale.get();
+         let world = grid.world.borrow();
          for (y, x) in itertools::iproduct!(ry, rx) {
             // Get dot for point (allow display dot outside its real x and y)
             let dot = world.dot(x, y);
@@ -779,32 +755,36 @@ impl MeshWidget {
             if grid.illumination {
                color.a = 1.0;
             }
+            let color = color::pack(color);
 
-            let scale1 = grid.scale.get();
-            let scale2 = Grid::CELL_SIZE.get();
-            let x = (x as f32 * scale2 - grid.translation.x) * scale1;
-            let y = (y as f32 * scale2 - grid.translation.y) * scale1;
+            let x0 = (x as f32 * scale1 - grid.translation.x) * scale2;
+            let y0 = (y as f32 * scale1 - grid.translation.y) * scale2;
+            let x1 = ((x + 1) as f32 * scale1 - grid.translation.x) * scale2;
+            let y1 = y0;
+            let x2 = x0;
+            let y2 = ((y + 1) as f32 * scale1 - grid.translation.y) * scale2;
+            let x3 = x1;
+            let y3 = y2;
 
             // Transform to vetex and store
-            let vertex = SolidVertex2D {
-               position: [x, y],
-               color: color::pack(color),
-            };
-            self.vertices.push(vertex);
-         }; */
+            self.vertices.push(SolidVertex2D {position: [x0, y0], color});
+            self.vertices.push(SolidVertex2D {position: [x1, y1], color});
+            self.vertices.push(SolidVertex2D {position: [x2, y2], color});
+            self.vertices.push(SolidVertex2D {position: [x3, y3], color});
+         };
 
          // Create triange edges and store with closure
          let c_store_indice = |i: u32| {
                self.indices.push(i);
          };
-         Self::indices(c_store_indice, (width * height) as u32 * 3 - 2);
+         Self::indices(c_store_indice, (width * height) as u32 * 4);
       }
    }
 
    
    // A set of indices of triangle edges.
    fn indices<F>(mut c_store_indice: F, count: u32) where F: FnMut(u32) {
-      for i in (0..count - 2).step_by(4) {
+      for i in (0..count).step_by(4) {
          c_store_indice(i);
          c_store_indice(i + 1);
          c_store_indice(i + 2);
@@ -816,24 +796,6 @@ impl MeshWidget {
    }
 
    
-   // A set of verticles of triangle edges.
-   fn verticles<F>(mut c_store: F, rect: Box2D<f32, WorldSpace>) where F: FnMut(isize, isize) {
-      let lx = rect.min.x as isize;
-      let rx = rect.max.x as isize;
-      let ly = rect.min.y as isize;
-      let ry = rect.max.y as isize;
-      
-      for y in ly..ry - 1 {
-         for x in lx..rx - 1 {
-            c_store(x, y);
-            c_store(x + 1, y);
-            c_store(x, y + 1);
-            c_store(x + 1, y + 1);
-         }
-      };
-   }
-
-
    fn clear(&mut self) {
       self.cached = false;
    }
@@ -914,18 +876,37 @@ mod tests {
          let width = 4;
          let height = 3;
 
-         // Test for MeshWidget::vertices
-         let mut vertices = Vec::<[isize; 2]>::new();
-         let rect = Box2D::from_size(Size2D::new(width as f32, height as f32));
-
-         MeshWidget::verticles(|x: isize, y: isize| {vertices.push([x, y])}, rect);
-         let answer = vec![[0, 0], [1, 0], [0, 1], [1, 1], [1, 0], [2, 0], [1, 1], [2, 1], [2, 0], [3, 0], [2, 1], [3, 1], [0, 1], [1, 1], [0, 2], [1, 2], [1, 1], [2, 1], [1, 2], [2, 2], [2, 1], [3, 1], [2, 2], [3, 2]];
-         assert_eq!(vertices, answer, "vertices");
+         // let verticles = vec![
+         //    [0, 0], [1, 0], [0, 1], [1, 1],
+         //    [1, 0], [2, 0], [1, 1], [2, 1],
+         //    [2, 0], [3, 0], [2, 1], [3, 1],
+         //    [3, 0], [4, 0], [3, 1], [4, 1],
+         //    [0, 1], [1, 1], [0, 2], [1, 2],
+         //    [1, 1], [2, 1], [1, 2], [2, 2], 
+         //    [2, 1], [3, 1], [2, 2], [3, 2],
+         //    [3, 1], [4, 1], [3, 2], [4, 2],
+         //    [0, 2], [1, 2], [0, 3], [1, 3],
+         //    [1, 2], [2, 2], [1, 3], [2, 3],
+         //    [2, 2], [3, 2], [2, 3], [3, 3],
+         //    [3, 2], [4, 2], [3, 3], [4, 3],
+         // ];
  
          // Test for MeshWidget::indices
          let mut indices = Vec::<u32>::new();
-         MeshWidget::indices(|i: u32| {indices.push(i)}, width * height * 2);
-         let answer = vec![0, 1, 2, 1, 2, 3, 4, 5, 6, 5, 6, 7, 8, 9, 10, 9, 10, 11, 12, 13, 14, 13, 14, 15, 16, 17, 18, 17, 18, 19, 20, 21, 22, 21, 22, 23];
+         MeshWidget::indices(|i: u32| {indices.push(i)}, width * height * 4);
+         let answer = vec![
+            0, 1, 2, 1, 2, 3,
+            4, 5, 6, 5, 6, 7,
+            8, 9, 10, 9, 10, 11,
+            12, 13, 14, 13, 14, 15,
+            16, 17, 18, 17, 18, 19,
+            20, 21, 22, 21, 22, 23,
+            24, 25, 26, 25, 26, 27,
+            28, 29, 30, 29, 30, 31,
+            32, 33, 34, 33, 34, 35,
+            36, 37, 38, 37, 38, 39,
+            40, 41, 42, 41, 42, 43,
+            44, 45, 46, 45, 46, 47];
          assert_eq!(indices, answer, "indices");
     }
 }
