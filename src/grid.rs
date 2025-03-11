@@ -743,10 +743,11 @@ impl MeshWidget {
          let t = grid.translation / Grid::CELL_SIZE.get();
          let rx = t.x as isize .. (t.x as isize + s.width as isize);
          let ry = t.y as isize .. (t.y as isize + s.height as isize);
-   
-         // Go through all the points
+
+         let rect = Box2D::from_origin_and_size(t, s);
          let world = grid.world.borrow();
-         for (y, x) in itertools::iproduct!(ry, rx) {
+         let c_store_verticle = |x: isize, y: isize| {
+
             // Get dot for point (allow display dot outside its real x and y)
             let dot = world.dot(x, y);
             let mut color = dot.color;
@@ -767,28 +768,67 @@ impl MeshWidget {
             self.vertices.push(vertex);
          };
 
-         // Create triange edges
-         Self::indices(&mut self.indices, width as u32, height as u32);
+         // Go through all the points
+         Self::verticles(c_store_verticle, rect);
+
+         /* // Go through all the points
+         for (y, x) in itertools::iproduct!(ry, rx) {
+            // Get dot for point (allow display dot outside its real x and y)
+            let dot = world.dot(x, y);
+            let mut color = dot.color;
+            if grid.illumination {
+               color.a = 1.0;
+            }
+
+            let scale1 = grid.scale.get();
+            let scale2 = Grid::CELL_SIZE.get();
+            let x = (x as f32 * scale2 - grid.translation.x) * scale1;
+            let y = (y as f32 * scale2 - grid.translation.y) * scale1;
+
+            // Transform to vetex and store
+            let vertex = SolidVertex2D {
+               position: [x, y],
+               color: color::pack(color),
+            };
+            self.vertices.push(vertex);
+         }; */
+
+         // Create triange edges and store with closure
+         let c_store_indice = |i: u32| {
+               self.indices.push(i);
+         };
+         Self::indices(c_store_indice, (width * height) as u32 * 3 - 2);
       }
    }
 
    
    // A set of indices of triangle edges.
-   fn indices(indices: &mut Vec<u32>, width: u32, height: u32) {
-      for y in 0..height - 1 {
-         for x in 0..width - 1{
-            let i = x + y * width;
-            let i1 = i + 1;
-            let i2 = i + width;
-            let i3 = i + width + 1;
+   fn indices<F>(mut c_store_indice: F, count: u32) where F: FnMut(u32) {
+      for i in (0..count - 2).step_by(4) {
+         c_store_indice(i);
+         c_store_indice(i + 1);
+         c_store_indice(i + 2);
 
-            indices.push(i);
-            indices.push(i1);
-            indices.push(i2);
+         c_store_indice(i + 1);
+         c_store_indice(i + 2);
+         c_store_indice(i + 3);
+      };
+   }
 
-            indices.push(i1);
-            indices.push(i3);
-            indices.push(i2);
+   
+   // A set of verticles of triangle edges.
+   fn verticles<F>(mut c_store: F, rect: Box2D<f32, WorldSpace>) where F: FnMut(isize, isize) {
+      let lx = rect.min.x as isize;
+      let rx = rect.max.x as isize;
+      let ly = rect.min.y as isize;
+      let ry = rect.max.y as isize;
+      
+      for y in ly..ry - 1 {
+         for x in lx..rx - 1 {
+            c_store(x, y);
+            c_store(x + 1, y);
+            c_store(x, y + 1);
+            c_store(x + 1, y + 1);
          }
       };
    }
@@ -871,9 +911,21 @@ mod tests {
 
     #[test]
     fn it_works() {
-         let mut result = Vec::<u32>::new();
-         MeshWidget::indices(&mut result, 4, 3);
-         let answer = vec![0, 1, 4, 1, 5, 4, 1, 2, 5, 2, 6, 5, 2, 3, 6, 3, 7, 6, 4, 5, 8, 5, 9, 8, 5, 6, 9, 6, 10, 9, 6, 7, 10, 7, 11, 10];
-         assert_eq!(result, answer);
+         let width = 4;
+         let height = 3;
+
+         // Test for MeshWidget::vertices
+         let mut vertices = Vec::<[isize; 2]>::new();
+         let rect = Box2D::from_size(Size2D::new(width as f32, height as f32));
+
+         MeshWidget::verticles(|x: isize, y: isize| {vertices.push([x, y])}, rect);
+         let answer = vec![[0, 0], [1, 0], [0, 1], [1, 1], [1, 0], [2, 0], [1, 1], [2, 1], [2, 0], [3, 0], [2, 1], [3, 1], [0, 1], [1, 1], [0, 2], [1, 2], [1, 1], [2, 1], [1, 2], [2, 2], [2, 1], [3, 1], [2, 2], [3, 2]];
+         assert_eq!(vertices, answer, "vertices");
+ 
+         // Test for MeshWidget::indices
+         let mut indices = Vec::<u32>::new();
+         MeshWidget::indices(|i: u32| {indices.push(i)}, width * height * 2);
+         let answer = vec![0, 1, 2, 1, 2, 3, 4, 5, 6, 5, 6, 7, 8, 9, 10, 9, 10, 11, 12, 13, 14, 13, 14, 15, 16, 17, 18, 17, 18, 19, 20, 21, 22, 21, 22, 23];
+         assert_eq!(indices, answer, "indices");
     }
 }
