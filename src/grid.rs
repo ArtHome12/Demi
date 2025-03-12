@@ -30,7 +30,7 @@ use crate::world::World;
 use crate::update_rate::*;
 
 pub struct Grid {
-   life_cache: Cache,
+   cell_text_cache: Cache,
    grid_cache: Cache,
    translation: PointW,
    bitmap: RefCell<Bitmap>,   // to store the off-screen image used at small scale for performance
@@ -112,7 +112,7 @@ impl Grid {
       let nonscaled_size = world_size * Self::CELL_SIZE.get();
 
       Self {
-         life_cache: Cache::default(),
+         cell_text_cache: Cache::default(),
          grid_cache: Cache::default(),
          translation: PointW::default(),
          bitmap: RefCell::new(Bitmap::new()),
@@ -161,7 +161,7 @@ impl Grid {
 
    // Force to redraw the cells and grid
    fn clear_cache(&mut self, with_grid: bool) {
-      self.life_cache.clear();
+      self.cell_text_cache.clear();
       self.bitmap.borrow_mut().clear();
       self.mesh.borrow_mut().clear();
       if with_grid {
@@ -378,14 +378,20 @@ impl<'a> canvas::Program<Message> for Grid {
       // Update FPS, once upon refresh
       self.fps.borrow_mut().make_tick();
 
-      // Closure for draw world content
-      let life = if !self.use_bitmap() {
-         let life_closure = |frame: &mut Frame| {
+      // The maximum number of lines of text that fit in a cell
+      let cell_scaled_size = Self::CELL_SIZE * self.scale;
+      let lines = if cell_scaled_size > Self::CELL_SIZE_FOR_TEXT {
+         (cell_scaled_size / Self::CELL_TEXT_HEIGHT).get() as usize
+      } else {0};
+
+      // Draw text inside cells if it fits
+      let cell_text = if lines > 0 {
+
+         let closure = |frame: &mut Frame| {
 
             frame.scale(self.scale.get());
             let neg_iced_vector = Vector::new(-self.translation.x, -self.translation.y);
             frame.translate(neg_iced_vector);
-            // frame.scale(Self::CELL_SIZE.get());
 
             // Scale for text inside cells
             let text_scale = 1.0 / self.scale.get();
@@ -393,72 +399,50 @@ impl<'a> canvas::Program<Message> for Grid {
             
             let s = &frame.size();
             let frame_size = SizeS::new(s.width, s.height);
+            let s: SizeW = frame_size / self.scale / Self::CELL_SIZE.get() + SizeW::splat(1.0); // size in cells +1 for last incomplete cell
 
             // Ranges in region to draw
             let t = self.translation / Self::CELL_SIZE.get();
-            let s: SizeW = frame_size / self.scale / Self::CELL_SIZE.get() + SizeW::splat(1.0); // size in cells +1 for last incomplete cell
             let rx = t.x as isize .. (t.x + s.width) as isize;
             let ry = t.y as isize .. (t.y + s.height) as isize;
 
-            // Closure for scaling
-            let scaled_cell = Self::CELL_SIZE * self.scale;
-            let c = |i: isize| -> isize {
-               (i as f32 * scaled_cell.get()) as isize
-            };
-
-            
-            // If frame is not large enough we need to exclude some cells
-            let no_filter = s.width < frame_size.width;
-            // Iterators skipping invisible points (skip, if the previous argument addresses the same point).
-            let ix = rx.filter(|x| no_filter || c(*x - 1) != c(*x));
-            let no_filter = s.height < frame_size.height;
-            let iy = ry.filter(|y| no_filter || c(*y - 1) != c(*y));
-
-            // The max number of lines of text to fit
-            let cell_scaled_size = Self::CELL_SIZE * self.scale;
-            let lines = if cell_scaled_size > Self::CELL_SIZE_FOR_TEXT {
-               (cell_scaled_size / Self::CELL_TEXT_HEIGHT).get() as usize
-            } else {0};
-
             // Draw the text if it fits
-            if lines > 0 {
-               let world = self.world.borrow();
-               // "iproduct" runs iterators repeatedly, we need to measure the performance compared to copying.
-               for (x, y) in itertools::iproduct!(ix, iy) {
-                  // Get dot for point (allow display dot outside its real x and y)
-                  let dot = world.dot(x, y);
-                  let mut color = dot.color;
-                  if self.illumination {
-                     color.a = 1.0;
-                  }
-
-                  let content = world.description(&dot, lines, '\n');
-                  let s = cell_scaled_size.get();
-                  let position = Point::new(x as f32 * s + 3.0, y as f32 * s); // with an indent from the left edge
-
-                  // Contrast color
-                  let avg_color = (color.r * color.a + color.g * color.a + color.b * color.a) / 3.0;
-                  let color = if avg_color < 0.2 { Color::from_rgb8(210, 210, 210) }
-                     else if avg_color < 0.5 { Color::WHITE }
-                     else { Color::BLACK };
-
-                  let text = Text {
-                     content,
-                     position,
-                     color,
-                     ..Text::default()
-                  };
-
-                  frame.fill_text(text);
+            let world = self.world.borrow();
+            // "iproduct" runs iterators repeatedly, we need to measure the performance compared to copying.
+            for (x, y) in itertools::iproduct!(rx, ry) {
+               // Get dot for point (allow display dot outside its real x and y)
+               let dot = world.dot(x, y);
+               let mut color = dot.color;
+               if self.illumination {
+                  color.a = 1.0;
                }
+
+               let content = world.description(&dot, lines, '\n');
+               let s = cell_scaled_size.get();
+               let position = Point::new(x as f32 * s + 3.0, y as f32 * s); // with an indent from the left edge
+
+               // Contrast color
+               let avg_color = (color.r * color.a + color.g * color.a + color.b * color.a) / 3.0;
+               let color = if avg_color < 0.2 { Color::from_rgb8(210, 210, 210) }
+                  else if avg_color < 0.5 { Color::WHITE }
+                  else { Color::BLACK };
+
+               let text = Text {
+                  content,
+                  position,
+                  color,
+                  ..Text::default()
+               };
+
+               frame.fill_text(text);
             }
          };
 
          // Return points on the canvas
-         let geom = self.life_cache.draw(renderer,
+         let geom = self.cell_text_cache.draw(renderer,
             bounds.size(), |frame| {
                let region = Rectangle::with_size(bounds.size());
-               frame.with_clip(region, |frame| life_closure(frame))
+               frame.with_clip(region, |frame| closure(frame))
             }
          );
          Some(geom)
@@ -472,7 +456,7 @@ impl<'a> canvas::Program<Message> for Grid {
             let bounds = SizeS::new(bounds.width, bounds.height);
 
             // Draw the inner grid if not too small scale - similar with using bitmap.
-            if life.is_some() {
+            if !self.use_bitmap() {
                let color = Color::from_rgb8(70, 74, 83);
                let step = SizeW::splat(Self::CELL_SIZE.get());
                self.draw_lines(frame, color, step, bounds);
@@ -497,6 +481,7 @@ impl<'a> canvas::Program<Message> for Grid {
                ..theme.palette().background
             }
          );
+         // println!("bounds.size: {:?}, frame_width: {}, frame_height: {}", bounds.size(), frame_width, frame_height);
 
          // Text object
          let text = Text {
@@ -526,7 +511,7 @@ impl<'a> canvas::Program<Message> for Grid {
             let p = ((self.translation + offset) / Self::CELL_SIZE.get()).floor();
 
             // Draw a square over the cell if not in bitmap mode
-            if life.is_some() {
+            if cell_text.is_some() {
                frame.with_save(|frame| {
                   // Tune scale and offset
                   frame.scale(self.scale.get());   // scale to user's choice
@@ -561,7 +546,7 @@ impl<'a> canvas::Program<Message> for Grid {
          frame.into_geometry()
       };
 
-      match life {
+      match cell_text {
          Some(life) => vec![life, grid, overlay],
          None => vec![grid, overlay]
       }
@@ -714,22 +699,14 @@ impl MeshWidget {
    fn update(&mut self, size: SizeS, grid: &Grid) {
 
       // Size in cells +1 for last incomplete column and row and +1 due to translation.
-      let s: SizeW = size / grid.scale / Grid::CELL_SIZE.get() + SizeW::splat(2.0);
+      let s: SizeW = size / grid.scale / Grid::CELL_SIZE.get() + SizeW::splat(1.0);
 
       // Calculate new capacity.
-      let width = s.width as usize;
-      let height = s.height as usize;
-      let capacity = width * height;
+      let capacity = (s.width * s.height).round() as usize;;
 
       // If the size has changed, then the cache is not valid
       self.cached = self.cached && (self.capacity == capacity);
       self.capacity = capacity;
-
-      // Recreate the storage when the size changes
-      if self.vertices.capacity() < capacity * 4 {
-         self.vertices = Vec::with_capacity(capacity * 4);
-         self.indices = Vec::with_capacity(capacity * 6);
-      }
 
       // Build the mesh
       if !self.cached {
@@ -741,20 +718,21 @@ impl MeshWidget {
 
          // Ranges in region to draw
          let t = grid.translation / Grid::CELL_SIZE.get();
-         let rx = t.x as isize .. (t.x as isize + s.width as isize);
-         let ry = t.y as isize .. (t.y as isize + s.height as isize);
+         let rx = t.x as isize .. (t.x + s.width) as isize;
+         let ry = t.y as isize .. (t.y + s.height) as isize;
 
          // Go through all the points
          let scale1 = Grid::CELL_SIZE.get();
          let scale2 = grid.scale.get();
          let world = grid.world.borrow();
-         for (y, x) in itertools::iproduct!(ry, rx) {
+         for (x, y) in itertools::iproduct!(rx, ry) {
             // Get dot for point (allow display dot outside its real x and y)
             let dot = world.dot(x, y);
             let mut color = dot.color;
             if grid.illumination {
                color.a = 1.0;
             }
+
             let color = color::pack(color);
 
             let x0 = (x as f32 * scale1 - grid.translation.x) * scale2;
@@ -774,16 +752,18 @@ impl MeshWidget {
          };
 
          // Create triange edges and store with closure
-         let c_store_indice = |i: u32| {
-               self.indices.push(i);
+         let c_store_indice = |i: usize| {
+               self.indices.push(i as u32);
          };
-         Self::indices(c_store_indice, (width * height) as u32 * 4);
+
+         // Use len() because width * height not equal to math in f32
+         Self::indices(c_store_indice, self.vertices.len() * 4);
       }
    }
 
    
    // A set of indices of triangle edges.
-   fn indices<F>(mut c_store_indice: F, count: u32) where F: FnMut(u32) {
+   fn indices<F>(mut c_store_indice: F, count: usize) where F: FnMut(usize) {
       for i in (0..count).step_by(4) {
          c_store_indice(i);
          c_store_indice(i + 1);
@@ -840,16 +820,21 @@ impl<Message> Widget<Message, Theme, Renderer> for MeshWidget {
            return;
        }
        
+       // In client area
+       let bounds = layout.bounds();
+
+       // Without project controls above
+       let clip_bounds = Rectangle::with_size(bounds.size());
+
        let mesh = Mesh::Solid {
          buffers: mesh::Indexed {
              vertices: self.vertices.clone(),
              indices: self.indices.clone(),
          },
          transformation: Transformation::IDENTITY,
-         clip_bounds: Rectangle::INFINITE,
+         clip_bounds: clip_bounds,
       };
 
-      let bounds = layout.bounds();
       renderer.with_translation(
          Vector::new(bounds.x, bounds.y),
          |renderer| {
@@ -893,7 +878,7 @@ mod tests {
  
          // Test for MeshWidget::indices
          let mut indices = Vec::<u32>::new();
-         MeshWidget::indices(|i: u32| {indices.push(i)}, width * height * 4);
+         MeshWidget::indices(|i: usize| {indices.push(i as u32)}, width * height * 4);
          let answer = vec![
             0, 1, 2, 1, 2, 3,
             4, 5, 6, 5, 6, 7,

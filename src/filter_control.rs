@@ -12,7 +12,7 @@ use std::{rc::Rc, cell::RefCell, };
 
 use iced::{Element, Length};
 use iced::widget::{scrollable,
-   Container, column, Column, Checkbox, text,
+   container, column, Column, Checkbox, text,
 };
 
 
@@ -95,10 +95,11 @@ impl Controls {
          ].spacing(8)
       );
 
-      Container::new(content)
+      container(content)
          .width(Length::Fill)
          .height(Length::Fill)
          .padding(5)
+         .style(container::bordered_box)
          .into()
   }
 }

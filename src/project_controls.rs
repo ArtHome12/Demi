@@ -8,8 +8,8 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2023 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use iced::{Alignment, Element, };
-use iced::widget::{checkbox, row, button};
+use iced::{Alignment, Element, Length, };
+use iced::widget::{checkbox, row, button, container, };
 
 use crate::resources::*;
 
@@ -50,7 +50,7 @@ impl Controls {
       &self,
    ) -> Element<Message> {
 
-      row![
+      container(row![
          // Toggle illuminate
          button(
             self.res.image(if self.illuminate {Images::IlluminateOn} else {Images::IlluminateOff})
@@ -96,10 +96,12 @@ impl Controls {
          .spacing(5)
          .text_size(16)
          .on_toggle(Message::ToggleAutorun),
-      ]
+      ].spacing(10)
+         .align_y(Alignment::Center)
+      )
+      .width(Length::Fill)
       .padding(10)
-      .spacing(10)
-      .align_y(Alignment::Center)
+      .style(container::bordered_box)
       .into()
    }
 }
