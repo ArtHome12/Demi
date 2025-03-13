@@ -481,7 +481,6 @@ impl<'a> canvas::Program<Message> for Grid {
                ..theme.palette().background
             }
          );
-         // println!("bounds.size: {:?}, frame_width: {}, frame_height: {}", bounds.size(), frame_width, frame_height);
 
          // Text object
          let text = Text {
@@ -702,7 +701,7 @@ impl MeshWidget {
       let s: SizeW = size / grid.scale / Grid::CELL_SIZE.get() + SizeW::splat(1.0);
 
       // Calculate new capacity.
-      let capacity = (s.width * s.height).round() as usize;;
+      let capacity = (s.width * s.height) as usize;
 
       // If the size has changed, then the cache is not valid
       self.cached = self.cached && (self.capacity == capacity);
@@ -725,7 +724,7 @@ impl MeshWidget {
          let scale1 = Grid::CELL_SIZE.get();
          let scale2 = grid.scale.get();
          let world = grid.world.borrow();
-         for (x, y) in itertools::iproduct!(rx, ry) {
+         for (y, x) in itertools::iproduct!(ry, rx) {
             // Get dot for point (allow display dot outside its real x and y)
             let dot = world.dot(x, y);
             let mut color = dot.color;
@@ -785,7 +784,7 @@ impl<Message> Widget<Message, Theme, Renderer> for MeshWidget {
    fn size(&self) -> Size<Length> {
        Size {
            width: Length::Fill,
-           height: Length::Shrink,
+           height: Length::Fill,
        }
    }
 
@@ -795,9 +794,7 @@ impl<Message> Widget<Message, Theme, Renderer> for MeshWidget {
        _renderer: &Renderer,
        limits: &layout::Limits,
    ) -> layout::Node {
-       let width = limits.max().width;
-
-       layout::Node::new(Size::new(width, width))
+       layout::Node::new(limits.max())
    }
 
    fn draw(
