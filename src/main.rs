@@ -25,10 +25,7 @@ mod organism;
 
 use grid::Grid;
 use iced::{Element, Subscription, Task, window, window::Id, Theme};
-use iced::widget::{
-   Container, column, PaneGrid, pane_grid, responsive,
-   pane_grid::Axis,
-};
+use iced::widget::{column, PaneGrid, pane_grid, responsive, pane_grid::Axis,};
 
 use std::time::{Duration, Instant};
 use std::{rc::Rc, cell::RefCell, };
@@ -217,13 +214,10 @@ impl Demi {
       })
       .on_resize(10, Message::Resized);
 
-      let content = column![
+      column![
          controls,
          pane_grid,
-      ];
-
-      Container::new(content)
-      .into()
+      ].into()
    }
 
    fn grid_mut(&mut self) -> &mut Grid {
