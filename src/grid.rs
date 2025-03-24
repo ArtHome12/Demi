@@ -185,7 +185,7 @@ impl Grid {
 
          stack(vec![img, canvas,]).into()
       } else {
-         self.mesh.borrow_mut().update(size, self);
+         self.mesh.borrow_mut().generate(size, self);
          let geom = self.mesh.borrow().clone().into();
          stack(vec![geom, canvas,]).into()
       }
@@ -695,7 +695,7 @@ impl MeshWidget {
    }
 
 
-   fn update(&mut self, size: SizeS, grid: &Grid) {
+   fn generate(&mut self, size: SizeS, grid: &Grid) {
 
       // Size in cells +1 for last incomplete column and row and +1 due to translation.
       let s: SizeW = size / grid.scale / Grid::CELL_SIZE.get() + SizeW::splat(1.0);
@@ -756,7 +756,7 @@ impl MeshWidget {
          };
 
          // Use len() because width * height not equal to math in f32
-         Self::indices(c_store_indice, self.vertices.len() * 4);
+         Self::indices(c_store_indice, self.vertices.len());
       }
    }
 
