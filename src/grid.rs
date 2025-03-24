@@ -510,7 +510,7 @@ impl<'a> canvas::Program<Message> for Grid {
             let p = ((self.translation + offset) / Self::CELL_SIZE.get()).floor();
 
             // Draw a square over the cell if not in bitmap mode
-            if cell_text.is_some() {
+            if !self.use_bitmap() {
                frame.with_save(|frame| {
                   // Tune scale and offset
                   frame.scale(self.scale.get());   // scale to user's choice
