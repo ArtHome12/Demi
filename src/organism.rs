@@ -9,7 +9,6 @@ Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 use std::{cmp::max, fmt, ptr, marker::PhantomData};
-use rayon::prelude::*;
 
 use crate::genes::*;
 use crate::reactions::Reactions;
@@ -161,61 +160,58 @@ impl<'s> AnimalsStack {
          };
       }
    }
+
+   pub fn end_of_turn(&mut self, now: usize) {
+      // Each alive organism at the point
+      self.get_mut_alive()
+      .for_each(|animal| {
+         // Decrease vitality on methabolism
+         animal.vitality = animal.vitality.saturating_sub(max(1, animal.metabolism));
+
+         // In case of death keep the age
+         if animal.vitality == 0 {
+            animal.birthday = now - animal.birthday + 1;
+         }
+      })
+   }
+
+   pub fn digestion(&mut self, ptr_elements: &PtrElements, serial: usize, reactions: &Reactions) {
+      self.get_mut_alive()
+      .for_each(|animal| {
+         animal.digestion(&ptr_elements, serial, reactions)
+      })
+   }
 }
 
 
 #[derive(Clone, Debug)]
 // Keeps live and death organisms in the grid
-pub struct AnimalsSheet(Vec<AnimalsStack>);
+pub struct AnimalsSheet {
+   pub sheet: Vec<AnimalsStack>
+}
 
 impl AnimalsSheet {
    pub fn new(max_serial: usize, max_animal_stack: usize) -> Self {
-      let mut matrix = Vec::with_capacity(max_serial);
+      let mut sheet = Vec::with_capacity(max_serial);
 
       // Fill points with stacks for futures animals
       (0..max_serial)
-      .for_each(|_| matrix.push(AnimalsStack::new(max_animal_stack)));
+      .for_each(|_| sheet.push(AnimalsStack::new(max_animal_stack)));
 
       Self {
-         0: matrix,
+         sheet,
       }
    }
 
 
    // Return stack of organisms at point
    pub fn get(&self, index: usize) -> &AnimalsStack {
-      &self.0[index]
+      &self.sheet[index]
    }
 
 
    pub fn get_mut(&mut self, index: usize) -> &mut AnimalsStack {
-      &mut self.0[index]
-   }
-
-
-   pub fn digestion(&mut self, elements: &mut ElementsSheets, reactions: &Reactions) {
-      let ptr_elements = PtrElements::new(elements);
-
-      // Each point on the ground
-      self.0
-      .par_iter_mut()
-      .enumerate()
-      .for_each(|(serial, animals)| {
-         // Each alive organism at the point
-         animals
-         .get_mut_alive()
-         .for_each(|animal| {
-            animal.digestion(&ptr_elements, serial, reactions)
-         })
-      })
-   }
-
-
-   pub fn reproduction(&mut self, now: usize) {
-      // Each point on the ground
-      self.0
-      .par_iter_mut()
-      .for_each(|animals| animals.reproduction(now))
+      &mut self.sheet[index]
    }
 
 
@@ -252,27 +248,6 @@ impl AnimalsSheet {
          }
       }
    }
-
-
-   pub fn end_of_turn(&mut self, now: usize) {
-      // Each point on the ground
-      self.0
-      .par_iter_mut()
-      .for_each(|stack| {
-         // Each alive organism at the point
-         stack
-         .get_mut_alive()
-         .for_each(|animal| {
-            // Decrease vitality on methabolism
-            animal.vitality = animal.vitality.saturating_sub(max(1, animal.metabolism));
-
-            // In case of death keep the age
-            if animal.vitality == 0 {
-               animal.birthday = now - animal.birthday + 1;
-            }
-         })
-      })
-   }
 }
 
 
@@ -282,8 +257,8 @@ pub struct PtrAnimals(Vec<usize>);
 impl PtrAnimals {
    pub fn new(animals: &AnimalsSheet) -> Self {
       // Store raw pointers to elements
-      let ptr = animals.0.iter()
-      .map(|sheet| ptr::addr_of!(sheet.stack[0]) as usize)
+      let ptr = animals.sheet.iter()
+      .map(|stack| ptr::addr_of!(stack.stack[0]) as usize)
       .collect();
 
       Self(ptr)

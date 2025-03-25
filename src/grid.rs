@@ -485,7 +485,7 @@ impl<'a> canvas::Program<Message> for Grid {
          // Text object
          let text = Text {
             color: theme.palette().text,
-            vertical_alignment: alignment::Vertical::Bottom,
+            align_y: alignment::Vertical::Bottom,
             ..Text::default()
          };
 

@@ -49,9 +49,9 @@ impl Evolution {
       .for_each(|mut sheet| {
          // Irradiate with solar energy or shuffle elements
          if sheet.volatility < 0.0 {
-            Evolution::shine(env, &mut sheet, tick);
+            Self::shine(env, &mut sheet, tick);
          } else {
-            Evolution::diffusion(env, &mut sheet);
+            Self::diffusion(env, &mut sheet);
          }
       });
 
@@ -60,15 +60,15 @@ impl Evolution {
       self.animals.implantation(&env.luca, tick);
 
       // Behavior
-      Evolution::transfer(env, &mut self.animals);
-      Evolution::escape(&mut self.animals);
-      Evolution::digestion(&mut self.elements, &mut self.animals, &self.reactions);
-      Evolution::attack(&mut self.animals);
-      Evolution::catch(&mut self.animals);
-      Evolution::cheese(&mut self.animals);
-      Evolution::walk(&mut self.animals);
-      Evolution::reproduction(&mut self.animals, tick);
-      Evolution::end_of_turn(&mut self.animals, tick);
+      self.transfer(env);
+      self.escape();
+      self.digestion();
+      self.attack();
+      self.catch();
+      self.cheese();
+      self.walk();
+      self.reproduction(tick);
+      self.end_of_turn(tick);
    }
 
    fn diffusion(env: &Environment, sheet: &mut ElementsSheet) {
@@ -120,7 +120,7 @@ impl Evolution {
    }
 
 
-   fn transfer(env: &Environment, sheet: &mut AnimalsSheet) {
+   fn transfer(&mut self, env: &Environment) {
       let mut rng = rand::rng();
       let rnd_bit = Uniform::try_from(0..env.bits_count).unwrap();
       let rnd_dir = Uniform::try_from(0..8).unwrap();
@@ -141,48 +141,66 @@ impl Evolution {
             dest_bit -= env.bits_count as isize; // positive value;
          }
 
-         sheet.transfer(origin_bit, dest_bit as usize);
+         self.animals.transfer(origin_bit, dest_bit as usize);
       })
    }
 
 
-   fn escape(_sheet: &mut AnimalsSheet) {
+   fn escape(&mut self) {
       // At this stage there are no predators
    }
 
 
-   fn digestion(elements: &mut ElementsSheets, animals_sheet: &mut AnimalsSheet, reactions: &Reactions) {
-      animals_sheet.digestion(elements, reactions)
+   fn digestion(&mut self) {
+      let ptr_elements = PtrElements::new(&self.elements);
+
+      // Each point on the ground
+      self.animals.sheet
+      .par_iter_mut()
+      .enumerate()
+      .for_each(|(serial, animals)| {
+         // Each alive organism at the point
+         animals.digestion(&ptr_elements, serial, &self.reactions)
+      })
    }
 
 
-   fn attack(_sheet: &mut AnimalsSheet) {
+   fn attack(&mut self) {
       // At this stage there are no predators
    }
 
 
-   fn catch(_sheet: &mut AnimalsSheet) {
+   fn catch(&mut self) {
       // At this stage there are no predators
    }
 
 
-   fn cheese(_sheet: &mut AnimalsSheet) {
+   fn cheese(&mut self) {
       // At this stage there are no muscle
    }
 
 
-   fn walk(_sheet: &mut AnimalsSheet) {
+   fn walk(&mut self) {
       // At this stage there are no walk
    }
 
 
-   fn reproduction(animals_sheet: &mut AnimalsSheet, now: usize) {
-      animals_sheet.reproduction(now)
+   fn reproduction(&mut self, now: usize) {
+      // Each point on the ground
+      self.animals.sheet
+      .par_iter_mut()
+      .for_each(|animals| animals.reproduction(now))
    }
 
 
-   fn end_of_turn(sheet: &mut AnimalsSheet, now: usize) {
-      sheet.end_of_turn(now)
+   fn end_of_turn(&mut self, now: usize) {
+      // Each point on the ground
+      self.animals.sheet
+      .par_iter_mut()
+      .for_each(|stack| {
+         // Each alive organism at the point
+         stack.end_of_turn(now);
+      })
    }
 
 
