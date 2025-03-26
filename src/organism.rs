@@ -9,6 +9,7 @@ Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 use std::{cmp::max, fmt, ptr, marker::PhantomData};
+use rand::prelude::ThreadRng;
 
 use crate::genes::*;
 use crate::reactions::Reactions;
@@ -72,7 +73,7 @@ impl Organism {
    }
 
 
-   pub fn reproduction(&mut self, randoms: &mut Randoms) -> Option<Organism> {
+   pub fn reproduction(&mut self, rng: &mut ThreadRng) -> Option<Organism> {
       // Check avaliability
       let level = self.gene_reproduction.level;
       if self.vitality > level {
@@ -84,8 +85,8 @@ impl Organism {
             vitality: level / 2,
             birthday: 0,
             metabolism: 0,
-            gene_digestion: self.gene_digestion.mutate(randoms),
-            gene_reproduction: self.gene_reproduction.mutate(randoms),
+            gene_digestion: self.gene_digestion.mutate(rng),
+            gene_reproduction: self.gene_reproduction.mutate(rng),
          };
          Some(res)
 
@@ -145,12 +146,12 @@ impl<'s> AnimalsStack {
       if let Some(free_slot) = free_slot {
 
          // For optimization
-         let mut randoms = Randoms::new();
+         let mut rng = rand::rng();
 
          // Looking for among all living organisms at a point capable of reproducing. The first gets priority
          let opt_new_born = self
          .get_mut_alive()
-         .find_map(|animal| animal.reproduction(&mut randoms));
+         .find_map(|animal| animal.reproduction(&mut rng));
 
          // Ask about birth
          if let Some(mut new_born) = opt_new_born {

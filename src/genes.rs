@@ -12,52 +12,70 @@ use rand::prelude::*;
 use rand::distr::Uniform;
 
 
-pub struct Randoms {
-   rng: ThreadRng,
-   variability: Uniform<usize>, // 0..=2
-}
-
-impl Randoms {
-   pub fn new() -> Self {
-      Self {
-         rng: rand::rng(),
-         variability: Uniform::try_from(0..=2).unwrap(),
-      }
-   }
-
-   pub fn get_variability(&mut self) -> usize {
-      self.variability.sample(&mut self.rng)
-   }
-}
-
 pub trait Gene {
-   fn mutate(&self, randoms: &mut Randoms) -> Self;
+   fn mutate(&self, rng: &mut ThreadRng) -> Self;
 }
 
 #[derive(Debug, Clone)]
 pub struct Digestion {
    pub reaction: usize, // reaction index
+   number_of_reactions: usize,
+   variability: Uniform<usize>, // number of reactions * 3
+}
+
+
+impl Digestion {
+   pub fn new(reaction: usize, number_of_reactions: usize) -> Self {
+      Self {
+         reaction,
+         number_of_reactions,
+         variability: Uniform::new(0, number_of_reactions * 3).unwrap(),
+      }
+   }
 }
 
 impl Gene for Digestion {
-   fn mutate(&self, _randoms: &mut Randoms) -> Self {
-      self.clone()
+   fn mutate(&self, rng: &mut ThreadRng) -> Self {
+
+      // Prepare a clone
+      let mut res = self.clone();
+
+      // Determine whether there will be a mutation
+      let dice = self.variability.sample(rng);
+      if dice < self.number_of_reactions && dice != self.reaction{
+         res.reaction = dice;
+      }
+
+      res
    }
 }
 
 #[derive(Debug, Clone)]
 pub struct Reproduction {
    pub level: usize, // the level of strength (vitality) required to divide
+   variability: Uniform<usize>, // 0..=2
+}
+
+impl Reproduction {
+   pub fn new(level: usize) -> Self {
+      Self {
+         level,
+         variability: Uniform::try_from(0..=2).unwrap(),
+      }
+   }
 }
 
 impl Gene for Reproduction {
-   fn mutate(&self, randoms: &mut Randoms) -> Self {
-      let level = match randoms.get_variability() {
+   fn mutate(&self, rng: &mut ThreadRng) -> Self {
+      let level = match self.variability.sample(rng) {
          0 => self.level.saturating_sub(1),
          1 => self.level.saturating_add(1),
          _ => self.level,
       };
 
-      Self { level }
+      Self {
+         level,
+         variability: self.variability.clone(),
+      }
    }
 }

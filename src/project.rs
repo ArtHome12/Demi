@@ -97,7 +97,7 @@ impl Project {
             .expect(&format!("Unknown chemical reagent {}", reagent.element));
 
             Reagent {
-               index: index,
+               index,
                amount: reagent.amount,
             }
          }).collect()
