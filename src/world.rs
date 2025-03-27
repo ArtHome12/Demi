@@ -167,7 +167,7 @@ impl World {
       let energy = self.ptr_elements.get(0, serial_bit);
 
       // Find the dot color among animals
-      let mut stack = self.ptr_animals.stack(serial_bit);
+      let mut stack = self.ptr_animals.get_stack(serial_bit);
 
       // Let's take out the color definition code - determine animal with visible reaction and alive or not
       let closure = |o: &Organism| {
@@ -231,7 +231,7 @@ impl World {
       let mut remaining_lines = max_lines;
 
       // Collect info among animals
-      let stack = self.ptr_animals.stack(serial_bit);
+      let stack = self.ptr_animals.get_stack(serial_bit);
 
       let filtered_animals = stack.into_iter().flatten()
       .filter(|o| {

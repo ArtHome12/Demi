@@ -15,7 +15,6 @@ use crate::genes::*;
 use crate::reactions::Reactions;
 use crate::dot::*;
 
-// pub type Organisms = Vec<Weak<Organism>>;
 
 #[derive(Debug, Clone)]
 pub struct Organism {
@@ -43,7 +42,7 @@ impl Organism {
    }
 
 
-   pub fn digestion(&mut self, ptr: &PtrElements, serial: usize, reactions: &Reactions) {
+   pub fn digestion_autotroph(&mut self, ptr: &PtrElements, serial: usize, reactions: &Reactions) {
       // Check the availability of resources for digestion
       let r = self.gene_digestion.reaction;
       let r = reactions.get(r);
@@ -72,6 +71,16 @@ impl Organism {
       self.vitality = self.vitality.saturating_add(r.vitality);
    }
 
+   pub fn digestion_heterotroph(&mut self, food: Organism, reactions: &Reactions) {
+      // For first part of portion
+      let r = self.gene_digestion.reaction;
+      let r = reactions.get(r);
+
+      let portion = r.vitality + food.gene_reproduction.level / 2;
+      
+      // Increase vitality
+      self.vitality = self.vitality.saturating_add(portion);
+   }
 
    pub fn reproduction(&mut self, rng: &mut ThreadRng) -> Option<Organism> {
       // Check avaliability
@@ -131,7 +140,7 @@ impl<'s> AnimalsStack {
 
 
    // Return index of first empty or occuped item
-   pub fn get_slot_index(&'s self, occuped: bool) -> Option<usize> {
+   pub fn get_slot_index(&self, occuped: bool) -> Option<usize> {
       self.stack
       .iter()
       .position(|opt| opt.is_some() == occuped)
@@ -141,8 +150,6 @@ impl<'s> AnimalsStack {
    pub fn reproduction(&mut self, now: usize) {
       // Checking for free space at the point
       let free_slot = self.get_slot_index(false);
-
-
       if let Some(free_slot) = free_slot {
 
          // For optimization
@@ -162,6 +169,7 @@ impl<'s> AnimalsStack {
       }
    }
 
+
    pub fn end_of_turn(&mut self, now: usize) {
       // Each alive organism at the point
       self.get_mut_alive()
@@ -176,11 +184,20 @@ impl<'s> AnimalsStack {
       })
    }
 
-   pub fn digestion(&mut self, ptr_elements: &PtrElements, serial: usize, reactions: &Reactions) {
+
+   pub fn digestion(&mut self, ptr_elements: &PtrElements, ptr_animals: &PtrAnimals, serial: usize, reactions: &Reactions) {
       self.get_mut_alive()
       .for_each(|animal| {
-         animal.digestion(&ptr_elements, serial, reactions)
-      })
+         match animal.gene_digestion.mode {
+            NutritionMode::Autotroph => animal.digestion_autotroph(&ptr_elements, serial, reactions),
+            NutritionMode::Heterotroph => {
+               let food = ptr_animals.get_stack(serial).get_dead();
+               if let Some(food) = food {
+                  animal.digestion_heterotroph(food, reactions);
+               }
+            }
+         }
+      });
    }
 }
 
@@ -190,6 +207,7 @@ impl<'s> AnimalsStack {
 pub struct AnimalsSheet {
    pub sheet: Vec<AnimalsStack>
 }
+
 
 impl AnimalsSheet {
    pub fn new(max_serial: usize, max_animal_stack: usize) -> Self {
@@ -265,7 +283,7 @@ impl PtrAnimals {
       Self(ptr)
    }
 
-   pub fn stack(&self, serial: usize) -> PtrAnimalsStack {
+   pub fn get_stack(&self, serial: usize) -> PtrAnimalsStack {
       PtrAnimalsStack {
          start: self.0[serial],
          curr: 0,
@@ -286,6 +304,30 @@ pub struct PtrAnimalsStack<'a> {
 }
 
 
+impl<'a> PtrAnimalsStack<'a> {
+   
+   // Returns a mutable iterator over the stack
+   pub fn iter_mut<'b>(&'b mut self) -> impl Iterator<Item = &'b mut Option<Organism>> + use<'a, 'b> {
+      (0..self.len).map(move |i| unsafe {
+         (self.start as *mut Option<Organism>)
+            .add(i)
+            .as_mut()
+            .unwrap() // replace with as_mut_unchecked() once it is stable
+      })
+   }
+
+   // Returns the first non-living organism, leaving None in its place
+   pub fn get_dead(&'a mut self) -> Option<Organism> {
+      let res = self.iter_mut()
+      .find(|opt| opt.as_ref().map_or(false, |o| !o.alive()));
+
+      match res {
+         Some(opt) => std::mem::replace(opt, None),
+         None => None,
+      }
+   }
+}
+
 impl<'a> Iterator for PtrAnimalsStack<'a> {
    type Item = &'a Option<Organism>;
 
@@ -293,7 +335,8 @@ impl<'a> Iterator for PtrAnimalsStack<'a> {
       if self.curr < self.len {
          let res = unsafe{ (self.start as *const Option<Organism>)
             .add(self.curr)
-            .as_ref().unwrap()   // replace with as_ref_unchecked() once it is stable
+            .as_ref()
+            .unwrap()   // replace with as_ref_unchecked() once it is stable
          };
          self.curr += 1;
 

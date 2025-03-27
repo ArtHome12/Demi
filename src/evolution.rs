@@ -153,6 +153,7 @@ impl Evolution {
 
    fn digestion(&mut self) {
       let ptr_elements = PtrElements::new(&self.elements);
+      let ptr_animals = PtrAnimals::new(&self.animals);
 
       // Each point on the ground
       self.animals.sheet
@@ -160,7 +161,7 @@ impl Evolution {
       .enumerate()
       .for_each(|(serial, animals)| {
          // Each alive organism at the point
-         animals.digestion(&ptr_elements, serial, &self.reactions)
+         animals.digestion(&ptr_elements, &ptr_animals, serial, &self.reactions)
       })
    }
 

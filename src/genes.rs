@@ -16,11 +16,20 @@ pub trait Gene {
    fn mutate(&self, rng: &mut ThreadRng) -> Self;
 }
 
+
+#[derive(Debug, Clone)]
+pub enum NutritionMode {
+   Autotroph,
+   Heterotroph,
+}
+
+
 #[derive(Debug, Clone)]
 pub struct Digestion {
    pub reaction: usize, // reaction index
    number_of_reactions: usize,
    variability: Uniform<usize>, // number of reactions * 3
+   pub mode: NutritionMode,
 }
 
 
@@ -30,6 +39,7 @@ impl Digestion {
          reaction,
          number_of_reactions,
          variability: Uniform::new(0, number_of_reactions * 3).unwrap(),
+         mode: NutritionMode::Autotroph,
       }
    }
 }
@@ -42,8 +52,18 @@ impl Gene for Digestion {
 
       // Determine whether there will be a mutation
       let dice = self.variability.sample(rng);
+
+      // Change the reaction
       if dice < self.number_of_reactions && dice != self.reaction{
          res.reaction = dice;
+      } else {
+         // Change the mode
+         if dice == self.number_of_reactions - 1 {
+            res.mode = match self.mode {
+               NutritionMode::Autotroph => NutritionMode::Heterotroph,
+               NutritionMode::Heterotroph => NutritionMode::Autotroph,
+            }
+         };
       }
 
       res
