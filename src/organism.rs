@@ -271,7 +271,11 @@ impl AnimalsSheet {
 
 
 // Pointers to fast unsafe access to organisms
-pub struct PtrAnimals(Vec<usize>);
+pub struct PtrAnimals {
+   ptr: Vec<usize>,
+   stack_size: usize,
+}
+
 
 impl PtrAnimals {
    pub fn new(animals: &AnimalsSheet) -> Self {
@@ -280,14 +284,17 @@ impl PtrAnimals {
       .map(|stack| ptr::addr_of!(stack.stack[0]) as usize)
       .collect();
 
-      Self(ptr)
+      Self {
+         ptr,
+         stack_size: animals.sheet[0].stack.len(),
+      }
    }
 
    pub fn get_stack(&self, serial: usize) -> PtrAnimalsStack {
       PtrAnimalsStack {
-         start: self.0[serial],
+         start: self.ptr[serial],
          curr: 0,
-         len: 12,
+         len: self.stack_size,
          phantom: PhantomData,
       }
    }
