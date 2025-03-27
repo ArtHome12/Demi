@@ -22,6 +22,7 @@ struct Toml {
    pub height_ratio: f32,
    resolution: f32,
    max_animal_stack: usize,
+   heterotroph_color: String,
    elements: Vec<ElementAttributes>,
    chemical: Vec<ReactionAttributes>,
    colors: HashMap<String, Colors>,
@@ -59,6 +60,7 @@ struct ReactionAttributes {
    right: Vec<ReactionReagent>,
 }
 
+// Section of the toml file withcolors
 type Colors = (u8, u8, u8);
 
 #[derive(Deserialize, Debug, Clone)]
@@ -70,6 +72,7 @@ pub struct Project {
    pub size: Size,
    pub resolution: f32,
    pub max_animal_stack: usize,
+   pub heterotroph_color: iced::Color,
    pub elements: Vec<Element>,
    pub reactions: Reactions,
    pub ui_reactions: UIReactions,
@@ -138,6 +141,8 @@ impl Project {
          }
       }).collect::<UIReactions>();
 
+      let heterotroph_color = Project::color_by_name(&toml, &toml.heterotroph_color);
+
       // At start all elements should be visible, collect its indexes
       // let len = toml.elements.len();
       // let vis_elem_indexes = vec![true; len];
@@ -152,6 +157,7 @@ impl Project {
          size,
          resolution: toml.resolution,
          max_animal_stack: toml.max_animal_stack,
+         heterotroph_color,
          elements,
          reactions,
          ui_reactions,

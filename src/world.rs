@@ -16,7 +16,8 @@ pub use crate::dot::{Dot, ElementsSheets, PtrElements};
 use crate::geom::*;
 use crate::project::{Project, Element, };
 use crate::organism::*;
-use crate::reactions::{/* Reactions, */ UIReactions, };
+use crate::reactions::UIReactions;
+use crate::genes::NutritionMode;
 
 type Handle = std::thread::JoinHandle<()>;
 
@@ -73,7 +74,8 @@ impl World {
       let env = Environment::new(size,
          project.resolution,
          project.luca_reaction,
-         reactions.len()
+         reactions.len(),
+         project.heterotroph_color,
       );
 
       // Create animals
@@ -173,14 +175,22 @@ impl World {
       let closure = |o: &Organism| {
          // Need to be visible and alive or not
          if self.vis_dead || o.alive() {
-            let reaction_index = o.reaction_index();
-            let visible = self.vis_reac_indexes[reaction_index];
+            
+            // The color of autotrophs is determined by the reaction, for heterotrophs it is predetermined
+            match o.nutrition_mode() {
+               NutritionMode::Heterotroph => return Some(self.env.heterotroph_color),
+               NutritionMode::Autotroph => {
 
-            if visible {
-               let reaction = self.ui_reactions.get(reaction_index);
-               Some(reaction.color)
-            } else {
-               None
+                  let reaction_index = o.reaction_index();
+                  let visible = self.vis_reac_indexes[reaction_index];
+      
+                  if visible {
+                     let reaction = self.ui_reactions.get(reaction_index);
+                     Some(reaction.color)
+                  } else {
+                     None
+                  }
+               }
             }
          } else {
             None

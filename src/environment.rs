@@ -31,6 +31,9 @@ pub struct Environment {
 
    // First organism
    pub luca: Organism,
+
+   // Color of heterotrophs
+   pub heterotroph_color: iced::Color,
 }
 
 impl Environment {
@@ -39,7 +42,7 @@ impl Environment {
    const DAYS_PER_YEAR: f32 = Self::TICKS_PER_DAY * 365.0;
    const HALF_YEAR: f32 = Self::DAYS_PER_YEAR / 2.0 + 0.5;
 
-   pub fn new(world_size: Size, resolution: f32, luca_reaction: usize, number_of_reactions: usize) -> Self {
+   pub fn new(world_size: Size, resolution: f32, luca_reaction: usize, number_of_reactions: usize, heterotroph_color: iced::Color) -> Self {
       let world_height = world_size.y;
 
       // How many bits to move (diffusion) elements in one tick
@@ -61,6 +64,7 @@ impl Environment {
          num_points_to_diffuse,
          bits_count,
          luca,
+         heterotroph_color,
       }
    }
 

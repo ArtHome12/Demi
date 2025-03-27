@@ -71,6 +71,7 @@ impl Organism {
       self.vitality = self.vitality.saturating_add(r.vitality);
    }
 
+
    pub fn digestion_heterotroph(&mut self, food: Organism, reactions: &Reactions) {
       // For first part of portion
       let r = self.gene_digestion.reaction;
@@ -81,6 +82,7 @@ impl Organism {
       // Increase vitality
       self.vitality = self.vitality.saturating_add(portion);
    }
+
 
    pub fn reproduction(&mut self, rng: &mut ThreadRng) -> Option<Organism> {
       // Check avaliability
@@ -104,8 +106,14 @@ impl Organism {
       }
    }
 
+
    pub fn reaction_index(&self) -> usize {
       self.gene_digestion.reaction
+   }
+
+   
+   pub fn nutrition_mode(&self) -> NutritionMode {
+      self.gene_digestion.mode
    }
 }
 

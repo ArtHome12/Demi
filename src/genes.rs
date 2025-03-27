@@ -17,7 +17,7 @@ pub trait Gene {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum NutritionMode {
    Autotroph,
    Heterotroph,
