@@ -26,18 +26,28 @@ mod organism;
 use grid::Grid;
 use iced::{Element, Subscription, Task, window, window::Id, Theme};
 use iced::widget::{column, PaneGrid, pane_grid, responsive, pane_grid::Axis,};
-
+use iced::window::icon;
+use std::path::Path;
 use std::time::{Duration, Instant};
 use std::{rc::Rc, cell::RefCell, };
 
 
 // #[tokio::main]
 pub fn main() -> iced::Result {
+
+   let icon_path = Path::new("./res/icon32.jpg");
+   let icon = icon::from_file(icon_path).ok();
+   let settings = iced::window::Settings {
+      icon,
+      ..iced::window::Settings::default()
+   };
+
    iced::application(Demi::title, Demi::update, Demi::view)
       .subscription(Demi::subscription)
       .exit_on_close_request(false)
       .antialiasing(true)
       .theme(|_| Theme::Nightfly)
+      .window(settings)
       .run_with(Demi::new)
 }
 
