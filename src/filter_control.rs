@@ -48,8 +48,8 @@ impl Controls {
       match message {
          Message::ItemToggledElement(index, checked) => world.vis_elem_indexes[index] = checked,
          Message::ItemToggledAnimal(index, checked) => world.vis_reac_indexes[index] = checked,
-         Message::ItemToggledDead(checked) => world.vis_dead = checked,
-         Message::ItemToggledHeterotrophs(checked) => world.vis_heterotrophs = checked,
+         Message::ItemToggledDead(checked) => world.show_dead = checked,
+         Message::ItemToggledHeterotrophs(checked) => world.show_heterotrophs = checked,
       }
   }
 
@@ -69,12 +69,12 @@ impl Controls {
          )
       });
 
-      let dead_check_box = Checkbox::new("Include dead", world.vis_dead)
+      let dead_check_box = Checkbox::new("Include dead", world.show_dead)
       .on_toggle(Message::ItemToggledDead)
       .text_size(16)
       .size(16);
 
-      let heterotrophs_check_box = Checkbox::new("Heterotrophs", world.vis_heterotrophs)
+      let heterotrophs_check_box = Checkbox::new("Heterotrophs", world.show_heterotrophs)
       .on_toggle(Message::ItemToggledHeterotrophs)
       .text_size(16)
       .size(16);

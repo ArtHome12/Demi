@@ -32,8 +32,8 @@ pub struct World {
    // Section for UI
    pub vis_elem_indexes: Vec<bool>, // indexes of visible (non-filtered) elements
    pub vis_reac_indexes: Vec<bool>, // indexes of visible (non-filtered) reactions
-   pub vis_dead: bool,              // to show or not dead organisms
-   pub vis_heterotrophs: bool,       // to show or not heterotrophs
+   pub show_dead: bool,              // to show or not dead organisms
+   pub show_heterotrophs: bool,       // to show or not heterotrophs
    pub ui_reactions: UIReactions,   // description of reactions
    pub ui_elements: Vec<Element>,      // description of elements
 }
@@ -119,8 +119,8 @@ impl World {
 
          vis_elem_indexes,
          vis_reac_indexes,
-         vis_dead: true,
-         vis_heterotrophs: true,
+         show_dead: true,
+         show_heterotrophs: true,
          ui_reactions,
          ui_elements,
       }
@@ -176,29 +176,34 @@ impl World {
       // Let's take out the color definition code - determine animal with visible reaction and alive or not
       let closure = |o: &Organism| {
 
-         // The color of autotrophs is determined by the reaction, for heterotrophs it is predetermined         
-         match o.nutrition_mode() {
-            NutritionMode::Heterotroph => {
-               // The color of heterotrophs
-               if self.vis_heterotrophs {
-                  Some(self.env.heterotroph_color)
-               } else {
-                  None
-               }
-            }
-            NutritionMode::Autotroph => {
-               // The color of autotrophs
-               let reaction_index = o.reaction_index();
-               let visible = self.vis_reac_indexes[reaction_index];
+         // The organism is alive or we show and the dead too
+         if self.show_dead || o.alive() {
 
-               // Need to be visible and alive or not
-               if visible && (self.vis_dead || o.alive()) {
-                  let reaction = self.ui_reactions.get(reaction_index);
-                  Some(reaction.color)
-               } else {
-                  None
+            // The color of autotrophs is determined by the reaction, for heterotrophs it is predetermined
+            match o.nutrition_mode() {
+               NutritionMode::Heterotroph => {
+                  // The color of heterotrophs
+                  if self.show_heterotrophs {
+                     Some(self.env.heterotroph_color)
+                  } else {
+                     None
+                  }
+               }
+               NutritionMode::Autotroph => {
+                  // The color of autotrophs
+                  let reaction_index = o.reaction_index();
+                  let visible = self.vis_reac_indexes[reaction_index];
+   
+                  if visible {
+                     let reaction = self.ui_reactions.get(reaction_index);
+                     Some(reaction.color)
+                  } else {
+                     None
+                  }
                }
             }
+         } else {
+             None
          }
       };
 
@@ -250,7 +255,7 @@ impl World {
 
       let filtered_animals = stack.into_iter().flatten()
       .filter(|o| {
-         self.vis_dead || (   // include all
+         self.show_dead || (   // include all
             o.alive() && self.vis_reac_indexes[o.reaction_index()]   // include only alive with visible reaction
          )
       });
