@@ -17,10 +17,10 @@ pub trait Gene {
 }
 
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum NutritionMode {
-   Autotroph,
-   Heterotroph,
+   Autotroph,  // autotrophs (plants) - use light energy and elements to produce food
+   Heterotroph,   // heterotrophs (animals) - eats autotrophs or other heterotrophs
 }
 
 

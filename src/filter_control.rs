@@ -24,6 +24,7 @@ pub enum Message {
    ItemToggledElement(usize, bool), // index, checked
    ItemToggledAnimal(usize, bool), // index, checked
    ItemToggledDead(bool), // checked
+   ItemToggledHeterotrophs(bool), // checked
 }
 
 
@@ -48,6 +49,7 @@ impl Controls {
          Message::ItemToggledElement(index, checked) => world.vis_elem_indexes[index] = checked,
          Message::ItemToggledAnimal(index, checked) => world.vis_reac_indexes[index] = checked,
          Message::ItemToggledDead(checked) => world.vis_dead = checked,
+         Message::ItemToggledHeterotrophs(checked) => world.vis_heterotrophs = checked,
       }
   }
 
@@ -72,6 +74,11 @@ impl Controls {
       .text_size(16)
       .size(16);
 
+      let heterotrophs_check_box = Checkbox::new("Heterotrophs", world.vis_heterotrophs)
+      .on_toggle(Message::ItemToggledHeterotrophs)
+      .text_size(16)
+      .size(16);
+
       let animal_check_boxes = world.ui_reactions
       .iter()
       .enumerate()
@@ -91,6 +98,7 @@ impl Controls {
             elements_check_boxes,
             text("Animals to show:"),
             dead_check_box,
+            heterotrophs_check_box,
             animal_check_boxes
          ].spacing(8)
       );
