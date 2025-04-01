@@ -158,6 +158,42 @@ impl World {
       Some(thread_handle)
    }
 
+
+   // Return color for organism, taking into account visibility filters
+   fn get_animal_color(&self, o: &Organism) -> Option<iced::Color> {
+
+      // The organism is alive or we show and the dead too
+      if self.show_dead || o.alive() {
+
+         // The color of autotrophs is determined by the reaction, for heterotrophs it is predetermined
+         match o.nutrition_mode() {
+            NutritionMode::Heterotroph => {
+               // The color of heterotrophs
+               if self.show_heterotrophs {
+                  Some(self.env.heterotroph_color)
+               } else {
+                  None
+               }
+            }
+            NutritionMode::Autotroph => {
+               // The color of autotrophs
+               let reaction_index = o.reaction_index();
+               let visible = self.vis_reac_indexes[reaction_index];
+
+               if visible {
+                  let reaction = self.ui_reactions.get(reaction_index);
+                  Some(reaction.color)
+               } else {
+                  None
+               }
+            }
+         }
+      } else {
+            None
+      }
+   }
+
+
    // Return dot at display position
    // The world must be continuous, the first point goes to the right (or bottom) of the last point again
    pub fn dot(&self, x: isize, y: isize) -> Dot {
@@ -174,42 +210,9 @@ impl World {
       let mut stack = self.ptr_animals.get_stack(serial_bit);
 
       // Let's take out the color definition code - determine animal with visible reaction and alive or not
-      let closure = |o: &Organism| {
-
-         // The organism is alive or we show and the dead too
-         if self.show_dead || o.alive() {
-
-            // The color of autotrophs is determined by the reaction, for heterotrophs it is predetermined
-            match o.nutrition_mode() {
-               NutritionMode::Heterotroph => {
-                  // The color of heterotrophs
-                  if self.show_heterotrophs {
-                     Some(self.env.heterotroph_color)
-                  } else {
-                     None
-                  }
-               }
-               NutritionMode::Autotroph => {
-                  // The color of autotrophs
-                  let reaction_index = o.reaction_index();
-                  let visible = self.vis_reac_indexes[reaction_index];
-   
-                  if visible {
-                     let reaction = self.ui_reactions.get(reaction_index);
-                     Some(reaction.color)
-                  } else {
-                     None
-                  }
-               }
-            }
-         } else {
-             None
-         }
-      };
-
       let animal_color = stack
       .find_map(|o| {
-         o.as_ref().and_then(|o| closure(o))
+         o.as_ref().and_then(|o| self.get_animal_color(o))
       });
 
       let mut color = if let Some(color) = animal_color {
@@ -239,6 +242,7 @@ impl World {
       Dot{x, y, color,}
    }
 
+
    // Text to describe a point with a size constraint
    pub fn description(&self, dot: &Dot, max_lines: usize, delimiter: char) -> String {
 
@@ -253,12 +257,9 @@ impl World {
       // Collect info among animals
       let stack = self.ptr_animals.get_stack(serial_bit);
 
+      // Include animals if color is set
       let filtered_animals = stack.into_iter().flatten()
-      .filter(|o| {
-         self.show_dead || (   // include all
-            o.alive() && self.vis_reac_indexes[o.reaction_index()]   // include only alive with visible reaction
-         )
-      });
+      .filter(|o| self.get_animal_color(o).is_some());
 
       // Animal world
       let animal_desc = filtered_animals
