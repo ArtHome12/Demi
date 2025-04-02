@@ -37,10 +37,9 @@ pub struct Grid {
    mesh: RefCell<MeshWidget>,
 
    scale: ScaleWS,
-   min_scale: ScaleWS,
-   max_scale: ScaleWS,
    scale_up: ScaleSS,
    scale_down: ScaleSS,
+   main_window_size: Size, // Previous size for change scale when resizing
 
    world: Rc<RefCell<World>>,
    nonscaled_size: SizeW, // for performance, world size * CELL_SIZE
@@ -54,6 +53,7 @@ pub struct Grid {
 pub enum Message {
    Translated(PointW),
    Scaled(ScaleWS, Option<PointW>),
+   Resized(Size),
    ClockChime(bool), // Update screen and rate counters if true
    Illumination(bool),
    FilterChanged,
@@ -86,9 +86,6 @@ impl Grid {
    // If less, cell borders are not drawn
    const MIN_VISIBLE_CELL_BORDER: LenS = LenS::new(5.0);
 
-   // Screen size defines scaling range
-   const MIN_SCREEN_WIDTH: LenW = LenW::new(800.0);
-
    // Scale step
    const SCALE_STEP: f32 = 0.3;
 
@@ -100,11 +97,6 @@ impl Grid {
       let world_size = Size2D::<usize, WorldSpace>::new(world_size.x, world_size.y);
       let world_size = world_size.cast::<f32>();
 
-      // Scaling range
-      let r = Self::MIN_SCREEN_WIDTH / Self::CELL_SIZE;
-      let max_scale = ScaleWS::new(r.get());   // about one cell on the screen
-      let min_scale = ScaleWS::new(r.get() / world_size.width);  // the whole world on the screen
-   
       // Scale range, after down by 10% it is needs to up to (1-0.1^n)/(1-0.1)
       let scale_up = ScaleSS::new((1.0 - Self::SCALE_STEP.powi(10)) / (1.0 - Self::SCALE_STEP));
       let scale_down = ScaleSS::new(1.0 - Self::SCALE_STEP);
@@ -118,10 +110,9 @@ impl Grid {
          bitmap: RefCell::new(Bitmap::new()),
          mesh: RefCell::new(MeshWidget::new()),
          scale: ScaleWS::identity(),
-         min_scale,
-         max_scale,
          scale_up,
          scale_down,
+         main_window_size: Size::ZERO,
          world,
          nonscaled_size,
          fps: RefCell::new(FPS::default()),
@@ -129,6 +120,25 @@ impl Grid {
          illumination: false,
          last_tick: usize::MAX,
       }
+   }
+
+
+   fn min_scale(&self, size: iced::Rectangle) -> ScaleWS {
+      let world = self.world.borrow().size();
+      let world_w = world.x as f32;
+      let world_h = world.y as f32;
+
+      let w = size.width / Self::CELL_SIZE.get() / world_w;
+      let h = size.height / Self::CELL_SIZE.get() / world_h;
+
+      ScaleWS::new(w.min(h) * 0.9) // 10% for overlap
+   }
+
+
+   fn max_scale(&self, size: iced::Rectangle) -> ScaleWS {
+      let w = size.width / Self::CELL_SIZE.get();
+      let h = size.height / Self::CELL_SIZE.get();
+      ScaleWS::new(w.min(h) * 0.9)
    }
 
 
@@ -155,6 +165,15 @@ impl Grid {
             self.clear_cache(false);
          }
          Message::FilterChanged => self.clear_cache(false),
+         Message::Resized(size) => {
+            if self.main_window_size != Size::ZERO {
+               let w = size.width / self.main_window_size.width;
+               // let h = size.height / self.main_window_size.height;
+               self.scale = ScaleWS::new(self.scale.get() * w/* .max(h) */);
+               self.clear_cache(true);
+            }
+            self.main_window_size = size;
+         }
       }
    }
 
@@ -300,7 +319,9 @@ impl<'a> canvas::Program<Message> for Grid {
                   }
                   mouse::Button::Middle => {
                      // Choice of action - increase or decrease
-                     let scale = iif!(self.scale.get() > 10.0 * self.min_scale.get(), self.min_scale, self.max_scale);
+                     let border = ScaleSS::new(10.0);
+                     let min_scale = self.min_scale(bounds);
+                     let scale = iif!(self.scale > min_scale * border, min_scale, self.max_scale(bounds));
 
                      let translation = self.translation_for_scale(cursor_position, scale);
                      Some(Message::Scaled(scale, Some(translation)))
@@ -338,13 +359,16 @@ impl<'a> canvas::Program<Message> for Grid {
             }
             mouse::Event::WheelScrolled { delta } => match *delta {
                mouse::ScrollDelta::Lines { y, .. } | mouse::ScrollDelta::Pixels { y, .. } => {
-                  let is_inside = y < 0.0 && self.scale > self.min_scale 
-                     || y > 0.0 && self.scale < self.max_scale;
+                  let min_scale = self.min_scale(bounds);
+                  let max_scale = self.max_scale(bounds);
+   
+                  let is_inside = y < 0.0 && self.scale > min_scale
+                     || y > 0.0 && self.scale < max_scale;
 
                   let action = if is_inside {
                      let step = iif!(y < 0.0, self.scale_down, self.scale_up);
                      let scale = self.scale * step;
-                     let scale = scale.clamp(self.min_scale, self.max_scale);
+                     let scale = scale.clamp(min_scale, max_scale);
                      let translation = self.translation_for_scale(cursor_position, scale);
                      
                      canvas::Action::publish(Message::Scaled(
