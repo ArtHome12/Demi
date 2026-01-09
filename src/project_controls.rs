@@ -73,15 +73,15 @@ impl Controls {
          .on_press(Message::ToggleRun),
 
          // Project commands
-         button("New")
+         button(self.res.image(Images::New))
          .style(button::secondary)
          .on_press(Message::New),
 
-         button("Load")
+         button(self.res.image(Images::Load))
          .style(button::secondary)
          .on_press(Message::Load),
 
-         button("Save")
+         button(self.res.image(Images::Save))
          .style(button::secondary)
          .on_press(Message::Save),
 

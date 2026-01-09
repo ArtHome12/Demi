@@ -61,6 +61,7 @@ enum Message {
    Refresh(Instant), // called about 30 times per second for screen refresh
 
    Resized(pane_grid::ResizeEvent), // Message from panes
+   ResizeEvent((Id, iced::Size)),   // Message from main window
 
    // Commands to execute
    ShowFilter(bool),
@@ -200,7 +201,12 @@ impl Demi {
          Message::CloseEvent(_id) => {
             self.world.borrow_mut().shutdown();
             return iced::exit()
-        }
+         }
+
+         Message::ResizeEvent((_id, size)) => {
+            let cmd = Message::GridMessage(grid::Message::Resized(size));
+            return self.update(cmd)
+         }
       }
       Task::none()
    }
@@ -208,6 +214,7 @@ impl Demi {
    fn subscription(&self) -> Subscription<Message> {
       let subs = vec![window::frames().map(Message::Refresh),
          window::close_requests().map(Message::CloseEvent),
+         window::resize_events().map(|(id, size)| Message::ResizeEvent((id, size))),
       ];
       Subscription::batch(subs)
    }
