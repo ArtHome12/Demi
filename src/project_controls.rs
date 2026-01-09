@@ -85,13 +85,15 @@ impl Controls {
          .style(button::secondary)
          .on_press(Message::Save),
 
-         checkbox("Autosave", self.autosave)
+         checkbox(self.autosave)
+         .label("Autosave")
          .size(16)
          .spacing(5)
          .text_size(16)
          .on_toggle(Message::ToggleAutosave),
-   
-         checkbox("Autorun", self.autorun)
+
+         checkbox(self.autorun)
+         .label("Autorun")
          .size(16)
          .spacing(5)
          .text_size(16)

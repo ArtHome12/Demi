@@ -12,7 +12,7 @@ use std::{rc::Rc, cell::RefCell, };
 
 use iced::{Element, Length};
 use iced::widget::{scrollable,
-   container, column, Column, Checkbox, text,
+   container, column, Column, checkbox, text,
 };
 
 
@@ -62,19 +62,22 @@ impl Controls {
       .enumerate()
       .fold(Column::new().spacing(10), |column, (index, item)| {
          column.push(
-            Checkbox::new(&item.name, world.vis_elem_indexes[index])
+            checkbox(world.vis_elem_indexes[index])
+            .label(item.name.clone())
             .on_toggle(move |b| Message::ItemToggledElement(index, b))
             .text_size(16)
             .size(16)
          )
       });
 
-      let dead_check_box = Checkbox::new("Include dead", world.show_dead)
+      let dead_check_box = checkbox(world.show_dead)
+      .label("Include dead")
       .on_toggle(Message::ItemToggledDead)
       .text_size(16)
       .size(16);
 
-      let heterotrophs_check_box = Checkbox::new("Heterotrophs", world.show_heterotrophs)
+      let heterotrophs_check_box = checkbox(world.show_heterotrophs)
+      .label("Heterotrophs")
       .on_toggle(Message::ItemToggledHeterotrophs)
       .text_size(16)
       .size(16);
@@ -85,7 +88,8 @@ impl Controls {
       .fold(Column::new().spacing(10), |column, (index, item)| {
          // Reaction name
          column.push(
-            Checkbox::new(&item.name, world.vis_reac_indexes[index])
+            checkbox(world.vis_reac_indexes[index])
+            .label(item.name.clone())
             .on_toggle(move |b| Message::ItemToggledAnimal(index, b))
             .text_size(16)
             .size(16)

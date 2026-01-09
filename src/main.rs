@@ -42,13 +42,14 @@ pub fn main() -> iced::Result {
       ..iced::window::Settings::default()
    };
 
-   iced::application(Demi::title, Demi::update, Demi::view)
+   iced::application(Demi::default, Demi::update, Demi::view)
       .subscription(Demi::subscription)
       .exit_on_close_request(false)
       .antialiasing(true)
-      .theme(|_| Theme::Nightfly)
+      .theme(Theme::Nightfly)
       .window(settings)
-      .run_with(Demi::new)
+      .title("Demi")
+      .run()
 }
 
 #[derive(Debug, Clone)]
@@ -80,8 +81,14 @@ struct Demi {
    last_one_second_time: Instant,   // for FPS/TPS evaluations
 }
 
+impl Default for Demi {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Demi {
-   fn new() -> (Self, Task<Message>) {
+   fn new() -> Self {
       // Project contains info for create model
       let project = project::Project::new("./demi.toml");
 
@@ -95,22 +102,16 @@ impl Demi {
       // Put the grid into pane and get back ref to it
       let grid = Grid::new(grid_world);
       let (panes, grid_pane) = pane_grid::State::new(PaneState::new(PaneContent::Grid(grid)));
-      (
-         Self {
-            world,
-            controls,
-            panes,
-            grid_pane,
-            filter_pane: None,
-            grid_pane_ratio: 0.8,
-            last_one_second_time: Instant::now(),
-         },
-         Task::none(),
-      )
-   }
-
-    fn title(&self) -> String {
-      String::from("Demi")
+      
+      Self {
+         world,
+         controls,
+         panes,
+         grid_pane,
+         filter_pane: None,
+         grid_pane_ratio: 0.8,
+         last_one_second_time: Instant::now(),
+      }
    }
 
    fn update(&mut self, message: Message) -> Task<Message> {

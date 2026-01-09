@@ -17,7 +17,6 @@ use iced::mouse::{self, Cursor,};
 use iced::widget::{image::Handle, Image, image, stack,};
 use iced::widget::canvas::{self, Cache, Canvas, Event, Frame, Geometry, Path, Stroke, Text, };
 use iced::advanced::renderer;
-use iced::advanced::image::Bytes;
 use iced::advanced::widget::{self, Widget};
 use iced::advanced::layout::{self, Layout};
 use iced::advanced::graphics::color;
@@ -655,7 +654,7 @@ impl Bitmap {
 
       // Return the image
       let cnt = self.storage.len();
-      let pixels = Bytes::from(self.storage.clone());
+      let pixels = self.storage.clone();
       let height = cnt / width / 4; // the formula is sometimes wrong by one
       let handle = Handle::from_rgba(width as u32, height as u32, pixels);
 
@@ -789,7 +788,7 @@ impl<Message> Widget<Message, Theme, Renderer> for MeshWidget {
    }
 
    fn layout(
-       &self,
+       &mut self,
        _tree: &mut widget::Tree,
        _renderer: &Renderer,
        limits: &layout::Limits,
