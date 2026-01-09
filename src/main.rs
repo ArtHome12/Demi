@@ -211,7 +211,7 @@ impl Demi {
       Subscription::batch(subs)
    }
 
-   fn view(&self) -> Element<Message> {
+   fn view(&self) -> Element<'_, Message> {
 
       // Place project controls at top line
       let controls = self.controls.view().map(Message::ProjectMessage);
@@ -263,7 +263,7 @@ impl PaneState {
        }
    }
    
-   fn view(&self, size: iced::Size) -> Element<Message> {
+   fn view(&self, size: iced::Size) -> Element<'_, Message> {
       match &self.content {
          PaneContent::Grid(grid) => grid.view(size).map(move |message| Message::GridMessage(message)),
          PaneContent::Filter(filter) => filter.view().map(move |message| Message::FilterMessage(message)),

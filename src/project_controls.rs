@@ -48,7 +48,7 @@ impl Controls {
 
    pub fn view(
       &self,
-   ) -> Element<Message> {
+   ) -> Element<'_, Message> {
 
       container(row![
          // Toggle illuminate

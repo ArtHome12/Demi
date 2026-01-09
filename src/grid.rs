@@ -170,7 +170,7 @@ impl Grid {
    }
 
 
-   pub fn view(&self, size: iced::Size) -> Element<Message> {
+   pub fn view(&self, size: iced::Size) -> Element<'_, Message> {
       let canvas = Canvas::new(self)
          .width(Length::Fill)
          .height(Length::Fill)

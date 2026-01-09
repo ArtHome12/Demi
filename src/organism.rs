@@ -298,7 +298,7 @@ impl PtrAnimals {
       }
    }
 
-   pub fn get_stack(&self, serial: usize) -> PtrAnimalsStack {
+   pub fn get_stack(&self, serial: usize) -> PtrAnimalsStack<'_> {
       PtrAnimalsStack {
          start: self.ptr[serial],
          curr: 0,

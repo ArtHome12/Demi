@@ -53,7 +53,7 @@ impl Controls {
       }
   }
 
-   pub fn view(&self) -> Element<Message> {
+   pub fn view(&self) -> Element<'_, Message> {
 
       let world = &self.world.borrow();
       
