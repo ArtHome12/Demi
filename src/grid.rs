@@ -35,10 +35,10 @@ pub struct Grid {
    bitmap: RefCell<Bitmap>,   // to store the off-screen image used at small scale for performance
    mesh: RefCell<MeshWidget>,
 
-   scale: ScaleWS,
+   scale: ScaleWS,            // Current scale, should never be zero
    scale_up: ScaleSS,
    scale_down: ScaleSS,
-   main_window_size: Size, // Previous size for change scale when resizing
+   previous_size: Size, // Previous size for change scale when resizing
 
    world: Rc<RefCell<World>>,
    nonscaled_size: SizeW, // for performance, world size * CELL_SIZE
@@ -111,7 +111,7 @@ impl Grid {
          scale: ScaleWS::identity(),
          scale_up,
          scale_down,
-         main_window_size: Size::ZERO,
+         previous_size: Size::ZERO,
          world,
          nonscaled_size,
          fps: RefCell::new(FPS::default()),
@@ -165,13 +165,17 @@ impl Grid {
          }
          Message::FilterChanged => self.clear_cache(false),
          Message::Resized(size) => {
-            if self.main_window_size != Size::ZERO {
-               let w = size.width / self.main_window_size.width;
-               // let h = size.height / self.main_window_size.height;
-               self.scale = ScaleWS::new(self.scale.get() * w/* .max(h) */);
-               self.clear_cache(true);
+            // When window is minimized, do not change scale. The scale should never be zero.
+            if size != Size::ZERO {
+
+               if self.previous_size != Size::ZERO {
+                  let w = size.width / self.previous_size.width;
+                  // let h = size.height / self.previous_size.height;
+                  self.scale = ScaleWS::new(self.scale.get() * w/* .max(h) */);
+                  self.clear_cache(true);
+               }
+               self.previous_size = size;
             }
-            self.main_window_size = size;
          }
       }
    }
@@ -397,7 +401,6 @@ impl<'a> canvas::Program<Message> for Grid {
       bounds: Rectangle,
       cursor: Cursor,
    ) -> Vec<Geometry> {
-
       // Update FPS, once upon refresh
       self.fps.borrow_mut().make_tick();
 
@@ -625,12 +628,19 @@ impl Bitmap {
       let height = s.height.min(size.height) as usize;
       let capacity = width * height * 4;
 
+      // When the window minimized
+      if capacity == 0 {
+         self.capacity = 0;
+         let handle = Handle::from_rgba(0, 0, vec![]);
+         return Image::new(handle);
+      }
+
       // If the size has changed, then the cache is not valid
       self.cached = self.cached && (self.capacity == capacity);
       self.capacity = capacity;
 
       // Recreate the storage when the size changes
-      if self.storage.capacity() < capacity {
+      if self.storage.capacity() != capacity {
          self.storage = vec![0; capacity];
       }
       
@@ -674,6 +684,8 @@ impl Bitmap {
             }
             i += 4;
          };
+
+         print!("create bitmap with i bytes {}\n", i);
       }
 
       // Return the image
@@ -681,6 +693,32 @@ impl Bitmap {
       let pixels = self.storage.clone();
       let height = cnt / width / 4; // the formula is sometimes wrong by one
       let handle = Handle::from_rgba(width as u32, height as u32, pixels);
+
+      // println!("Bitmap size: {}x{}, capacity: {}, cnt error: {}", width, height, self.capacity, cnt - width * height *4);
+      // Create a simple 256x256 RGBA image where R = x, G = y, B = 128, A = 255
+      /* let width: u32 = 256;
+      let height: u32 = 256;
+
+      let mut pixels = Vec::with_capacity((width * height * 4) as usize);
+
+      for y in 0..height {
+         for x in 0..width {
+               let r = x as u8;
+               let g = y as u8;
+               let b = 128u8;
+               let a = 255u8;
+
+               pixels.push(r);
+               pixels.push(g);
+               pixels.push(b);
+               pixels.push(a);
+         }
+      }
+
+      let handle = Handle::from_rgba(width, height, pixels); */
+
+
+
 
       // Only increase, the decrease is taken into account through the size.
       let scale = (grid.scale.get() * Grid::CELL_SIZE.get()).max(1.0);
