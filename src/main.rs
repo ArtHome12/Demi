@@ -25,7 +25,7 @@ mod organism;
 
 use grid::Grid;
 use iced::{Element, Subscription, Task, window, window::Id, Theme};
-use iced::widget::{column, PaneGrid, pane_grid, responsive, pane_grid::Axis,};
+use iced::widget::{column, PaneGrid, pane_grid, pane_grid::Axis,};
 use iced::window::icon;
 use std::path::Path;
 use std::time::{Duration, Instant};
@@ -120,30 +120,30 @@ impl Demi {
          Message::ProjectMessage(message) => {
 
             // Reflecting the interface change immediately
-            _ = self.controls.update(message.clone());
+            self.controls.update(message.clone());
 
             // Translate from project message to own and create new command
-            let cmd = match message {
-               project_controls::Message::ToggleRun => Some(Message::ToggleRun),
-               project_controls::Message::ToggleIllumination => Some(Message::Illuminate(self.controls.illuminate)),
-               project_controls::Message::ToggleFilter => Some(Message::ShowFilter(self.controls.show_filter)),
-               project_controls::Message::Save => Some(Message::WorldSave),
-               _ => None,
-            };
-
-            // If necessary, try again with a new command.
-            if let Some(cmd) = cmd {
-               return self.update(cmd)
+            match message {
+               project_controls::Message::ToggleRun => Task::done(Message::ToggleRun),
+               project_controls::Message::ToggleIllumination => Task::done(Message::Illuminate(self.controls.illuminate)),
+               project_controls::Message::ToggleFilter => Task::done(Message::ShowFilter(self.controls.show_filter)),
+               project_controls::Message::Save => Task::done(Message::WorldSave),
+               _ => Task::none(),
             }
          }
 
-         Message::GridMessage(message) => self.grid_mut().update(message),
+         Message::GridMessage(message) => {
+            self.grid_mut()
+               .update(message)
+               .map(| msg | Message::GridMessage(msg))
+         }
+
          Message::FilterMessage(message) => {
             self.filter_mut().update(message);
 
             let grid_cmd = grid::Message::FilterChanged;
             let cmd = Message::GridMessage(grid_cmd);
-            return self.update(cmd)
+            Task::done(cmd)
          }
 
          Message::Refresh(ts) => {
@@ -155,12 +155,13 @@ impl Demi {
 
             let grid_cmd = grid::Message::ClockChime(one_second_passed);
             let cmd = Message::GridMessage(grid_cmd);
-            return self.update(cmd)
+            Task::done(cmd)
          }
 
          Message::Resized(pane_grid::ResizeEvent { split, ratio }) => {
             self.grid_pane_ratio = ratio;
             self.panes.resize(split, ratio);
+            Task::none()
          }
 
          Message::ShowFilter(show) => {
@@ -186,17 +187,24 @@ impl Demi {
                self.panes.close(filter_pane);
                self.filter_pane = None;
             }
+            Task::none()
          }
 
          Message::Illuminate(is_on) => {
             let grid_cmd = grid::Message::Illumination(is_on);
             let cmd = Message::GridMessage(grid_cmd);
-            return self.update(cmd)
+            Task::done(cmd)
          }
 
-         Message::ToggleRun => self.world.borrow().toggle_run(),
+         Message::ToggleRun => {
+            self.world.borrow().toggle_run();
+            Task::none()
+         }
 
-         Message::WorldSave => self.world.borrow().save(),
+         Message::WorldSave => {
+            self.world.borrow().save();
+            Task::none()
+         }
 
          Message::CloseEvent(_id) => {
             self.world.borrow_mut().shutdown();
@@ -205,10 +213,9 @@ impl Demi {
 
          Message::ResizeEvent((_id, size)) => {
             let cmd = Message::GridMessage(grid::Message::Resized(size));
-            return self.update(cmd)
+            Task::done(cmd)
          }
       }
-      Task::none()
    }
 
    fn subscription(&self) -> Subscription<Message> {
@@ -226,9 +233,7 @@ impl Demi {
 
       // Client area contains grid with the world's dots and sometimes filter for showing elements
       let pane_grid = PaneGrid::new(&self.panes, |_id, pane, _is_maximized| {
-         pane_grid::Content::new(responsive(move |size| {
-            pane.view(size)
-         }))
+         pane_grid::Content::new(pane.view())
       })
       .on_resize(10, Message::Resized);
 
@@ -271,9 +276,9 @@ impl PaneState {
        }
    }
    
-   fn view(&self, size: iced::Size) -> Element<'_, Message> {
+   fn view(&self) -> Element<'_, Message> {
       match &self.content {
-         PaneContent::Grid(grid) => grid.view(size).map(move |message| Message::GridMessage(message)),
+         PaneContent::Grid(grid) => grid.view().map(move |message| Message::GridMessage(message)),
          PaneContent::Filter(filter) => filter.view().map(move |message| Message::FilterMessage(message)),
       }
    }

@@ -8,13 +8,14 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2023 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
+use iced::widget::image::Allocation;
 use iif::iif;
 
 use iced::{alignment, Color, Element, Length, Point, Rectangle, Size, Theme, Vector,
-   Transformation, Renderer,
+   Transformation, Renderer, Task,
 };
 use iced::mouse::{self, Cursor,};
-use iced::widget::{image::Handle, Image, image, stack,};
+use iced::widget::{image::Handle, image, stack};
 use iced::widget::canvas::{self, Cache, Canvas, Event, Frame, Geometry, Path, Stroke, Text, };
 use iced::advanced::renderer;
 use iced::advanced::widget::{self, Widget};
@@ -32,13 +33,13 @@ pub struct Grid {
    cell_text_cache: Cache,
    grid_cache: Cache,
    translation: PointW,
-   bitmap: RefCell<Bitmap>,   // to store the off-screen image used at small scale for performance
-   mesh: RefCell<MeshWidget>,
+   bitmap: Bitmap,   // to store the off-screen image used at small scale for performance
+   mesh: MeshData,
 
    scale: ScaleWS,            // Current scale, should never be zero
    scale_up: ScaleSS,
    scale_down: ScaleSS,
-   previous_size: Size, // Previous size for change scale when resizing
+   previous_size: Size,       // Previous size for change scale when resizing
 
    world: Rc<RefCell<World>>,
    nonscaled_size: SizeW, // for performance, world size * CELL_SIZE
@@ -56,6 +57,7 @@ pub enum Message {
    ClockChime(bool), // Update screen and rate counters if true
    Illumination(bool),
    FilterChanged,
+   BitmapAllocated(Allocation),
 }
 
 // Adress spaces for Euclid crate
@@ -106,8 +108,8 @@ impl Grid {
          cell_text_cache: Cache::default(),
          grid_cache: Cache::default(),
          translation: PointW::default(),
-         bitmap: RefCell::new(Bitmap::new()),
-         mesh: RefCell::new(MeshWidget::new()),
+         bitmap: Bitmap::new(),
+         mesh: MeshData::new(),
          scale: ScaleWS::identity(),
          scale_up,
          scale_down,
@@ -141,7 +143,7 @@ impl Grid {
    }
 
 
-   pub fn update(&mut self, message: Message) {
+   pub fn update(&mut self, message: Message) -> Task<Message> {
       match message {
 
          Message::Translated(translation) => {
@@ -158,7 +160,7 @@ impl Grid {
             self.clear_cache(true);
          }
 
-         Message::ClockChime(is_one_second_passed) => self.clock_chime(is_one_second_passed),
+         Message::ClockChime(is_one_second_passed) => return self.clock_chime(is_one_second_passed),
          Message::Illumination(is_on) => {
             self.illumination = is_on;
             self.clear_cache(false);
@@ -168,6 +170,7 @@ impl Grid {
             // When window is minimized, do not change scale. The scale should never be zero.
             if size != Size::ZERO {
 
+               // Previous size is zero at start
                if self.previous_size != Size::ZERO {
                   let w = size.width / self.previous_size.width;
                   // let h = size.height / self.previous_size.height;
@@ -175,41 +178,88 @@ impl Grid {
                   self.clear_cache(true);
                }
                self.previous_size = size;
+   
+               // Update content on the grid (mesh or bitmap)
+               return self.update_grid_content();
             }
          }
+         Message::BitmapAllocated(allocation) => {
+            self.bitmap.handle = Some(allocation);
+            self.bitmap.busy = false;
+         }
+      }
+
+      Task::none()
+   }
+
+   // Update content on the grid (mesh or bitmap)
+   fn update_grid_content(&mut self) -> Task<Message> {
+      let size = self.previous_size;
+      let size_s = Size2D::<f32, ScreenSpace>::new(size.width, size.height);
+
+      if self.use_bitmap() {
+         if self.bitmap.busy {
+            return Task::none();
+         }
+         self.bitmap.busy = true;
+
+         Bitmap::generate(size_s, self)
+            .map(|res| {
+               match res {
+                  Ok(allocation) => Message::BitmapAllocated(allocation),
+                  Err(_) => panic!("Grid update(): Bitmap allocation error"),
+               }
+            })
+      } else {
+         // Generate mesh for new size
+         self.mesh.buffers = MeshData::generate(size_s, self);
+         Task::none()
       }
    }
 
 
-   // Force to redraw the cells and grid
+   // Force to update the cells and grid
    fn clear_cache(&mut self, with_grid: bool) {
       self.cell_text_cache.clear();
-      self.bitmap.borrow_mut().clear();
-      self.mesh.borrow_mut().clear();
+      self.bitmap.clear();
+      self.mesh.clear();
       if with_grid {
          self.grid_cache.clear();
       }
    }
 
 
-   pub fn view(&self, size: iced::Size) -> Element<'_, Message> {
+   pub fn view(&self) -> Element<'_, Message> {
       let canvas = Canvas::new(self)
          .width(Length::Fill)
          .height(Length::Fill)
          .into();
-      
-      let size = SizeS::new(size.width, size.height);
 
       if self.use_bitmap() {
-         let bitmap = self.bitmap.borrow_mut()
-            .update(size, self);
-         let img: Element<Message> =Element::from(bitmap);
+         if let Some(allocation) = &self.bitmap.handle {
+            let handle = allocation.handle().clone();
 
-         stack(vec![img, canvas,]).into()
+            let scale = (self.scale.get() * Grid::CELL_SIZE.get())
+               .max(1.0);
+
+            let bitmap = image(handle)
+               .width(Length::Fill)   // reserved space for the Element, does not affect the display of the image
+               .height(Length::Fill)
+               .scale(scale)
+               .filter_method(image::FilterMethod::Nearest)
+               .content_fit(iced::ContentFit::None);
+
+            let img: Element<Message> =Element::from(bitmap);
+
+            stack(vec![img, canvas,]).into()
+         } else {
+            canvas.into()
+         }
       } else {
-         self.mesh.borrow_mut().generate(size, self);
-         let geom = self.mesh.borrow().clone().into();
-         stack(vec![geom, canvas,]).into()
+         let widget = MeshWidget {
+            data: &self.mesh,
+         };
+         stack(vec![widget.into(), canvas,]).into()
       }
    }
 
@@ -231,7 +281,7 @@ impl Grid {
 
 
    // Update rate counters
-   fn clock_chime(&mut self, is_one_second_passed: bool) {
+   fn clock_chime(&mut self, is_one_second_passed: bool) -> Task<Message> {
 
       // Current model time
       let tick = self.world.borrow().ticks_elapsed();
@@ -248,7 +298,8 @@ impl Grid {
          self.last_tick = tick;
          self.clear_cache(false)
       }
-      canvas::Action::<Message>::request_redraw();
+
+      self.update_grid_content()
    }
 
 
@@ -604,21 +655,23 @@ impl Default for Interaction {
 
 // To store the off-screen image
 struct Bitmap {
-   capacity: usize,
    cached: bool,
    storage: Vec<u8>,
+   handle: Option<image::Allocation>,
+   busy: bool,
 }
 
 impl Bitmap {
    fn new() -> Self {
       Self {
-         capacity: 0,   // capacity as criterion for cache
          cached: false,
          storage: Vec::new(),
+         handle: None,
+         busy: false,
       }
    }
 
-   fn update(&mut self, size: SizeS, grid: &Grid) -> Image {
+   fn generate(size: SizeS, grid: &mut Grid) -> Task<Result<image::Allocation, iced::advanced::image::Error>> {
 
       // Size in cells, maybe it is necessary +1 for last incomplete column and row.
       let s: SizeW = size / grid.scale / Grid::CELL_SIZE.get(); 
@@ -626,33 +679,24 @@ impl Bitmap {
       // Calculate new capacity. "Size" may be less than "s" due to filtering of points in the iterator.
       let width = s.width.min(size.width) as usize;
       let height = s.height.min(size.height) as usize;
-      let capacity = width * height * 4;
+      let capacity = width * height * 4; // RGBA
 
-      // When the window minimized
-      if capacity == 0 {
-         self.capacity = 0;
-         let handle = Handle::from_rgba(0, 0, vec![]);
-         return Image::new(handle);
-      }
+      let bitmap = &mut grid.bitmap;
 
-      // If the size has changed, then the cache is not valid
-      self.cached = self.cached && (self.capacity == capacity);
-      self.capacity = capacity;
-
-      // Recreate the storage when the size changes
-      if self.storage.capacity() != capacity {
-         self.storage = vec![0; capacity];
-      }
-      
       // Build the image
-      if !self.cached {
-         self.cached = true;
+      if !bitmap.cached {
+         bitmap.cached = true;
+
+         // Recreate the storage when the size increased
+         if bitmap.storage.capacity() < capacity {
+            bitmap.storage.resize(capacity + 1024, 0); // some extra space due to rounding errors
+         }
 
          // Ranges in region to draw
          let t = grid.translation / Grid::CELL_SIZE.get();
          let rx = t.x as isize .. (t.x as isize + s.width as isize);
          let ry = t.y as isize .. (t.y as isize + s.height as isize);
-   
+
          // Closure for scaling
          let scaled_cell = Grid::CELL_SIZE * grid.scale;
          let c = |i: isize| -> isize {
@@ -679,148 +723,108 @@ impl Bitmap {
    
             let color = Vec::from(color.into_rgba8());
             unsafe {
-               let dst = self.storage.as_mut_ptr().add(i);
+               let dst = bitmap.storage.as_mut_ptr().add(i);
                ptr::copy_nonoverlapping(color.as_ptr(), dst, 4);
             }
             i += 4;
          };
-
-         print!("create bitmap with i bytes {}\n", i);
       }
 
       // Return the image
-      let cnt = self.storage.len();
-      let pixels = self.storage.clone();
+      let cnt = bitmap.storage.len();
+      let pixels = bitmap.storage.clone();
       let height = cnt / width / 4; // the formula is sometimes wrong by one
       let handle = Handle::from_rgba(width as u32, height as u32, pixels);
-
-      // println!("Bitmap size: {}x{}, capacity: {}, cnt error: {}", width, height, self.capacity, cnt - width * height *4);
-      // Create a simple 256x256 RGBA image where R = x, G = y, B = 128, A = 255
-      /* let width: u32 = 256;
-      let height: u32 = 256;
-
-      let mut pixels = Vec::with_capacity((width * height * 4) as usize);
-
-      for y in 0..height {
-         for x in 0..width {
-               let r = x as u8;
-               let g = y as u8;
-               let b = 128u8;
-               let a = 255u8;
-
-               pixels.push(r);
-               pixels.push(g);
-               pixels.push(b);
-               pixels.push(a);
-         }
-      }
-
-      let handle = Handle::from_rgba(width, height, pixels); */
-
-
-
-
-      // Only increase, the decrease is taken into account through the size.
-      let scale = (grid.scale.get() * Grid::CELL_SIZE.get()).max(1.0);
-
-      image(handle)
-         .width(size.width)   // reserved space for the Element, does not affect the display of the image
-         .height(size.height)
-         .scale(scale)
-         .filter_method(image::FilterMethod::Nearest)
-         .content_fit(iced::ContentFit::None)
+      image::allocate(handle)
    }
-
 
    fn clear(&mut self) {
       self.cached = false;
    }
 }
 
+
 #[derive(Debug, Clone)]
-struct MeshWidget {
-   capacity: usize,  // capacity of vertices as criterion for cache
+struct MeshData {
    cached: bool,
-   vertices: Vec<SolidVertex2D>,
-   indices: Vec<u32>,
+   buffers: mesh::Indexed<SolidVertex2D>,   // vertex and index buffers
 }
 
-impl MeshWidget {
+impl MeshData {
    fn new() -> Self {
       Self {
-         capacity: 0,
          cached: false,
-         vertices: Vec::new(),
-         indices: Vec::new(),
+         buffers: mesh::Indexed {
+            vertices: Vec::new(),
+            indices: Vec::new(),
+         },
       }
    }
 
 
-   fn generate(&mut self, size: SizeS, grid: &Grid) {
+   fn generate(size: SizeS, grid: &Grid) -> mesh::Indexed<SolidVertex2D> {
 
       // Size in cells +1 for last incomplete column and row and +1 due to translation.
       let s: SizeW = size / grid.scale / Grid::CELL_SIZE.get() + SizeW::splat(1.0);
 
-      // Calculate new capacity.
-      let capacity = (s.width * s.height) as usize;
+      // Ranges in region to draw
+      let t = grid.translation / Grid::CELL_SIZE.get();
+      let rx = t.x as isize .. (t.x + s.width) as isize;
+      let ry = t.y as isize .. (t.y + s.height) as isize;
 
-      // If the size has changed, then the cache is not valid
-      self.cached = self.cached && (self.capacity == capacity);
-      self.capacity = capacity;
+      // Calculate capacity with reserve for incomplete cells
+      let w = (t.x + s.width) as isize - (t.x as isize);
+      let h = (t.y + s.height) as isize - (t.y as isize);
+      let capacity = (w * h * 4) as usize; // 4 vertices per cell
 
-      // Build the mesh
-      if !self.cached {
-         self.cached = true;
+      let mut vertices = Vec::with_capacity(capacity);
+      let mut indices = Vec::with_capacity(capacity);
 
-         // Clear the storage
-         self.vertices.clear();
-         self.indices.clear();
+      // Go through all the points
+      let scale1 = Grid::CELL_SIZE.get();
+      let scale2 = grid.scale.get();
+      let world = grid.world.borrow();
+      for (y, x) in itertools::iproduct!(ry, rx) {
+         // Get dot for point (allow display dot outside its real x and y)
+         let dot = world.dot(x, y);
+         let mut color = dot.color;
+         if grid.illumination {
+            color.a = 1.0;
+         }
 
-         // Ranges in region to draw
-         let t = grid.translation / Grid::CELL_SIZE.get();
-         let rx = t.x as isize .. (t.x + s.width) as isize;
-         let ry = t.y as isize .. (t.y + s.height) as isize;
+         let color = color::pack(color);
 
-         // Go through all the points
-         let scale1 = Grid::CELL_SIZE.get();
-         let scale2 = grid.scale.get();
-         let world = grid.world.borrow();
-         for (y, x) in itertools::iproduct!(ry, rx) {
-            // Get dot for point (allow display dot outside its real x and y)
-            let dot = world.dot(x, y);
-            let mut color = dot.color;
-            if grid.illumination {
-               color.a = 1.0;
-            }
+         let x0 = (x as f32 * scale1 - grid.translation.x) * scale2;
+         let y0 = (y as f32 * scale1 - grid.translation.y) * scale2;
+         let x1 = ((x + 1) as f32 * scale1 - grid.translation.x) * scale2;
+         let y1 = y0;
+         let x2 = x0;
+         let y2 = ((y + 1) as f32 * scale1 - grid.translation.y) * scale2;
+         let x3 = x1;
+         let y3 = y2;
 
-            let color = color::pack(color);
+         // Transform to vetex and store
+         vertices.push(SolidVertex2D {position: [x0, y0], color});
+         vertices.push(SolidVertex2D {position: [x1, y1], color});
+         vertices.push(SolidVertex2D {position: [x2, y2], color});
+         vertices.push(SolidVertex2D {position: [x3, y3], color});
+      };
 
-            let x0 = (x as f32 * scale1 - grid.translation.x) * scale2;
-            let y0 = (y as f32 * scale1 - grid.translation.y) * scale2;
-            let x1 = ((x + 1) as f32 * scale1 - grid.translation.x) * scale2;
-            let y1 = y0;
-            let x2 = x0;
-            let y2 = ((y + 1) as f32 * scale1 - grid.translation.y) * scale2;
-            let x3 = x1;
-            let y3 = y2;
+      // Create triange edges and store with closure
+      let c_store_indice = |i: usize| {
+            indices.push(i as u32);
+      };
 
-            // Transform to vetex and store
-            self.vertices.push(SolidVertex2D {position: [x0, y0], color});
-            self.vertices.push(SolidVertex2D {position: [x1, y1], color});
-            self.vertices.push(SolidVertex2D {position: [x2, y2], color});
-            self.vertices.push(SolidVertex2D {position: [x3, y3], color});
-         };
+      // Use len() because width * height not equal to math in f32
+      Self::indices(c_store_indice, capacity);
 
-         // Create triange edges and store with closure
-         let c_store_indice = |i: usize| {
-               self.indices.push(i as u32);
-         };
+      debug_assert_eq!(capacity, vertices.len(), "mesh generate: capacity {}, len: {}", capacity, vertices.len());
 
-         // Use len() because width * height not equal to math in f32
-         Self::indices(c_store_indice, self.vertices.len());
+      mesh::Indexed {
+         vertices,
+         indices,
       }
    }
-
    
    // A set of indices of triangle edges.
    fn indices<F>(mut c_store_indice: F, count: usize) where F: FnMut(usize) {
@@ -841,7 +845,13 @@ impl MeshWidget {
    }
 }
 
-impl<Message> Widget<Message, Theme, Renderer> for MeshWidget {
+#[derive(Debug, Clone)]
+struct MeshWidget<'a> {
+   data: &'a MeshData,
+}
+
+
+impl<'a, Message> Widget<Message, Theme, Renderer> for MeshWidget<'a> {
    fn size(&self) -> Size<Length> {
        Size {
            width: Length::Fill,
@@ -874,7 +884,7 @@ impl<Message> Widget<Message, Theme, Renderer> for MeshWidget {
        };
 
        // Mesh must not have empty indices
-       if self.indices.is_empty() {
+       if self.data.buffers.indices.is_empty() {
            return;
        }
        
@@ -885,10 +895,7 @@ impl<Message> Widget<Message, Theme, Renderer> for MeshWidget {
        let clip_bounds = Rectangle::with_size(bounds.size());
 
        let mesh = Mesh::Solid {
-         buffers: mesh::Indexed {
-             vertices: self.vertices.clone(),
-             indices: self.indices.clone(),
-         },
+         buffers: self.data.buffers.clone(),
          transformation: Transformation::IDENTITY,
          clip_bounds: clip_bounds,
       };
@@ -903,11 +910,13 @@ impl<Message> Widget<Message, Theme, Renderer> for MeshWidget {
 }
 
 
-impl<Message> From<MeshWidget> for Element<'_, Message> {
-   fn from(mesh_widget: MeshWidget) -> Self {
+impl<'a, Message> From<MeshWidget<'a>> for Element<'a, Message> {
+   fn from(mesh_widget: MeshWidget<'a>) -> Self {
        Self::new(mesh_widget)
    }
 }
+
+
 
 
 #[cfg(test)]
@@ -936,7 +945,7 @@ mod tests {
  
          // Test for MeshWidget::indices
          let mut indices = Vec::<u32>::new();
-         MeshWidget::indices(|i: usize| {indices.push(i as u32)}, width * height * 4);
+         MeshData::indices(|i: usize| {indices.push(i as u32)}, width * height * 4);
          let answer = vec![
             0, 1, 2, 1, 2, 3,
             4, 5, 6, 5, 6, 7,
