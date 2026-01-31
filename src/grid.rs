@@ -8,14 +8,13 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2023 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use iced::widget::image::Allocation;
 use iif::iif;
 
 use iced::{alignment, Color, Element, Length, Point, Rectangle, Size, Theme, Vector,
    Transformation, Renderer, Task,
 };
 use iced::mouse::{self, Cursor,};
-use iced::widget::{image::Handle, image, stack};
+use iced::widget::{image::{Handle, Allocation}, image, stack};
 use iced::widget::canvas::{self, Cache, Canvas, Event, Frame, Geometry, Path, Stroke, Text, };
 use iced::advanced::renderer;
 use iced::advanced::widget::{self, Widget};

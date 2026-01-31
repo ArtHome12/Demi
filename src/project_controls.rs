@@ -55,6 +55,8 @@ impl Controls {
          button(
             self.res.image(if self.illuminate {Images::IlluminateOn} else {Images::IlluminateOff})
          )
+         .width(Length::Fixed(24.0 + 20.0))  // fixed size (+padding) prevents flickering due to button resizing on image change
+         .height(Length::Fixed(24.0 + 10.0))
          .style(button::secondary)
          .on_press(Message::ToggleIllumination),
 
@@ -62,6 +64,8 @@ impl Controls {
          button(
             self.res.image(if self.show_filter {Images::ShowFilter} else {Images::HideFilter}),
          )
+         .width(Length::Fixed(24.0 + 20.0))
+         .height(Length::Fixed(24.0 + 10.0))
          .style(button::secondary)
          .on_press(Message::ToggleFilter),
 
@@ -69,19 +73,27 @@ impl Controls {
          button(
             self.res.image(if self.run {Images::ModelPlay} else {Images::ModelPause}),
          )
+         .width(Length::Fixed(24.0 + 20.0))
+         .height(Length::Fixed(24.0 + 10.0))
          .style(button::secondary)
          .on_press(Message::ToggleRun),
 
          // Project commands
          button(self.res.image(Images::New))
+         .width(Length::Fixed(24.0 + 20.0))
+         .height(Length::Fixed(24.0 + 10.0))
          .style(button::secondary)
          .on_press(Message::New),
 
          button(self.res.image(Images::Load))
+         .width(Length::Fixed(24.0 + 20.0))
+         .height(Length::Fixed(24.0 + 10.0))
          .style(button::secondary)
          .on_press(Message::Load),
 
          button(self.res.image(Images::Save))
+         .width(Length::Fixed(24.0 + 20.0))
+         .height(Length::Fixed(24.0 + 10.0))
          .style(button::secondary)
          .on_press(Message::Save),
 

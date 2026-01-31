@@ -42,7 +42,7 @@ pub fn main() -> iced::Result {
       ..iced::window::Settings::default()
    };
 
-   iced::application(Demi::default, Demi::update, Demi::view)
+   iced::application(Demi::new, Demi::update, Demi::view)
       .subscription(Demi::subscription)
       .exit_on_close_request(false)
       .antialiasing(true)
@@ -54,6 +54,7 @@ pub fn main() -> iced::Result {
 
 #[derive(Debug, Clone)]
 enum Message {
+   StartupAction,
    ProjectMessage(project_controls::Message), // Messages from project controls at top line
    GridMessage(grid::Message), // Messages from grid
    FilterMessage(filter_control::Message), // Messages from filter pane at right
@@ -82,14 +83,9 @@ struct Demi {
    last_one_second_time: Instant,   // for FPS/TPS evaluations
 }
 
-impl Default for Demi {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
 impl Demi {
-   fn new() -> Self {
+   fn new() -> (Self, Task<Message>) {
       // Project contains info for create model
       let project = project::Project::new("./demi.toml");
 
@@ -104,7 +100,7 @@ impl Demi {
       let grid = Grid::new(grid_world);
       let (panes, grid_pane) = pane_grid::State::new(PaneState::new(PaneContent::Grid(grid)));
       
-      Self {
+      let res = Self {
          world,
          controls,
          panes,
@@ -112,11 +108,18 @@ impl Demi {
          filter_pane: None,
          grid_pane_ratio: 0.8,
          last_one_second_time: Instant::now(),
-      }
+      };
+      (res, Task::done(Message::StartupAction))
    }
 
    fn update(&mut self, message: Message) -> Task<Message> {
       match message {
+         Message::StartupAction => {
+            // Load last project
+            // self.world.borrow_mut().load_last_project();
+            Task::none()
+         }
+
          Message::ProjectMessage(message) => {
 
             // Reflecting the interface change immediately
