@@ -8,8 +8,10 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2023 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use std::sync::{Arc, atomic::{Ordering, AtomicUsize, AtomicU8}, };
-use std::time::{Duration, Instant, };
+use std::{fs::File, path::PathBuf, sync::{Arc, atomic::{AtomicU8, AtomicUsize, Ordering}, }, };
+use std::time::{Duration, };
+use std::io::{BufReader, BufWriter,};
+use std::sync::Mutex;
 
 use crate::{dot::ElementsSheet, evolution::Evolution, environment::*};
 pub use crate::dot::{Dot, ElementsSheets, PtrElements};
@@ -28,6 +30,7 @@ pub struct World {
    ptr_elements: PtrElements,       // Contents of inanimate nature calculations
    ptr_animals: PtrAnimals,         // Contents of living nature calculations
    thread_handle: Option<Handle>,
+   filename: Arc<Mutex<PathBuf>>,   // Filename for save/load project
 
    // Section for UI
    pub vis_elem_indexes: Vec<bool>, // indexes of visible (non-filtered) elements
@@ -39,12 +42,13 @@ pub struct World {
 }
 
 // Modes of operation of the calculated thread
-#[derive(Copy, Clone, )]
+#[derive(Copy, Clone, PartialEq)]
 enum ThreadMode {
    Run = 1, // evaluate tick by tick
    Pause = 2, // command from main to pause
    Paused = 3, // signal from thread about pause
    Shutdown = 4, // command from main to break loop
+   Save = 5, // command from main to save project
 }
 
 impl From<u8> for ThreadMode {
@@ -54,6 +58,7 @@ impl From<u8> for ThreadMode {
          2 => ThreadMode::Pause,
          3 => ThreadMode::Paused,
          4 => ThreadMode::Shutdown,
+         5 => ThreadMode::Save,
          _ => panic!("world::ThreadMode({})", n),
       }
    }
@@ -88,6 +93,9 @@ impl World {
       // The model time
       let ticks_elapsed = Arc::new(AtomicUsize::new(0));
 
+      // File name for save/load
+      let filename = Arc::new(Mutex::new(PathBuf::from("./demi_save.dat")));
+
       // Thread for calculate evolution
 
       // Evolution algorithm
@@ -101,7 +109,8 @@ impl World {
          env.clone(),
          evolution,
          mode.clone(),
-         ticks_elapsed.clone()
+         ticks_elapsed.clone(),
+         filename.clone(),
       );
 
       // At start all elements should be visible, collect its indexes
@@ -116,6 +125,7 @@ impl World {
          ptr_elements,
          ptr_animals,
          thread_handle,
+         filename,
 
          vis_elem_indexes,
          vis_reac_indexes,
@@ -126,10 +136,13 @@ impl World {
       }
    }
 
-   fn spawn(env: Environment, mut evolution: Evolution, mode: Arc<AtomicU8>, ticks: Arc<AtomicUsize>) -> Option<Handle> {
+   fn spawn(env: Environment, mut evolution: Evolution, mode: Arc<AtomicU8>, ticks: Arc<AtomicUsize>, filename: Arc<Mutex<PathBuf>>) -> Option<Handle> {
       // Thread for calculate evolution
       let thread_handle = std::thread::spawn(move || {
          let sleep_time = Duration::from_millis(100);
+
+         // For resume after save
+         let mut prev_state: ThreadMode = mode.load(Ordering::Relaxed).into();
 
          // Running until program not closed
          loop {
@@ -137,6 +150,8 @@ impl World {
             let task = mode.load(Ordering::Relaxed).into();
             match task {
                ThreadMode::Run => {
+                  prev_state = ThreadMode::Run;
+
                   // Increase model time
                   let tick = ticks.fetch_add(1, Ordering::Relaxed);
 
@@ -144,6 +159,7 @@ impl World {
                   evolution.make_tick(&env, tick);
                }
                ThreadMode::Pause => {
+                  prev_state = ThreadMode::Paused;
                   mode.store(ThreadMode::Paused as u8, Ordering::Relaxed);
                }
                ThreadMode::Paused => std::thread::sleep(sleep_time),
@@ -151,11 +167,45 @@ impl World {
                   mode.store(ThreadMode::Paused as u8, Ordering::Relaxed);
                   break;
                }
+               ThreadMode::Save => {
+                  // Save project
+                  {
+                     let filename = filename.lock().unwrap();
+                     if let Err(e) = Self::save_compressed_data(&filename, &evolution) {
+                        eprintln!("Error saving project to {}: {}", filename.display(), e);
+                     }
+                  }
+
+                  // Resume previous state, before save
+                  mode.store(prev_state as u8, Ordering::Relaxed);
+               }
             }
          }
       });
 
       Some(thread_handle)
+   }
+
+
+   fn save_compressed_data(path: &std::path::Path, data: &Evolution) -> anyhow::Result<()> {
+
+      // 1. Create a file
+      let file = File::create(path)?;
+      
+      // 2. Wrap it in a BufWriter to speed up disk access
+      let buf_writer = BufWriter::new(file);
+      
+      // 3. Add a Zstd compression layer (compression levels from 1 to 21, 3 is standard)
+      let mut encoder = zstd::Encoder::new(buf_writer, 3)?;
+      
+      // 4. Bincode writes directly to the encoder
+      // The serialize_into method is more efficient than serialize, as it doesn't create an intermediate Vec<u8>
+      let version = 1u8;
+      bincode::serialize_into(&mut encoder, &version)?;
+      bincode::serialize_into(&mut encoder, &data.elements)?;
+      bincode::serialize_into(&mut encoder, &data.animals)?;
+      encoder.finish()?;
+      Ok(())
    }
 
 
@@ -321,35 +371,36 @@ impl World {
       Environment::date(now)
    }
 
-   fn await_for_pause_thread_or_panic(&self) {
+   /* fn await_for_complete(&self, wait_for: ThreadMode) -> Result<(), String> {
       let timeout = Duration::from_secs(5);
       let sleep_time = Duration::from_millis(100);
       let now = Instant::now();
 
       while now.elapsed() < timeout {
          let state: ThreadMode = self.mode.load(Ordering::Acquire).into();
-         match state {
-            ThreadMode::Paused => return,
-            _ => std::thread::sleep(sleep_time),
+         if state == wait_for {
+            return Ok(());
          }
+         std::thread::sleep(sleep_time);
       }
-      panic!("await_for_stop_thread too long")
-   }
+      Err("Timeout waiting for thread to reach state".into())
+   } */
 
 
    pub fn save(&self) {
-      // Stop evaluate if running
-      let prev_state: ThreadMode = self.mode.load(Ordering::Acquire).into();
-      if matches!(prev_state, ThreadMode::Run) {
-         self.mode.store(ThreadMode::Pause as u8, Ordering::Release);
-         self.await_for_pause_thread_or_panic();
+      // Send filename to save
+      {
+         let mut filename = self.filename.lock().unwrap();
+         *filename = PathBuf::from("./demi_save.demi");
       }
 
-      // Save
+      // Send signal to thread to save
+      let state = ThreadMode::Save;
+      self.mode.store(state as u8, Ordering::Release);
+   }
 
-      // Resume
-      if matches!(prev_state, ThreadMode::Run) {
-         self.mode.store(ThreadMode::Run as u8, Ordering::Release);
-      }
+   pub fn busy(&self) -> bool {
+      let state: ThreadMode = self.mode.load(Ordering::Acquire).into();
+      state == ThreadMode::Save
    }
 }

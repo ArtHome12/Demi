@@ -53,7 +53,7 @@ impl Environment {
       let vitality = 3 * world_size.x;   // hold out for 3 days
       let level = 3 * vitality;  // grow 3 times to start breeding
       let luca = Organism::new(vitality, 0,
-         Digestion::new(luca_reaction, number_of_reactions),
+         Digestion::new(luca_reaction, number_of_reactions, NutritionMode::Autotroph),
          Reproduction::new(level),
       );
 

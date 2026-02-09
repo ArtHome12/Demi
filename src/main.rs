@@ -24,9 +24,10 @@ mod genes;
 mod organism;
 
 use grid::Grid;
-use iced::{Element, Subscription, Task, window, window::Id, Theme};
-use iced::widget::{column, PaneGrid, pane_grid, pane_grid::Axis,};
+use iced::{Element, Subscription, Task, window, window::Id, Theme, mouse};
+use iced::widget::{column, PaneGrid, pane_grid, pane_grid::Axis, mouse_area,};
 use iced::window::icon;
+
 use std::path::Path;
 use std::time::{Duration, Instant};
 use std::{rc::Rc, cell::RefCell, };
@@ -52,6 +53,7 @@ pub fn main() -> iced::Result {
       .run()
 }
 
+
 #[derive(Debug, Clone)]
 enum Message {
    StartupAction,
@@ -69,11 +71,14 @@ enum Message {
    Illuminate(bool),
    ToggleRun,
    WorldSave,
+   WorldNew,
+   WorldNewed, // after new world created
    CloseEvent(Id),
 }
 
 
 struct Demi {
+   project: project::Project,
    world: Rc<RefCell<world::World>>,
    controls: project_controls::Controls,
    panes: pane_grid::State<PaneState>,
@@ -90,7 +95,7 @@ impl Demi {
       let project = project::Project::new("./demi.toml");
 
       // World contains model and manage its evaluation
-      let world = world::World::new(project);
+      let world = world::World::new(project.clone());
       let world = Rc::new(RefCell::new(world));
       let grid_world = Rc::clone(&world);
 
@@ -101,6 +106,7 @@ impl Demi {
       let (panes, grid_pane) = pane_grid::State::new(PaneState::new(PaneContent::Grid(grid)));
       
       let res = Self {
+         project,
          world,
          controls,
          panes,
@@ -131,6 +137,7 @@ impl Demi {
                project_controls::Message::ToggleIllumination => Task::done(Message::Illuminate(self.controls.illuminate)),
                project_controls::Message::ToggleFilter => Task::done(Message::ShowFilter(self.controls.show_filter)),
                project_controls::Message::Save => Task::done(Message::WorldSave),
+               project_controls::Message::New => Task::done(Message::WorldNew),
                _ => Task::none(),
             }
          }
@@ -209,6 +216,24 @@ impl Demi {
             Task::none()
          }
 
+         Message::WorldNew => {
+            let project = project::Project::new("./demi.toml");
+            let world = world::World::new(project);
+            self.world.replace(world);
+            /* let future = async {
+               let project = project::Project::new("./demi.toml");
+               let world = world::World::new(project);
+               self.world.replace(world);
+            };
+
+            Task::perform(future, |_| Message::WorldNewed) */
+            Task::none()
+         }
+
+         Message::WorldNewed => {
+            Task::none()
+         }
+
          Message::CloseEvent(_id) => {
             self.world.borrow_mut().shutdown();
             return iced::exit()
@@ -240,10 +265,21 @@ impl Demi {
       })
       .on_resize(10, Message::Resized);
 
-      column![
+      let widget = column![
          controls,
          pane_grid,
-      ].into()
+      ];
+
+      // Set the cursor if necessary
+      let busy = self.world.borrow().busy();
+      if busy {
+         mouse_area(widget)
+         .interaction(mouse::Interaction::Progress)
+         .into()
+      } else {
+         widget
+         .into()
+      }
    }
 
    fn grid_mut(&mut self) -> &mut Grid {

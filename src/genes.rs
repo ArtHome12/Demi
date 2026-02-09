@@ -10,36 +10,53 @@ Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 
 use rand::prelude::*;
 use rand::distr::Uniform;
-
+use serde::{Serialize, Deserialize};
 
 pub trait Gene {
    fn mutate(&self, rng: &mut ThreadRng) -> Self;
 }
 
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub enum NutritionMode {
    Autotroph,  // autotrophs (plants) - use light energy and elements to produce food
    Heterotroph,   // heterotrophs (animals) - eats autotrophs or other heterotrophs
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(from = "RawDigestion")]
 pub struct Digestion {
    pub reaction: usize, // reaction index
    number_of_reactions: usize,
+   #[serde(skip)]
    variability: Uniform<usize>, // number of reactions * 3
    pub mode: NutritionMode,
 }
 
 
+#[derive(Deserialize)]
+pub struct RawDigestion {
+   pub reaction: usize, // reaction index
+   number_of_reactions: usize,
+   pub mode: NutritionMode,
+}
+
+
+impl From<RawDigestion> for Digestion {
+   fn from(raw: RawDigestion) -> Self {
+      Self::new(raw.reaction, raw.number_of_reactions, raw.mode)
+   }
+}
+
+
 impl Digestion {
-   pub fn new(reaction: usize, number_of_reactions: usize) -> Self {
+   pub fn new(reaction: usize, number_of_reactions: usize, mode: NutritionMode) -> Self {
       Self {
          reaction,
          number_of_reactions,
          variability: Uniform::new(0, number_of_reactions * 3).unwrap(),
-         mode: NutritionMode::Autotroph,
+         mode,
       }
    }
 }
@@ -70,11 +87,14 @@ impl Gene for Digestion {
    }
 }
 
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Reproduction {
    pub level: usize, // the level of strength (vitality) required to divide
+   #[serde(skip, default="Reproduction::default_variability")]
    variability: Uniform<usize>, // 0..=2
 }
+
 
 impl Reproduction {
    pub fn new(level: usize) -> Self {
@@ -83,7 +103,12 @@ impl Reproduction {
          variability: Uniform::try_from(0..=2).unwrap(),
       }
    }
+
+   fn default_variability() -> Uniform<usize> {
+      Uniform::try_from(0..=2).unwrap()
+   }
 }
+
 
 impl Gene for Reproduction {
    fn mutate(&self, rng: &mut ThreadRng) -> Self {

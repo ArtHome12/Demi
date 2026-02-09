@@ -9,7 +9,7 @@ Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
 use std::{fs, collections::HashMap, };
-use serde_derive::Deserialize;
+use serde::Deserialize;
 
 use crate::geom::*;
 use crate::reactions::*;
@@ -68,6 +68,8 @@ pub struct LucaAttributes {
    pub digestion: String,
 }
 
+
+#[derive(Debug, Clone)]
 pub struct Project {
    pub size: Size,
    pub resolution: f32,
@@ -79,7 +81,7 @@ pub struct Project {
    pub luca_reaction: usize, // first organism
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Element {
    pub name: String,
    pub color: iced::Color,

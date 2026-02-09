@@ -8,9 +8,7 @@ http://www.gnu.org/licenses/gpl-3.0.html
 Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 =============================================================================== */
 
-use serde_derive::Deserialize;
-
-#[derive(Debug, Clone, Copy, Deserialize, )]
+#[derive(Debug, Clone, Copy, )]
 pub struct Coord {
    pub x: usize,
    pub y: usize,

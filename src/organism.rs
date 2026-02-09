@@ -10,13 +10,14 @@ Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 
 use std::{cmp::max, fmt, ptr, marker::PhantomData};
 use rand::prelude::ThreadRng;
+use serde::{Serialize, Deserialize};
 
 use crate::genes::*;
 use crate::reactions::Reactions;
 use crate::dot::*;
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Organism {
    pub vitality: usize,
    pub birthday: usize,
@@ -125,8 +126,8 @@ impl fmt::Display for Organism {
 }
 
 
-#[derive(Clone, Debug)]
 // Organisms at one point
+#[derive(Serialize, Deserialize)]
 pub struct AnimalsStack {
    stack: Vec<Option<Organism>>,
 }
@@ -210,7 +211,7 @@ impl<'s> AnimalsStack {
 }
 
 
-#[derive(Clone, Debug)]
+#[derive(Serialize, Deserialize)]
 // Keeps live and death organisms in the grid
 pub struct AnimalsSheet {
    pub sheet: Vec<AnimalsStack>

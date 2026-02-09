@@ -10,6 +10,7 @@ Copyright (c) 2013-2022 by Artem Khomenko _mag12@yahoo.com.
 
 use std::ptr;
 use iced::Color;
+use serde::{Serialize, Deserialize};
 
 use crate::geom::*;
 
@@ -25,7 +26,7 @@ pub struct Dot {
 }
 
 // Storage amount by points of one element
-#[derive(Debug)]
+#[derive(Serialize, Deserialize)]
 pub struct ElementsSheet {
    pub matrix: Vec<usize>,
 
@@ -50,6 +51,7 @@ impl ElementsSheet {
    }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct ElementsSheets(Vec<ElementsSheet>);
 
 impl ElementsSheets {
