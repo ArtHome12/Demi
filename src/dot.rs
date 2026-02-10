@@ -70,6 +70,7 @@ impl std::iter::FromIterator<ElementsSheet> for ElementsSheets {
    }
 }
 
+#[derive(Debug)]
 // Fast unsafe access to elements for mirroring and rayon
 pub struct PtrElements(Vec<usize>);
 

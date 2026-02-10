@@ -23,6 +23,7 @@ use crate::genes::NutritionMode;
 
 type Handle = std::thread::JoinHandle<()>;
 
+#[derive(Debug)]
 pub struct World {
    env: Environment,
    mode: Arc<AtomicU8>,

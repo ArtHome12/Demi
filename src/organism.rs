@@ -279,6 +279,7 @@ impl AnimalsSheet {
 }
 
 
+#[derive(Debug)]
 // Pointers to fast unsafe access to organisms
 pub struct PtrAnimals {
    ptr: Vec<usize>,

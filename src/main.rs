@@ -29,6 +29,7 @@ use iced::widget::{column, PaneGrid, pane_grid, pane_grid::Axis, mouse_area,};
 use iced::window::icon;
 
 use std::path::Path;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use std::{rc::Rc, cell::RefCell, };
 
@@ -54,7 +55,7 @@ pub fn main() -> iced::Result {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 enum Message {
    StartupAction,
    ProjectMessage(project_controls::Message), // Messages from project controls at top line
@@ -72,13 +73,12 @@ enum Message {
    ToggleRun,
    WorldSave,
    WorldNew,
-   WorldNewed, // after new world created
+   WorldNewed(Arc<UnblownDemi>), // after new world created
    CloseEvent(Id),
 }
 
 
 struct Demi {
-   project: project::Project,
    world: Rc<RefCell<world::World>>,
    controls: project_controls::Controls,
    panes: pane_grid::State<PaneState>,
@@ -89,6 +89,13 @@ struct Demi {
 }
 
 
+// Unblown version of Demi for async world creation
+#[derive(Debug)]
+struct UnblownDemi {
+   world: world::World,
+}
+
+
 impl Demi {
    fn new() -> (Self, Task<Message>) {
       // Project contains info for create model
@@ -96,25 +103,7 @@ impl Demi {
 
       // World contains model and manage its evaluation
       let world = world::World::new(project.clone());
-      let world = Rc::new(RefCell::new(world));
-      let grid_world = Rc::clone(&world);
-
-      let controls = project_controls::Controls::new(resources::Resources::new("./res"));
-
-      // Put the grid into pane and get back ref to it
-      let grid = Grid::new(grid_world);
-      let (panes, grid_pane) = pane_grid::State::new(PaneState::new(PaneContent::Grid(grid)));
-      
-      let res = Self {
-         project,
-         world,
-         controls,
-         panes,
-         grid_pane,
-         filter_pane: None,
-         grid_pane_ratio: 0.8,
-         last_one_second_time: Instant::now(),
-      };
+      let res = Self::init(world);
       (res, Task::done(Message::StartupAction))
    }
 
@@ -217,21 +206,22 @@ impl Demi {
          }
 
          Message::WorldNew => {
-            let project = project::Project::new("./demi.toml");
-            let world = world::World::new(project);
-            self.world.replace(world);
-            /* let future = async {
+            let future = async {
                let project = project::Project::new("./demi.toml");
                let world = world::World::new(project);
-               self.world.replace(world);
+               Arc::new(UnblownDemi {
+                  world,
+               })
             };
 
-            Task::perform(future, |_| Message::WorldNewed) */
-            Task::none()
+            Task::perform(future, |unblown| Message::WorldNewed(unblown))
          }
 
-         Message::WorldNewed => {
-            Task::none()
+         Message::WorldNewed(unblown) => {
+            let unblown = Arc::try_unwrap(unblown).expect("WorldNewed() Failed to unwrap Arc");
+            *self = Self::init(unblown.world);
+
+            Task::done(Message::ResizeEvent((Id::unique(), iced::Size::new(10240.0, 768.0))))
          }
 
          Message::CloseEvent(_id) => {
@@ -245,6 +235,28 @@ impl Demi {
          }
       }
    }
+
+
+   fn init(world: world::World) -> Self{
+      let world = Rc::new(RefCell::new(world));
+      let controls = project_controls::Controls::new(resources::Resources::new("./res"));
+
+      let grid_world = Rc::clone(&world);
+      let grid = Grid::new(grid_world);
+      let (panes, grid_pane) = pane_grid::State::new(PaneState::new(PaneContent::Grid(grid)));
+
+      let res = Self {
+         world,
+         controls,
+         panes,
+         grid_pane,
+         filter_pane: None,
+         grid_pane_ratio: 0.8,
+         last_one_second_time: Instant::now(),
+      };
+      res
+   }
+
 
    fn subscription(&self) -> Subscription<Message> {
       let subs = vec![window::frames().map(Message::Refresh),
